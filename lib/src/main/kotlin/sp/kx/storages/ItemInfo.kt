@@ -21,7 +21,7 @@ class ItemInfo(
     }
 
     override fun toString(): String {
-        return "ItemInfo(created: ${Date(created.inWholeMilliseconds)}, updated: ${Date(updated.inWholeMilliseconds)}, hash: \"$hash\")"
+        return "{created: ${Date(created.inWholeMilliseconds)}, updated: ${Date(updated.inWholeMilliseconds)}, hash: \"$hash\"}"
     }
 
     override fun equals(other: Any?): Boolean {

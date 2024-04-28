@@ -22,7 +22,7 @@ class Described<T : Any>(
     }
 
     override fun toString(): String {
-        return "{id: $id, info: $info, item: ${item::class.java}}"
+        return "{id: $id, info: $info, item: ${item::class.java.name}}"
     }
 
     override fun equals(other: Any?): Boolean {
