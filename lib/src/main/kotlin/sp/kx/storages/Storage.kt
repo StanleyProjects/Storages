@@ -2,9 +2,7 @@ package sp.kx.storages
 
 import java.util.UUID
 
-interface Storage<T : Any> {
+interface Storage<T : Any> : Items<T> {
     val id: UUID
     val hash: String
-    val items: List<Described<T>>
-    val deleted: Set<UUID>
 }

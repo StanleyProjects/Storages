@@ -1,3 +1,3 @@
 rootProject.name = "Storages"
 
-include("lib")
+include("lib", "sample")

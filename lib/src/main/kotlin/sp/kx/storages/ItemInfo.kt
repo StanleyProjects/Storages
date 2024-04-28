@@ -9,6 +9,17 @@ class ItemInfo(
     val updated: Duration,
     val hash: String,
 ) {
+    fun copy(
+        updated: Duration,
+        hash: String,
+    ): ItemInfo {
+        return ItemInfo(
+            created = created,
+            updated = updated,
+            hash = hash,
+        )
+    }
+
     override fun toString(): String {
         return "ItemInfo(created: ${Date(created.inWholeMilliseconds)}, updated: ${Date(updated.inWholeMilliseconds)}, hash: \"$hash\")"
     }
