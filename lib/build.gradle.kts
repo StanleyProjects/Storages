@@ -31,6 +31,7 @@ repositories.mavenCentral()
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
+    id("org.gradle.jacoco")
     id("org.jetbrains.dokka") version Version.dokka
 }
 
@@ -50,8 +51,29 @@ tasks.getByName<KotlinCompile>("compileTestKotlin") {
 }
 
 dependencies {
-    // todo
+    testImplementation("org.junit.jupiter:junit-jupiter-api:${Version.jupiter}")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${Version.jupiter}")
 }
+
+fun Test.getExecutionData(): File {
+    return buildDir()
+        .dir("jacoco")
+        .asFile("$name.exec")
+}
+
+val taskUnitTest = task<Test>("checkUnitTest") {
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    jvmArgs("--add-opens=java.base/java.lang=ALL-UNNAMED") // https://github.com/gradle/gradle/issues/18647
+    doLast {
+        getExecutionData().existing().file().filled()
+    }
+}
+
+jacoco.toolVersion = Version.jacoco
+
+// todo test coverage
 
 "unstable".also { variant ->
     val version = "${version}u-SNAPSHOT"
