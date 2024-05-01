@@ -52,7 +52,7 @@ abstract class BytesStorage<T : Any>(
             }
         }
 
-    override fun delete(id: UUID) {
+    override fun delete(id: UUID): Boolean {
         val items = items.toMutableList()
         for (index in items.indices) {
             val item = items[index]
@@ -62,12 +62,12 @@ abstract class BytesStorage<T : Any>(
                 items = items,
                 deleted = deleted + id,
             )
-            return
+            return true
         }
-        TODO("BytesStorage:delete($id)")
+        return false
     }
 
-    override fun update(id: UUID, item: T) {
+    override fun update(id: UUID, item: T): Described<T> {
         TODO("update")
     }
 
@@ -130,20 +130,20 @@ abstract class BytesStorage<T : Any>(
         }
     }
 
-    override fun add(item: T) {
+    override fun add(item: T): Described<T> {
         val items = items.toMutableList()
         val created = now()
-        items.add(
-            Described(
-                id = randomUUID(),
-                info = ItemInfo(
-                    created = created,
-                    updated = created,
-                    hash = itemHash(item),
-                ),
-                item = item,
+        val described = Described(
+            id = randomUUID(),
+            info = ItemInfo(
+                created = created,
+                updated = created,
+                hash = itemHash(item),
             ),
+            item = item,
         )
+        items.add(described)
         write(items = items)
+        return described
     }
 }
