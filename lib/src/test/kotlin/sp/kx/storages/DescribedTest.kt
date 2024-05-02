@@ -187,6 +187,20 @@ internal class DescribedTest {
 
     @Test
     fun mapTest() {
-        TODO("DescribedTest:mapTest")
+        val info = ItemInfo(
+            created = 1.milliseconds,
+            updated = 2.milliseconds,
+            hash = "hash",
+        )
+        val itemMapped = 42
+        val value = Described(
+            id = mockUUID(1),
+            info = info,
+            item = "DescribedTest:mapTest",
+        )
+        val mapped = value.map { itemMapped }
+        assertEquals(value.id, mapped.id)
+        assertEquals(value.info, mapped.info)
+        assertEquals(mapped.item, itemMapped)
     }
 }
