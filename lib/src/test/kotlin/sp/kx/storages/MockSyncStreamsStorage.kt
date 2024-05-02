@@ -7,24 +7,16 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-internal class MockStreamsStorage<T : Any>(
+internal class MockSyncStreamsStorage<T : Any>(
     id: UUID,
     private val now: Duration = 1.milliseconds,
     private val randomUUID: UUID = UUID.fromString("a9971314-2b26-4704-b145-f2473a7e068c"),
+    defaultDeleted: Set<UUID> = emptySet(),
     private val hashes: List<Pair<ByteArray, String>>,
     private val transformer: List<Pair<ByteArray, T>> = emptyList(),
-) : StreamsStorage<T>(id) {
-    private val stream = ByteArrayOutputStream().also {
-        it.write(
-            StringBuilder()
-                .append("$id")
-                .append("\n")
-                .append("")
-                .append("\n")
-                .append("0")
-                .toString()
-                .toByteArray(),
-        )
+) : SyncStreamsStorage<T>(id = id) {
+    private val stream = ByteArrayOutputStream().also { stream ->
+        stream.write("${defaultDeleted.joinToString(separator = "") { it.toString() }}\n0".toByteArray())
     }
 
     override fun now(): Duration {
@@ -39,6 +31,10 @@ internal class MockStreamsStorage<T : Any>(
         return hashes.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second ?: error("No hash!")
     }
 
+    override fun encode(item: T): ByteArray {
+        return transformer.firstOrNull { (_, value) -> value == item }?.first ?: error("No encoded!")
+    }
+
     override fun decode(bytes: ByteArray): T {
         return transformer.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second ?: error("No decoded!")
     }
@@ -50,9 +46,5 @@ internal class MockStreamsStorage<T : Any>(
     override fun outputStream(): OutputStream {
         stream.reset()
         return stream
-    }
-
-    override fun encode(item: T): ByteArray {
-        return transformer.firstOrNull { (_, value) -> value == item }?.first ?: error("No encoded!")
     }
 }

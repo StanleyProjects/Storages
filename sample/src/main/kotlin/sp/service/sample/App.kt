@@ -1,7 +1,7 @@
 package sp.service.sample
 
-import sp.kx.storages.BytesStorage
 import sp.kx.storages.Storage
+import sp.kx.storages.StreamsStorage
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
@@ -11,7 +11,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private data class Foo(val text: String)
 
-private class FooStorage : BytesStorage<Foo>(UUID.fromString("dbb81949-54c9-42e7-91b4-7be1a84bc875")) {
+private class FooStorage : StreamsStorage<Foo>(UUID.fromString("dbb81949-54c9-42e7-91b4-7be1a84bc875")) {
     private val stream = ByteArrayOutputStream().also {
         it.write(
             StringBuilder()
@@ -33,10 +33,9 @@ private class FooStorage : BytesStorage<Foo>(UUID.fromString("dbb81949-54c9-42e7
         return UUID.randomUUID()
     }
 
-    override val hash: String
-        get() {
-            return items.joinToString(separator = "") { it.info.hash }.hashCode().toString()
-        }
+    override fun hash(bytes: ByteArray): String {
+        return String(bytes).hashCode().toString()
+    }
 
     override fun decode(bytes: ByteArray): Foo {
         return Foo(text = String(bytes))
@@ -44,10 +43,6 @@ private class FooStorage : BytesStorage<Foo>(UUID.fromString("dbb81949-54c9-42e7
 
     override fun encode(item: Foo): ByteArray {
         return item.text.toByteArray()
-    }
-
-    override fun itemHash(item: Foo): String {
-        return item.hashCode().toString()
     }
 
     override fun inputStream(): InputStream {

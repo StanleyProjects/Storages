@@ -7,7 +7,7 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-abstract class StreamsStorage<T : Any>(override val id: UUID) : SynchronizedStorage<T> {
+abstract class StreamsStorage<T : Any>(override val id: UUID) : MutableStorage<T> {
     override val hash: String
         get() {
             val hashes = inputStream().use { stream ->
@@ -139,17 +139,5 @@ abstract class StreamsStorage<T : Any>(override val id: UUID) : SynchronizedStor
         items.add(described)
         write(items = items)
         return described
-    }
-
-    override fun merge(info: MergeInfo): List<Described<ByteArray>> {
-        TODO("merge")
-    }
-
-    override fun getSyncInfo(): SyncInfo {
-        TODO("getSyncInfo")
-    }
-
-    override fun getMergeInfo(info: SyncInfo): MergeInfo {
-        TODO("getMergeInfo")
     }
 }
