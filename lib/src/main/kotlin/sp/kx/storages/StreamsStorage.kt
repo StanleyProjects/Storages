@@ -85,13 +85,12 @@ abstract class StreamsStorage<T : Any>(override val id: UUID) : MutableStorage<T
         items: List<Described<T>>,
         deleted: Set<UUID> = this.deleted,
     ) {
-        val sorted = items.sortedBy { it.info.created }
         outputStream().use { stream ->
             val writer = stream.bufferedWriter()
             writer.write(deleted.joinToString(separator = ",") { it.toString() })
             writer.newLine()
-            writer.write(sorted.size.toString())
-            for (it in sorted) {
+            writer.write(items.size.toString())
+            for (it in items) {
                 writer.newLine()
                 writer.write(it.id.toString())
                 writer.newLine()
@@ -139,7 +138,7 @@ abstract class StreamsStorage<T : Any>(override val id: UUID) : MutableStorage<T
                     item = item,
                 )
                 items.add(described)
-                write(items = items)
+                write(items = items.sortedBy { it.info.created })
                 return described.info
             }
         }
@@ -159,7 +158,7 @@ abstract class StreamsStorage<T : Any>(override val id: UUID) : MutableStorage<T
             item = item,
         )
         items.add(described)
-        write(items = items)
+        write(items = items.sortedBy { it.info.created })
         return described
     }
 }

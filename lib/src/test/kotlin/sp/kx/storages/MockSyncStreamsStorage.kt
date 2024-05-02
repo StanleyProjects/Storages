@@ -8,9 +8,9 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class MockSyncStreamsStorage<T : Any>(
-    id: UUID,
+    id: UUID = UUID.fromString("a523adfd-07c1-450b-834d-6c34dec9fa4f"),
     private val timeProvider: MockProvider<Duration> = mockProvider { 1.milliseconds },
-    private val randomUUID: UUID = UUID.fromString("a9971314-2b26-4704-b145-f2473a7e068c"),
+    private val uuidProvider: MockProvider<UUID> = mockProvider { UUID.fromString("d2d7c21b-f99a-4f78-80d4-8bf05ee25f62") },
     defaultDeleted: Set<UUID> = emptySet(),
     private val hashes: List<Pair<ByteArray, String>>,
     private val transformer: List<Pair<ByteArray, T>> = emptyList(),
@@ -24,11 +24,11 @@ internal class MockSyncStreamsStorage<T : Any>(
     }
 
     override fun randomUUID(): UUID {
-        return randomUUID
+        return uuidProvider.provide()
     }
 
     override fun hash(bytes: ByteArray): String {
-        return hashes.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second ?: error("No hash!")
+        return hashes.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second ?: error("No hash!\n---\n${String(bytes)}\n---")
     }
 
     override fun encode(item: T): ByteArray {
