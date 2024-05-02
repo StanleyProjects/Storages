@@ -13,13 +13,12 @@ abstract class SyncStreamsStorage<T : Any>(id: UUID) : StreamsStorage<T>(id), Sy
         val deleted: Set<UUID>
         inputStream().use { stream ->
             val reader = stream.bufferedReader()
-            reader.readLine() // 0) id
             deleted = reader.readLine()
                 .split(",")
                 .filter { it.isNotBlank() }
                 .map(UUID::fromString)
                 .toSet()
-            val size = reader.readLine().toInt() // 2) items size
+            val size = reader.readLine().toInt() // 1) items size
             (0 until size).map { _ ->
                 val id = UUID.fromString(reader.readLine()) // 0) item id
                 meta[id] = reader.readLine().split(",").let { split ->

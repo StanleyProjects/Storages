@@ -12,9 +12,8 @@ abstract class StreamsStorage<T : Any>(override val id: UUID) : MutableStorage<T
         get() {
             val hashes = inputStream().use { stream ->
                 val reader = stream.bufferedReader()
-                reader.readLine() // 0) id
-                reader.readLine() // 1) deleted
-                val size = reader.readLine().toInt() // 2) items size
+                reader.readLine() // 0) deleted
+                val size = reader.readLine().toInt() // 1) items size
                 (0 until size).map { _ ->
                     reader.readLine() // 0) item id
                     val hash = reader.readLine().split(",").let { split ->
@@ -31,9 +30,8 @@ abstract class StreamsStorage<T : Any>(override val id: UUID) : MutableStorage<T
         get() {
             return inputStream().use { stream ->
                 val reader = stream.bufferedReader()
-                reader.readLine() // 0) id
-                reader.readLine() // 1) deleted
-                val size = reader.readLine().toInt() // 2) items size
+                reader.readLine() // 0) deleted
+                val size = reader.readLine().toInt() // 1) items size
                 (0 until size).map { _ ->
                     val id = UUID.fromString(reader.readLine()) // 0) item id
                     val info = reader.readLine().split(",").let { split ->
@@ -57,7 +55,6 @@ abstract class StreamsStorage<T : Any>(override val id: UUID) : MutableStorage<T
         get() {
             return inputStream().use { stream ->
                 val reader = stream.bufferedReader()
-                reader.readLine() // 0) id
                 reader.readLine()
                     .split(",")
                     .filter { it.isNotBlank() }
@@ -91,8 +88,6 @@ abstract class StreamsStorage<T : Any>(override val id: UUID) : MutableStorage<T
         val sorted = items.sortedBy { it.info.created }
         outputStream().use { stream ->
             val writer = stream.bufferedWriter()
-            writer.write(id.toString())
-            writer.newLine()
             writer.write(deleted.joinToString(separator = ",") { it.toString() })
             writer.newLine()
             writer.write(sorted.size.toString())
