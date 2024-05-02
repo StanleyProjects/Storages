@@ -112,7 +112,19 @@ abstract class StreamsStorage<T : Any>(override val id: UUID) : MutableStorage<T
     protected abstract fun outputStream(): OutputStream
 
     override fun delete(id: UUID): Boolean {
-        TODO("delete")
+        val items = items.toMutableList()
+        for (index in items.indices) {
+            val item = items[index]
+            if (item.id == id) {
+                items.removeAt(index)
+                write(
+                    items = items,
+                    deleted = deleted + id,
+                )
+                return true
+            }
+        }
+        return false
     }
 
     override fun update(id: UUID, item: T): Described<T> {

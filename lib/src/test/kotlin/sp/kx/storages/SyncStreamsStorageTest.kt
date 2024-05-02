@@ -10,9 +10,9 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class SyncStreamsStorageTest {
     private fun <T : Any> Storage<T>.assert(
         id: UUID,
-        deleted: Set<UUID>,
+        deleted: Set<UUID> = emptySet(),
         hash: String,
-        items: List<Described<T>>,
+        items: List<Described<T>> = emptyList(),
     ) {
         assertEquals(id, this.id)
         assertEquals(deleted, this.deleted)
@@ -30,9 +30,10 @@ internal class SyncStreamsStorageTest {
                 "".toByteArray() to storageHash,
             ),
         )
-        assertEquals(id, storage.id)
-        assertEquals(storageHash, storage.hash)
-        assertTrue(storage.deleted.isEmpty())
+        storage.assert(
+            id = id,
+            hash = storageHash,
+        )
     }
 
     @Test
@@ -47,9 +48,11 @@ internal class SyncStreamsStorageTest {
             ),
             defaultDeleted = deleted,
         )
-        assertEquals(id, storage.id)
-        assertEquals(storageHash, storage.hash)
-        assertEquals(deleted, storage.deleted)
+        storage.assert(
+            id = id,
+            deleted = deleted,
+            hash = storageHash,
+        )
     }
 
     @Test
@@ -81,22 +84,30 @@ internal class SyncStreamsStorageTest {
                 expected.item.toByteArray() to expected.item,
             ),
         )
-        assertEquals(id, storage.id)
-        assertTrue(storage.items.isEmpty())
-        assertTrue(storage.deleted.isEmpty())
-        val actual = storage.add(expected.item)
-        assertEquals(expected, actual)
-        assertEquals(id, storage.id)
-        assertEquals(storageHash, storage.hash)
-        assertTrue(storage.deleted.isEmpty())
-        assertEquals(expected, storage.items.single())
+        storage.assert(
+            id = id,
+            hash = storageEmptyHash,
+        )
+        assertEquals(expected, storage.add(expected.item))
+        storage.assert(
+            id = id,
+            hash = storageHash,
+            items = listOf(expected),
+        )
         val notExists = UUID.fromString("35ca49c2-d716-4eb3-ad1e-3f87337ce360")
         check(notExists != expected.id)
         assertFalse(storage.delete(id = notExists))
-        assertEquals(id, storage.id)
-        assertTrue(storage.deleted.isEmpty())
-        assertEquals(storageHash, storage.hash)
-        assertEquals(expected, storage.items.single())
+        storage.assert(
+            id = id,
+            hash = storageHash,
+            items = listOf(expected),
+        )
+        assertTrue(storage.delete(id = expected.id))
+        storage.assert(
+            id = id,
+            hash = storageEmptyHash,
+            deleted = setOf(expected.id),
+        )
     }
 
     @Test
@@ -113,10 +124,12 @@ internal class SyncStreamsStorageTest {
             ),
             item = "foobar",
         )
+        val storageEmptyHash = "storageEmptyHash"
         val storageHash = "storageHash"
         val storage: SyncStorage<String> = MockSyncStreamsStorage(
             id = id,
             hashes = listOf(
+                "".toByteArray() to storageEmptyHash,
                 expected.item.toByteArray() to itemHash,
                 itemHash.toByteArray() to storageHash,
             ),
@@ -126,15 +139,16 @@ internal class SyncStreamsStorageTest {
                 expected.item.toByteArray() to expected.item,
             ),
         )
-        assertEquals(id, storage.id)
-        assertTrue(storage.items.isEmpty())
-        assertTrue(storage.deleted.isEmpty())
-        val actual = storage.add(expected.item)
-        assertEquals(expected, actual)
-        assertEquals(id, storage.id)
-        assertEquals(storageHash, storage.hash)
-        assertTrue(storage.deleted.isEmpty())
-        assertEquals(expected, storage.items.single())
+        storage.assert(
+            id = id,
+            hash = storageEmptyHash,
+        )
+        assertEquals(expected, storage.add(expected.item))
+        storage.assert(
+            id = id,
+            hash = storageHash,
+            items = listOf(expected),
+        )
     }
 
     @Test
