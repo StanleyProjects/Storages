@@ -233,7 +233,95 @@ internal class SyncStreamsStorageTest {
     fun mergeTest() {TODO("SyncStreamsStorageTest:mergeTest")}
 
     @Test
-    fun getSyncInfoTest() {TODO("SyncStreamsStorageTest:getSyncInfoTest")}
+    fun getSyncInfoTest() {
+        val id = UUID.fromString("dc4092c6-e7a1-433e-9169-c2f6f92fc4c1")
+        val itemHash = "itemHash"
+        val itemUpdated = "itemUpdated"
+        val itemUpdatedHash = "itemUpdatedHash"
+        var time = 1.milliseconds
+        val timeProvider = mockProvider { time }
+        val expected = Described(
+            id = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935"),
+            info = ItemInfo(
+                created = time,
+                updated = time,
+                hash = itemHash,
+            ),
+            item = "foobar",
+        )
+        val storageEmptyHash = "storageEmptyHash"
+        val storageHash = "storageHash"
+        val storageUpdatedHash = "storageUpdatedHash"
+        val storage: SyncStorage<String> = MockSyncStreamsStorage(
+            id = id,
+            hashes = listOf(
+                "".toByteArray() to storageEmptyHash,
+                expected.item.toByteArray() to itemHash,
+                itemUpdated.toByteArray() to itemUpdatedHash,
+                itemHash.toByteArray() to storageHash,
+                itemUpdatedHash.toByteArray() to storageUpdatedHash,
+            ),
+            randomUUID = expected.id,
+            timeProvider = timeProvider,
+            transformer = listOf(
+                expected.item.toByteArray() to expected.item,
+                itemUpdated.toByteArray() to itemUpdated,
+            ),
+        )
+        storage.assert(
+            id = id,
+            hash = storageEmptyHash,
+        )
+        assertEquals(SyncInfo(meta = emptyMap(), deleted = emptySet()), storage.getSyncInfo())
+        assertEquals(expected, storage.add(expected.item))
+        storage.assert(
+            id = id,
+            hash = storageHash,
+            items = listOf(expected),
+        )
+        assertEquals(SyncInfo(meta = mapOf(expected.id to expected.info), deleted = emptySet()), storage.getSyncInfo())
+        val notExists = UUID.fromString("35ca49c2-d716-4eb3-ad1e-3f87337ce360")
+        check(notExists != expected.id)
+        assertNull(storage.update(id = notExists, item = itemUpdated))
+        storage.assert(
+            id = id,
+            hash = storageHash,
+            items = listOf(expected),
+        )
+        time = 2.milliseconds
+        val updated = Described(
+            id = expected.id,
+            info = ItemInfo(
+                created = expected.info.created,
+                updated = time,
+                hash = itemUpdatedHash,
+            ),
+            item = itemUpdated,
+        )
+        assertEquals(
+            updated.info,
+            storage.update(id = expected.id, item = itemUpdated),
+        )
+        storage.assert(
+            id = id,
+            hash = storageUpdatedHash,
+            items = listOf(updated),
+        )
+        assertEquals(SyncInfo(meta = mapOf(updated.id to updated.info), deleted = emptySet()), storage.getSyncInfo())
+        assertFalse(storage.delete(id = notExists))
+        storage.assert(
+            id = id,
+            hash = storageUpdatedHash,
+            items = listOf(updated),
+        )
+        assertTrue(storage.delete(id = expected.id))
+        storage.assert(
+            id = id,
+            hash = storageEmptyHash,
+            deleted = setOf(expected.id),
+        )
+        assertEquals(SyncInfo(meta = emptyMap(), deleted = setOf(expected.id)), storage.getSyncInfo())
+    }
 
     @Test
     fun getMergeInfoTest() {TODO("SyncStreamsStorageTest:getMergeInfoTest")}
