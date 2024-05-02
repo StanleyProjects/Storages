@@ -422,32 +422,45 @@ internal class SyncStreamsStorageTest {
             Described(
                 id = mockUUID(index),
                 info = ItemInfo(
-                    created = time,
-                    updated = time,
+                    created = (1_000 + index).milliseconds,
+                    updated = (1_000 + index).milliseconds,
                     hash = "item:hash:$index"
                 ),
                 item = "item:$index",
             )
         }
+        check(defaultItems.size == 4)
         val rItems = mutableListOf<Described<String>>().also {
-            it.add(defaultItems[0].copy(updated = 2.milliseconds, hash = "item:hash:0:updated", item = "item:0:updated"))
+            it.add(defaultItems[0].copy(updated = (2_000 + 0).milliseconds, hash = "item:hash:0:updated", item = "item:0:updated"))
             it.add(defaultItems[2])
             it.add(defaultItems[3])
         }
-        check(defaultItems.size == 4)
+        check(rItems.size == 3)
+        val tItems = mutableListOf<Described<String>>().also {
+            it.add(defaultItems[0])
+            it.add(defaultItems[1])
+            it.add(defaultItems[3].copy(updated = (3_000 + 0).milliseconds, hash = "item:hash:3:updated", item = "item:3:updated"))
+        }
+        check(tItems.size == 3)
         val storageHash = "storageHash"
         val storageRHash = "storageRHash"
+        val storageTHash = "storageTHash"
         val hashes = defaultItems.map {
             it.item.toByteArray() to it.info.hash
         } + rItems.map {
             it.item.toByteArray() to it.info.hash
+        } + tItems.map {
+            it.item.toByteArray() to it.info.hash
         } + listOf(
             defaultItems.joinToString(separator = "") { it.info.hash }.toByteArray() to storageHash,
             rItems.joinToString(separator = "") { it.info.hash }.toByteArray() to storageRHash,
+            tItems.joinToString(separator = "") { it.info.hash }.toByteArray() to storageTHash,
         )
         val transformer = defaultItems.map {
             it.item.toByteArray() to it.item
         } + rItems.map {
+            it.item.toByteArray() to it.item
+        } + tItems.map {
             it.item.toByteArray() to it.item
         }
         val rStorage: SyncStorage<String> = MockSyncStreamsStorage(
@@ -464,8 +477,9 @@ internal class SyncStreamsStorageTest {
             hashes = hashes,
             transformer = transformer,
         )
-        defaultItems.forEach { described ->
+        defaultItems.forEachIndexed { index, described ->
             itemId = described.id
+            time = (1_000 + index).milliseconds
             rStorage.add(described.item)
             tStorage.add(described.item)
         }
@@ -480,7 +494,7 @@ internal class SyncStreamsStorageTest {
             items = defaultItems,
         )
         //
-        time = 2.milliseconds
+        time = (2_000 + 0).milliseconds
         assertEquals(rItems[0].info, rStorage.update(defaultItems[0].id, rItems[0].item))
         assertTrue(rStorage.delete(defaultItems[1].id))
         rStorage.assert(
@@ -490,7 +504,15 @@ internal class SyncStreamsStorageTest {
             deleted = setOf(defaultItems[1].id),
         )
         //
-        TODO("SyncStreamsStorageTest:tStorage")
+        time = (3_000 + 0).milliseconds
+        assertEquals(tItems[2].info, tStorage.update(defaultItems[3].id, tItems[2].item))
+        assertTrue(tStorage.delete(defaultItems[2].id))
+        tStorage.assert(
+            id = storageId,
+            hash = storageTHash,
+            items = tItems,
+            deleted = setOf(defaultItems[2].id),
+        )
         //
         TODO("SyncStreamsStorageTest:getMergeInfoTest")
     }
