@@ -21,6 +21,14 @@ class Described<T : Any>(
         )
     }
 
+    fun <U : Any> map(transform: (T) -> U): Described<U> {
+        return Described(
+            id = id,
+            info = info,
+            item = transform(item),
+        )
+    }
+
     override fun toString(): String {
         return "{id: $id, info: $info, item: ${item::class.java.name}}"
     }

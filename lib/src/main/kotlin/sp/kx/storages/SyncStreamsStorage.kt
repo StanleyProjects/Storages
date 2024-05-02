@@ -39,6 +39,32 @@ abstract class SyncStreamsStorage<T : Any>(id: UUID) : StreamsStorage<T>(id), Sy
     }
 
     override fun getMergeInfo(info: SyncInfo): MergeInfo {
-        TODO("getMergeInfo")
+        val download = mutableSetOf<UUID>()
+        val upload = mutableListOf<Described<ByteArray>>()
+        val items = items
+        for (described in items) {
+            if (info.meta.containsKey(described.id)) continue
+            if (info.deleted.contains(described.id)) continue
+            upload.add(described.map(::encode))
+        }
+        val deleted = deleted
+        for ((itemId, itemInfo) in info.meta) {
+            val described = items.firstOrNull { it.id == itemId }
+            if (described == null) {
+                if (deleted.contains(itemId)) continue
+                download.add(itemId)
+            } else if (itemInfo.hash != described.info.hash) {
+                if (itemInfo.updated > described.info.updated) {
+                    download.add(itemId)
+                } else {
+                    upload.add(described.map(::encode))
+                }
+            }
+        }
+        return MergeInfo(
+            download = download,
+            items = upload,
+            deleted = deleted,
+        )
     }
 }
