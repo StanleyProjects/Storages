@@ -127,8 +127,23 @@ abstract class StreamsStorage<T : Any>(override val id: UUID) : MutableStorage<T
         return false
     }
 
-    override fun update(id: UUID, item: T): Described<T> {
-        TODO("update")
+    override fun update(id: UUID, item: T): ItemInfo? {
+        val items = items.toMutableList()
+        for (index in items.indices) {
+            val it = items[index]
+            if (it.id == id) {
+                items.removeAt(index)
+                val described = it.copy(
+                    updated = now(),
+                    hash = hash(encode(item)),
+                    item = item,
+                )
+                items.add(described)
+                write(items = items)
+                return described.info
+            }
+        }
+        return null
     }
 
     override fun add(item: T): Described<T> {

@@ -9,7 +9,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 internal class MockSyncStreamsStorage<T : Any>(
     id: UUID,
-    private val now: Duration = 1.milliseconds,
+    private val timeProvider: MockProvider<Duration> = mockProvider { 1.milliseconds },
     private val randomUUID: UUID = UUID.fromString("a9971314-2b26-4704-b145-f2473a7e068c"),
     defaultDeleted: Set<UUID> = emptySet(),
     private val hashes: List<Pair<ByteArray, String>>,
@@ -20,7 +20,7 @@ internal class MockSyncStreamsStorage<T : Any>(
     }
 
     override fun now(): Duration {
-        return now
+        return timeProvider.provide()
     }
 
     override fun randomUUID(): UUID {
