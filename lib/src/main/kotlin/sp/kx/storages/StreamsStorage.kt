@@ -81,7 +81,7 @@ abstract class StreamsStorage<T : Any>(override val id: UUID) : MutableStorage<T
         return Base64.getDecoder().decode(this)
     }
 
-    private fun write(
+    protected fun write(
         items: List<Described<T>>,
         deleted: Set<UUID> = this.deleted,
     ) {

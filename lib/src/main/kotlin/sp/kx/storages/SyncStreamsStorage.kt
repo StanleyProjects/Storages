@@ -5,7 +5,38 @@ import kotlin.time.Duration.Companion.milliseconds
 
 abstract class SyncStreamsStorage<T : Any>(id: UUID) : StreamsStorage<T>(id), SyncStorage<T> {
     override fun merge(info: MergeInfo): List<Described<ByteArray>> {
-        TODO("merge")
+        val download = mutableListOf<Described<ByteArray>>()
+        val newItems = mutableListOf<Described<T>>()
+        for (item in this.items) {
+            if (info.deleted.contains(item.id)) continue
+            if (info.items.any { it.id == item.id }) continue
+            if (info.download.contains(item.id)) download.add(item.map(::encode))
+            newItems += item
+        }
+        for (item in info.items) {
+            newItems += item.map(::decode)
+        }
+        write(
+            items = newItems.sortedBy { it.info.created },
+            deleted = this.deleted + info.deleted,
+        )
+        return download
+    }
+
+    override fun merge(items: List<Described<ByteArray>>, deleted: Set<UUID>) {
+        val newItems = mutableListOf<Described<T>>()
+        for (item in this.items) {
+            if (deleted.contains(item.id)) continue
+            if (items.any { it.id == item.id }) continue
+            newItems += item
+        }
+        for (item in items) {
+            newItems += item.map(::decode)
+        }
+        write(
+            items = newItems.sortedBy { it.info.created },
+            deleted = this.deleted + deleted,
+        )
     }
 
     override fun getSyncInfo(): SyncInfo {
