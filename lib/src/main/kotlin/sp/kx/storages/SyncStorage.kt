@@ -7,7 +7,7 @@ interface SyncStorage<T : Any> : MutableStorage<T> {
     fun merge(
         items: List<Described<ByteArray>>,
         deleted: Set<UUID>,
-    )
+    ) // todo commit
     fun getSyncInfo(): SyncInfo
     fun getMergeInfo(info: SyncInfo): MergeInfo
 }
