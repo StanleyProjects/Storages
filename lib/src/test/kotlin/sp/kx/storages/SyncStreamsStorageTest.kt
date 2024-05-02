@@ -89,7 +89,7 @@ internal class SyncStreamsStorageTest {
                 info = ItemInfo(
                     created = (1_000 + index).milliseconds,
                     updated = (1_000 + index).milliseconds,
-                    hash = "item:hash:$index"
+                    hash = "item:hash:$index",
                 ),
                 item = "item:$index",
             )
@@ -359,7 +359,7 @@ internal class SyncStreamsStorageTest {
                 info = ItemInfo(
                     created = (1_000 + index).milliseconds,
                     updated = (1_000 + index).milliseconds,
-                    hash = "item:hash:$index"
+                    hash = "item:hash:$index",
                 ),
                 item = "item:$index",
             )
@@ -579,7 +579,7 @@ internal class SyncStreamsStorageTest {
                 info = ItemInfo(
                     created = (1_000 + index).milliseconds,
                     updated = (1_000 + index).milliseconds,
-                    hash = "item:hash:$index"
+                    hash = "item:hash:$index",
                 ),
                 item = "item:$index",
             )
