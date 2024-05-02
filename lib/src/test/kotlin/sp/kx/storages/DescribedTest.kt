@@ -67,6 +67,34 @@ internal class DescribedTest {
     }
 
     @Test
+    fun equalsBytesTest() {
+        val id = UUID.fromString("43518ed6-cda2-48c3-bd28-fed6fab80196")
+        val info = ItemInfo(
+            created = 1.milliseconds,
+            updated = 2.milliseconds,
+            hash = "hash",
+        )
+        val item = "DescribedTest:equalsBytesTest".toByteArray()
+        val value = Described(
+            id = id,
+            info = info,
+            item = item,
+        )
+        val equals = Described(
+            id = id,
+            info = info,
+            item = item,
+        )
+        assertEquals(value, equals)
+        val notEquals = Described(
+            id = id,
+            info = info,
+            item = "notEquals".toByteArray(),
+        )
+        assertNotEquals(value, notEquals)
+    }
+
+    @Test
     fun notEqualsTest() {
         val id = UUID.fromString("43518ed6-cda2-48c3-bd28-fed6fab80196")
         val info = ItemInfo(

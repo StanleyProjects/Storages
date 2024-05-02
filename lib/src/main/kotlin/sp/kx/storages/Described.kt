@@ -26,12 +26,14 @@ class Described<T : Any>(
     }
 
     override fun equals(other: Any?): Boolean {
-        return when (other) {
-            is Described<*> -> {
-                other.id == id && other.info == info && other.item == item
-            }
-            else -> false
+        if (other !is Described<*>) return false
+        if (other.id != id) return false
+        if (other.info != info) return false
+        if (item is ByteArray) {
+            if (other.item !is ByteArray) return false
+            return item.contentEquals(other.item)
         }
+        return other.item == item
     }
 
     override fun hashCode(): Int {
