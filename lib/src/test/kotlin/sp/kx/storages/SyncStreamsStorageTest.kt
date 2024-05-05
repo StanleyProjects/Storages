@@ -458,7 +458,7 @@ internal class SyncStreamsStorageTest {
         //
         val rSyncInfo = rStorage.getSyncInfo()
         val rMergeInfo = tStorage.getMergeInfo(rSyncInfo)
-        tStorage.merge(rStorage.merge(rMergeInfo), deleted = rSyncInfo.deleted)
+        tStorage.merge(rStorage.merge(rMergeInfo))
         val deletedMerged = setOf(defaultItems[1].id, defaultItems[2].id)
         rStorage.assert(
             id = storageId,
