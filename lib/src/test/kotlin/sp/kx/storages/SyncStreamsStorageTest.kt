@@ -25,13 +25,10 @@ internal class SyncStreamsStorageTest {
 
     private fun <T : Any> SyncStorage<T>.assert(
         id: UUID,
-        deleted: Set<UUID> = emptySet(),
         hash: String,
         items: List<Described<T>> = emptyList(),
     ) {
         assertEquals(id, this.id)
-        assertEquals(deleted.size, this.deleted.size, "deleted:size")
-        assertEquals(deleted, this.deleted, "deleted")
         assertEquals(hash, this.hash)
         assertEquals(items.size, this.items.size)
         items.forEachIndexed { index, expected ->
@@ -181,7 +178,6 @@ internal class SyncStreamsStorageTest {
             id = storageId,
             hash = storageHashUpdated,
             items = updatedItems,
-            deleted = setOf(defaultItems[1].id),
         )
     }
 
@@ -199,7 +195,6 @@ internal class SyncStreamsStorageTest {
         )
         storage.assert(
             id = id,
-            deleted = deleted,
             hash = storageHash,
         )
     }
@@ -258,7 +253,6 @@ internal class SyncStreamsStorageTest {
         storage.assert(
             id = storageId,
             hash = storageEmptyHash,
-            deleted = setOf(expected.id),
         )
     }
 
@@ -470,7 +464,6 @@ internal class SyncStreamsStorageTest {
         storage.assert(
             id = id,
             hash = storageEmptyHash,
-            deleted = setOf(expected.id),
         )
         storage.getSyncInfo().assert(deleted = setOf(expected.id))
     }
@@ -595,7 +588,6 @@ internal class SyncStreamsStorageTest {
             id = storageId,
             hash = storageRHash,
             items = rItems,
-            deleted = setOf(defaultItems[1].id),
         )
         //
         time = (3_000 + 0).milliseconds
@@ -605,7 +597,6 @@ internal class SyncStreamsStorageTest {
             id = storageId,
             hash = storageTHash,
             items = tItems,
-            deleted = setOf(defaultItems[2].id),
         )
         //
         val rSyncInfo = rStorage.getSyncInfo()
@@ -642,18 +633,15 @@ internal class SyncStreamsStorageTest {
             deleted = setOf(defaultItems[1].id),
         )
         tStorage.merge(commitInfo)
-        val deletedMerged = setOf(defaultItems[1].id, defaultItems[2].id)
         rStorage.assert(
             id = storageId,
             hash = storageHashMerged,
             items = itemsMerged,
-            deleted = deletedMerged,
         )
         tStorage.assert(
             id = storageId,
             hash = storageHashMerged,
             items = itemsMerged,
-            deleted = deletedMerged,
         )
     }
 
@@ -756,13 +744,11 @@ internal class SyncStreamsStorageTest {
             id = storageId,
             hash = "merged:hash",
             items = itemsMerged,
-            deleted = emptySet(),
         )
         tStorage.assert(
             id = storageId,
             hash = "merged:hash",
             items = itemsMerged,
-            deleted = emptySet(),
         )
     }
 }
