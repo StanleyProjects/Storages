@@ -21,10 +21,10 @@ class ItemInfo(
 
     override fun toString(): String {
         return "{" +
-                "created: ${created.inWholeMilliseconds}ms, " +
-                "updated: ${updated.inWholeMilliseconds}ms, " +
-                "hash: \"$hash\"" +
-                "}"
+            "created: ${created.inWholeMilliseconds}ms, " +
+            "updated: ${updated.inWholeMilliseconds}ms, " +
+            "hash: \"$hash\"" +
+            "}"
     }
 
     override fun equals(other: Any?): Boolean {
