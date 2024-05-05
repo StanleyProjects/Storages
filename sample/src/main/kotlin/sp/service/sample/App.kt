@@ -1,29 +1,23 @@
 package sp.service.sample
 
-import sp.kx.storages.Storage
-import sp.kx.storages.StreamsStorage
-import java.io.ByteArrayOutputStream
+import sp.kx.storages.SyncStorage
+import sp.kx.storages.SyncStreamsStorage
+import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.math.BigInteger
+import java.security.MessageDigest
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 private data class Foo(val text: String)
 
-private class FooStorage : StreamsStorage<Foo>(UUID.fromString("dbb81949-54c9-42e7-91b4-7be1a84bc875")) {
-    private val stream = ByteArrayOutputStream().also {
-        it.write(
-            StringBuilder()
-                .append("$id")
-                .append("\n")
-                .append("")
-                .append("\n")
-                .append("0")
-                .toString()
-                .toByteArray(),
-        )
-    }
+private class FileStorage : SyncStreamsStorage<Foo>(
+    id = UUID.fromString("dbb81949-54c9-42e7-91b4-7be1a84bc875"),
+) {
+    private val md = MessageDigest.getInstance("MD5")
+    private val file = File.createTempFile("storage", id.toString())
 
     override fun now(): Duration {
         return System.currentTimeMillis().milliseconds
@@ -34,28 +28,27 @@ private class FooStorage : StreamsStorage<Foo>(UUID.fromString("dbb81949-54c9-42
     }
 
     override fun hash(bytes: ByteArray): String {
-        return String(bytes).hashCode().toString()
-    }
-
-    override fun decode(bytes: ByteArray): Foo {
-        return Foo(text = String(bytes))
+        return BigInteger(1, md.digest(bytes)).toString(16)
     }
 
     override fun encode(item: Foo): ByteArray {
         return item.text.toByteArray()
     }
 
+    override fun decode(bytes: ByteArray): Foo {
+        return Foo(text = String(bytes))
+    }
+
     override fun inputStream(): InputStream {
-        return stream.toByteArray().inputStream()
+        return file.inputStream()
     }
 
     override fun outputStream(): OutputStream {
-        stream.reset()
-        return stream
+        return file.outputStream()
     }
 }
 
-private fun Storage<out Any>.println() {
+private fun SyncStorage<out Any>.println() {
     val message = """
         id: $id
         hash: $hash
@@ -66,7 +59,7 @@ private fun Storage<out Any>.println() {
 }
 
 fun main() {
-    val storage = FooStorage()
+    val storage = FileStorage()
     storage.println()
     println("---")
     Foo(text = "42").also { item ->
