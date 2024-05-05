@@ -4,7 +4,7 @@ import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 
 abstract class SyncStreamsStorage<T : Any>(id: UUID) : StreamsStorage<T>(id), SyncStorage<T> {
-    override fun merge(info: MergeInfo): List<Described<ByteArray>> {
+    override fun merge(info: MergeInfo): CommitInfo {
         val download = mutableListOf<Described<ByteArray>>()
         val newItems = mutableListOf<Described<T>>()
         for (item in this.items) {
@@ -16,27 +16,33 @@ abstract class SyncStreamsStorage<T : Any>(id: UUID) : StreamsStorage<T>(id), Sy
         for (item in info.items) {
             newItems += item.map(::decode)
         }
+        val deleted = this.deleted
         write(
             items = newItems.sortedBy { it.info.created },
-            deleted = this.deleted + info.deleted,
+            deleted = deleted + info.deleted,
         )
-        return download
+        return CommitInfo(
+            hash = hash,
+            items = download,
+            deleted = deleted,
+        )
     }
 
-    override fun merge(items: List<Described<ByteArray>>, deleted: Set<UUID>) {
+    override fun merge(info: CommitInfo) {
         val newItems = mutableListOf<Described<T>>()
         for (item in this.items) {
-            if (deleted.contains(item.id)) continue
-            if (items.any { it.id == item.id }) continue
+            if (info.deleted.contains(item.id)) continue
+            if (info.items.any { it.id == item.id }) continue
             newItems += item
         }
-        for (item in items) {
+        for (item in info.items) {
             newItems += item.map(::decode)
         }
         write(
             items = newItems.sortedBy { it.info.created },
-            deleted = this.deleted + deleted,
+            deleted = this.deleted + info.deleted,
         )
+        check(hash == info.hash)
     }
 
     override fun getSyncInfo(): SyncInfo {
