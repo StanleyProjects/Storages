@@ -41,6 +41,10 @@ class Storages private constructor(
         return entry.value as Storage<T>
     }
 
+    inline fun <reified T : Any> get(): Storage<T>? {
+        return get(T::class.java)
+    }
+
     companion object {
         fun <T : Any> create(storage: Storage<T>, type: Class<T>): Storages {
             return Storages(map = mapOf(type to storage))
