@@ -1,0 +1,10 @@
+# 2022/06/12
+
+build:
+  maxIssues: 0
+
+processors:
+  active: false
+
+console-reports:
+  active: false

@@ -1,3 +1,4 @@
+import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import sp.gx.core.Badge
@@ -7,11 +8,14 @@ import sp.gx.core.Maven
 import sp.gx.core.asFile
 import sp.gx.core.assemble
 import sp.gx.core.buildDir
+import sp.gx.core.buildSrc
 import sp.gx.core.check
 import sp.gx.core.create
+import sp.gx.core.dir
 import sp.gx.core.existing
 import sp.gx.core.file
 import sp.gx.core.filled
+import sp.gx.core.getByName
 import sp.gx.core.resolve
 import sp.gx.core.task
 
@@ -32,6 +36,7 @@ repositories.mavenCentral()
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("org.gradle.jacoco")
+    id("io.gitlab.arturbosch.detekt") version Version.detekt
     id("org.jetbrains.dokka") version Version.dokka
 }
 
@@ -105,6 +110,49 @@ task<JacocoCoverageVerification>("checkCoverage") {
     }
     classDirectories.setFrom(taskCoverageReport.classDirectories)
     executionData(taskCoverageReport.executionData)
+}
+
+task<Detekt>("check", "CodeQuality") {
+    jvmTarget = Version.jvmTarget
+    val type = "main"
+    source = sourceSets.getByName(type).allSource
+    val configs = setOf(
+        "comments",
+        "common",
+        "complexity",
+        "coroutines",
+        "empty-blocks",
+        "exceptions",
+        "naming",
+        "performance",
+        "potential-bugs",
+        "style",
+    ).map { config ->
+        buildSrc.dir("src/main/resources/detekt/config")
+            .file("$config.yml")
+            .existing()
+            .file()
+            .filled()
+    }
+    config.setFrom(configs)
+    val report = buildDir()
+        .dir("reports/analysis/code/quality/$type/html")
+        .asFile("index.html")
+    reports {
+        html {
+            required = true
+            outputLocation = report
+        }
+        md.required = false
+        sarif.required = false
+        txt.required = false
+        xml.required = false
+    }
+    val detektTask = tasks.getByName<Detekt>("detekt", type)
+    classpath.setFrom(detektTask.classpath)
+    doFirst {
+        println("Analysis report: ${report.absolutePath}")
+    }
 }
 
 "unstable".also { variant ->
