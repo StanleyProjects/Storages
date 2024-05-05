@@ -54,16 +54,17 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
                 }
             }
         }
-    override val deleted: Set<UUID>
+    private val deleted: Set<UUID>
         get() {
-            return inputStream().use { stream ->
+            val line = inputStream().use { stream ->
                 val reader = stream.bufferedReader()
                 reader.readLine()
-                    .split(",")
-                    .filter { it.isNotBlank() }
-                    .map(UUID::fromString)
-                    .toSet()
             }
+            if (line.isEmpty()) return emptySet()
+            return line
+                .split(",")
+                .map(UUID::fromString)
+                .toSet()
         }
 
     private fun ItemInfo.toLine(): String {
