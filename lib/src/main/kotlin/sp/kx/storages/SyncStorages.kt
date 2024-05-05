@@ -53,6 +53,10 @@ class SyncStorages private constructor(
         return get(T::class.java) ?: error("No storage by type: \"${T::class.java.name}\"!")
     }
 
+    fun hashes(): Map<UUID, String> {
+        TODO("SyncStorages:hashes")
+    }
+
     companion object {
         fun <T : Any> create(storage: SyncStorage<T>, type: Class<T>): SyncStorages {
             return SyncStorages(map = mapOf(type to storage))
