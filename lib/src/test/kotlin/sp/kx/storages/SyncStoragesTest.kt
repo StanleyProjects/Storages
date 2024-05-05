@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrowsExactly
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.util.UUID
+import kotlin.time.Duration.Companion.milliseconds
 
 internal class SyncStoragesTest {
     @Test
@@ -130,8 +132,73 @@ internal class SyncStoragesTest {
         }
     }
 
+    private fun SyncStorages.assertHashes(expected: Map<UUID, String>) {
+        val actual = hashes()
+        assertEquals(expected.size, actual.size, "hashes:\n$expected\n$actual\n")
+        for ((ei, eh) in expected) {
+            val ah = actual[ei] ?: error("No hash by ID: \"$ei\"!")
+            assertEquals(eh, ah)
+        }
+    }
+
     @Test
     fun hashesTest() {
-        TODO("SyncStoragesTest:hashesTest")
+        val storage1Items = listOf(
+            mockDescribed(pointer = 11),
+        )
+        val storage2Items = listOf(
+            mockDescribed(pointer = 21, 21),
+        )
+        val hashes = listOf(
+            storage1Items.joinToString(separator = "") { it.info.hash }.toByteArray() to "1:default",
+            storage2Items.joinToString(separator = "") { it.info.hash }.toByteArray() to "2:default",
+        ) + storage1Items.map {
+            it.item.toByteArray() to it.info.hash
+        } + storage2Items.map {
+            it.item.toString().toByteArray() to it.info.hash
+        }
+        var time = 1.milliseconds
+        val timeProvider = mockProvider { time }
+        var itemId = mockUUID()
+        val uuidProvider = mockProvider { itemId }
+        val storages = SyncStorages.Builder()
+            .add(
+                MockSyncStreamsStorage<String>(
+                    id = mockUUID(1),
+                    hashes = hashes,
+                    timeProvider = timeProvider,
+                    uuidProvider = uuidProvider,
+                    transformer = storage1Items.map {
+                        it.item.toByteArray() to it.item
+                    },
+                ),
+            )
+            .add(
+                MockSyncStreamsStorage<Int>(
+                    id = mockUUID(2),
+                    hashes = hashes,
+                    timeProvider = timeProvider,
+                    uuidProvider = uuidProvider,
+                    transformer = storage2Items.map {
+                        it.item.toString().toByteArray() to it.item
+                    },
+                ),
+            )
+            .build()
+        storage1Items.forEach { described ->
+            itemId = described.id
+            time = described.info.created
+            storages.require<String>().add(described.item)
+        }
+        storage2Items.forEach { described ->
+            itemId = described.id
+            time = described.info.created
+            storages.require<Int>().add(described.item)
+        }
+        val expected = mapOf(
+            mockUUID(1) to "1:default",
+            mockUUID(2) to "2:default",
+        )
+        storages.assertHashes(expected = expected)
     }
 }

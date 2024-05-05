@@ -54,7 +54,7 @@ class SyncStorages private constructor(
     }
 
     fun hashes(): Map<UUID, String> {
-        TODO("SyncStorages:hashes")
+        return map.values.associate { it.id to it.hash }
     }
 
     companion object {
