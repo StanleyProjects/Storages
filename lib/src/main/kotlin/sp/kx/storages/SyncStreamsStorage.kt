@@ -7,6 +7,10 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
+@Suppress(
+    "MagicNumber",
+    "TooManyFunctions",
+)
 abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<T> {
     override val hash: String
         get() {
@@ -15,7 +19,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
                 val reader = stream.bufferedReader()
                 reader.readLine() // 0) deleted
                 val size = reader.readLine().toInt() // 1) items size
-                for (i in 0 until size) {
+                for (ignored in 0 until size) {
                     reader.readLine() // 0) item id
                     val split = reader.readLine().split(",")
                     check(split.size == 3)
@@ -41,7 +45,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
                             hash = split[2],
                         )
                     }
-                    val item = decode(reader.readLine().base64()) // 2) item
+                    val item = decode(base64(reader.readLine())) // 2) item
                     Described(
                         id = id,
                         info = info,
@@ -76,8 +80,8 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
         return Base64.getEncoder().encodeToString(this)
     }
 
-    private fun String.base64(): ByteArray {
-        return Base64.getDecoder().decode(this)
+    private fun base64(value: String): ByteArray {
+        return Base64.getDecoder().decode(value)
     }
 
     private fun write(
@@ -114,7 +118,8 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
         for (index in items.indices) {
             val item = items[index]
             if (item.id == id) {
-                items.removeAt(index)
+                val oldItem = items.removeAt(index)
+                check(oldItem.id == id)
                 write(
                     items = items,
                     deleted = deleted + id,
@@ -130,7 +135,8 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
         for (index in items.indices) {
             val it = items[index]
             if (it.id == id) {
-                items.removeAt(index)
+                val oldItem = items.removeAt(index)
+                check(oldItem.id == id)
                 val described = it.copy(
                     updated = now(),
                     hash = hash(encode(item)),
@@ -213,10 +219,11 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
                 .map(UUID::fromString)
                 .toSet()
             val size = reader.readLine().toInt() // 1) items size
-            for (i in 0 until size) {
+            for (ignored in 0 until size) {
                 val id = UUID.fromString(reader.readLine()) // 0) item id
                 val split = reader.readLine().split(",")
                 check(split.size == 3)
+                @Suppress("IgnoredReturnValue")
                 meta[id] = ItemInfo(
                     created = split[0].toLong().milliseconds,
                     updated = split[1].toLong().milliseconds,

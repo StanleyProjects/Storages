@@ -1,6 +1,5 @@
 package sp.kx.storages
 
-import java.util.Date
 import java.util.Objects
 import kotlin.time.Duration
 
@@ -21,7 +20,11 @@ class ItemInfo(
     }
 
     override fun toString(): String {
-        return "{created: ${Date(created.inWholeMilliseconds)}, updated: ${Date(updated.inWholeMilliseconds)}, hash: \"$hash\"}"
+        return "{" +
+                "created: ${created.inWholeMilliseconds}ms, " +
+                "updated: ${updated.inWholeMilliseconds}ms, " +
+                "hash: \"$hash\"" +
+                "}"
     }
 
     override fun equals(other: Any?): Boolean {
