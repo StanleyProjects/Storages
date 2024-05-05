@@ -3,6 +3,13 @@ package sp.kx.storages
 import java.util.Objects
 import kotlin.time.Duration
 
+/**
+ * Information about an object in the repository.
+ * Can be used for searching, sorting, comparing and synchronizing.
+ *
+ * @author [Stanley Wintergreen](https://github.com/kepocnhh)
+ * @since 0.4.1
+ */
 class ItemInfo(
     val created: Duration,
     val updated: Duration,
