@@ -3,6 +3,7 @@ package sp.kx.storages
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrowsExactly
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -634,6 +635,115 @@ internal class SyncStreamsStorageTest {
             hash = storageHashMerged,
             items = itemsMerged,
             deleted = deletedMerged,
+        )
+    }
+
+    @Test
+    fun commitTest() {
+        val rItems = listOf(
+            mockDescribed(pointer = 1),
+            mockDescribed(pointer = 11),
+        )
+        check(rItems.size == 2)
+        val tItems = listOf(
+            mockDescribed(pointer = 1),
+            mockDescribed(pointer = 21),
+        )
+        check(tItems.size == 2)
+        val itemsMerged = listOf(
+            mockDescribed(pointer = 1),
+            mockDescribed(pointer = 11),
+            mockDescribed(pointer = 21),
+        )
+        check(itemsMerged.size == 3)
+        //
+        var time = 1.milliseconds
+        val timeProvider = mockProvider { time }
+        var itemId = mockUUID()
+        val uuidProvider = mockProvider { itemId }
+        val hashes = listOf(
+            rItems.joinToString(separator = "") { it.info.hash }.toByteArray() to "r:default",
+            tItems.joinToString(separator = "") { it.info.hash }.toByteArray() to "t:default",
+            itemsMerged.joinToString(separator = "") { it.info.hash }.toByteArray() to "merged:hash",
+            listOf(
+                mockDescribed(pointer = 1),
+                mockDescribed(pointer = 21),
+                mockDescribed(pointer = 31),
+            ).joinToString(separator = "") { it.info.hash }.toByteArray() to "t:wrong",
+        ) + rItems.map {
+            it.item.toByteArray() to it.info.hash
+        } + tItems.map {
+            it.item.toByteArray() to it.info.hash
+        }
+        val transformer = rItems.map {
+            it.item.toByteArray() to it.item
+        } + tItems.map {
+            it.item.toByteArray() to it.item
+        } + mockDescribed(pointer = 31).let {
+            it.item.toByteArray() to it.item
+        }
+        val storageId = mockUUID(pointer = 42)
+        val rStorage: SyncStorage<String> = MockSyncStreamsStorage(
+            id = storageId,
+            timeProvider = timeProvider,
+            uuidProvider = uuidProvider,
+            hashes = hashes,
+            transformer = transformer,
+        )
+        val tStorage: SyncStorage<String> = MockSyncStreamsStorage(
+            id = storageId,
+            timeProvider = timeProvider,
+            uuidProvider = uuidProvider,
+            hashes = hashes,
+            transformer = transformer,
+        )
+        rItems.forEach { described ->
+            itemId = described.id
+            time = described.info.created
+            rStorage.add(described.item)
+        }
+        rStorage.assert(
+            id = storageId,
+            hash = "r:default",
+            items = rItems,
+        )
+        tItems.forEach { described ->
+            itemId = described.id
+            time = described.info.created
+            tStorage.add(described.item)
+        }
+        tStorage.assert(
+            id = storageId,
+            hash = "t:default",
+            items = tItems,
+        )
+        val rSyncInfo = rStorage.getSyncInfo()
+        val tMergeInfo = tStorage.getMergeInfo(rSyncInfo)
+        val error = assertThrowsExactly(IllegalStateException::class.java) {
+            val info = CommitInfo(
+                hash = "wrong:hash",
+                items = listOf(
+                    mockDescribed(pointer = 31).map { it.toByteArray() },
+                ),
+                deleted = emptySet(),
+            )
+            tStorage.merge(info)
+        }
+        assertEquals("Wrong hash!", error.message)
+        val rCommitInfo = rStorage.merge(tMergeInfo)
+        tStorage.merge(rCommitInfo)
+        assertEquals(rStorage.hash, tStorage.hash)
+        rStorage.assert(
+            id = storageId,
+            hash = "merged:hash",
+            items = itemsMerged,
+            deleted = emptySet(),
+        )
+        tStorage.assert(
+            id = storageId,
+            hash = "merged:hash",
+            items = itemsMerged,
+            deleted = emptySet(),
         )
     }
 }

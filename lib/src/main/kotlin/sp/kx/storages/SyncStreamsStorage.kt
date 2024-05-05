@@ -201,11 +201,14 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
         for (item in info.items) {
             newItems += item.map(::decode)
         }
+        val sorted = newItems.sortedBy { it.info.created }
+        val builder = StringBuilder()
+        for (item in sorted) builder.append(item.info.hash)
+        check(hash(builder.toString().toByteArray()) == info.hash) { "Wrong hash!" }
         write(
-            items = newItems.sortedBy { it.info.created },
+            items = sorted,
             deleted = this.deleted + info.deleted,
         )
-        check(hash == info.hash)
     }
 
     override fun getSyncInfo(): SyncInfo {
