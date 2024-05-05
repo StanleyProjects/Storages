@@ -7,15 +7,15 @@ import org.junit.jupiter.api.Assertions.assertThrowsExactly
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-internal class StoragesTest {
+internal class SyncStoragesTest {
     @Test
     fun createTest() {
-        val ignored = Storages.create(MockSyncStreamsStorage<String>())
+        val ignored = SyncStorages.create(MockSyncStreamsStorage<String>())
     }
 
     @Test
     fun buildTest() {
-        val ignored = Storages.Builder()
+        val ignored = SyncStorages.Builder()
             .add(MockSyncStreamsStorage<String>(id = mockUUID(1)))
             .add(MockSyncStreamsStorage<Int>(id = mockUUID(2)))
             .build()
@@ -25,7 +25,7 @@ internal class StoragesTest {
     fun getTest() {
         val storage1 = MockSyncStreamsStorage<String>(id = mockUUID(1))
         val storage2 = MockSyncStreamsStorage<Int>(id = mockUUID(2))
-        val storages = Storages.Builder()
+        val storages = SyncStorages.Builder()
             .add(storage1)
             .add(storage2)
             .build()
@@ -71,16 +71,16 @@ internal class StoragesTest {
     @Test
     fun errorTest() {
         assertThrowsExactly(IllegalStateException::class.java) {
-            Storages.Builder().build()
+            SyncStorages.Builder().build()
         }
         assertThrowsExactly(IllegalStateException::class.java) {
-            Storages.Builder()
+            SyncStorages.Builder()
                 .add(MockSyncStreamsStorage<String>())
                 .add(MockSyncStreamsStorage<String>())
                 .build()
         }
         assertThrowsExactly(IllegalStateException::class.java) {
-            Storages.Builder()
+            SyncStorages.Builder()
                 .add(MockSyncStreamsStorage<String>())
                 .add(MockSyncStreamsStorage<Int>())
                 .build()

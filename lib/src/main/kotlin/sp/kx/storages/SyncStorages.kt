@@ -2,22 +2,22 @@ package sp.kx.storages
 
 import java.util.UUID
 
-class Storages private constructor(
-    private val map: Map<Class<out Any>, Storage<out Any>>,
+class SyncStorages private constructor(
+    private val map: Map<Class<out Any>, SyncStorage<out Any>>,
 ) {
     class Builder {
-        private val list = mutableListOf<Pair<Class<out Any>, Storage<out Any>>>()
+        private val list = mutableListOf<Pair<Class<out Any>, SyncStorage<out Any>>>()
 
-        fun <T : Any> add(storage: Storage<T>, type: Class<T>): Builder {
+        fun <T : Any> add(storage: SyncStorage<T>, type: Class<T>): Builder {
             list.add(type to storage)
             return this
         }
 
-        inline fun <reified T : Any> add(storage: Storage<T>): Builder {
+        inline fun <reified T : Any> add(storage: SyncStorage<T>): Builder {
             return add(storage, T::class.java)
         }
 
-        fun build(): Storages {
+        fun build(): SyncStorages {
             if (list.isEmpty()) error("Empty storages!")
             for (i in list.indices) {
                 val (type, storage) = list[i]
@@ -28,29 +28,29 @@ class Storages private constructor(
                     if (storage.id == pair.second.id) error("ID \"${storage.id}\" is repeated!")
                 }
             }
-            return Storages(list.toMap())
+            return SyncStorages(list.toMap())
         }
     }
 
-    operator fun get(id: UUID): Storage<out Any>? {
+    operator fun get(id: UUID): SyncStorage<out Any>? {
         return map.values.firstOrNull { it.id == id }
     }
 
-    fun <T : Any> get(type: Class<T>): Storage<T>? {
+    fun <T : Any> get(type: Class<T>): SyncStorage<T>? {
         val entry = map.entries.firstOrNull { it.key == type } ?: return null
-        return entry.value as Storage<T>
+        return entry.value as SyncStorage<T>
     }
 
-    inline fun <reified T : Any> get(): Storage<T>? {
+    inline fun <reified T : Any> get(): SyncStorage<T>? {
         return get(T::class.java)
     }
 
     companion object {
-        fun <T : Any> create(storage: Storage<T>, type: Class<T>): Storages {
-            return Storages(map = mapOf(type to storage))
+        fun <T : Any> create(storage: SyncStorage<T>, type: Class<T>): SyncStorages {
+            return SyncStorages(map = mapOf(type to storage))
         }
 
-        inline fun <reified T : Any> create(storage: Storage<T>): Storages {
+        inline fun <reified T : Any> create(storage: SyncStorage<T>): SyncStorages {
             return create(storage, T::class.java)
         }
     }
