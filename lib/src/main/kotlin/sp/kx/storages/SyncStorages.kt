@@ -36,6 +36,10 @@ class SyncStorages private constructor(
         return map.values.firstOrNull { it.id == id }
     }
 
+    fun require(id: UUID): SyncStorage<out Any> {
+        return map.values.firstOrNull { it.id == id } ?: error("No storage by ID: \"$id\"!")
+    }
+
     fun <T : Any> get(type: Class<T>): SyncStorage<T>? {
         val entry = map.entries.firstOrNull { it.key == type } ?: return null
         return entry.value as SyncStorage<T>
@@ -43,6 +47,10 @@ class SyncStorages private constructor(
 
     inline fun <reified T : Any> get(): SyncStorage<T>? {
         return get(T::class.java)
+    }
+
+    inline fun <reified T : Any> require(): SyncStorage<T> {
+        return get(T::class.java) ?: error("No storage by type: \"${T::class.java.name}\"!")
     }
 
     companion object {
