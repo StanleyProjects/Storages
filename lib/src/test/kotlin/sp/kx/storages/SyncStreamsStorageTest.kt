@@ -573,24 +573,27 @@ internal class SyncStreamsStorageTest {
         val timeProvider = mockProvider { time }
         var itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
         val uuidProvider = mockProvider { itemId }
-        val defaultItems = (0..3).map { index ->
+        val defaultItems = (0..4).map { index ->
             mockDescribed(pointer = index)
         }
-        check(defaultItems.size == 4)
+        check(defaultItems.size == 5)
         val rItems = mutableListOf<Described<String>>().also {
             it.add(defaultItems[0].copy(updated = (2_000 + 0).milliseconds, hash = "item:hash:0:updated", item = "item:0:updated"))
             it.add(defaultItems[2])
             it.add(defaultItems[3])
+            it.add(defaultItems[4])
             it.add(mockDescribed(pointer = 11))
         }
-        check(rItems.size == 4)
+        check(rItems.size == 5)
         val tItems = mutableListOf<Described<String>>().also {
             it.add(defaultItems[0])
             it.add(defaultItems[1])
             it.add(defaultItems[3].copy(updated = (3_000 + 0).milliseconds, hash = "item:hash:3:updated", item = "item:3:updated"))
+            it.add(defaultItems[4])
             it.add(mockDescribed(pointer = 21))
         }
-        check(tItems.size == 4)
+        check(tItems.size == 5)
+        val storageHash = "storageHash"
         val storageRDefaultHash = "storageRDHash"
         val storageTDefaultHash = "storageTDHash"
         val storageRHash = "storageRHash"
@@ -602,8 +605,9 @@ internal class SyncStreamsStorageTest {
         } + tItems.map {
             it.item.toByteArray() to it.info.hash
         } + listOf(
-            (defaultItems + rItems[3]).joinToString(separator = "") { it.info.hash }.toByteArray() to storageRDefaultHash,
-            (defaultItems + tItems[3]).joinToString(separator = "") { it.info.hash }.toByteArray() to storageTDefaultHash,
+            defaultItems.joinToString(separator = "") { it.info.hash }.toByteArray() to storageHash,
+            (defaultItems + rItems.last()).joinToString(separator = "") { it.info.hash }.toByteArray() to storageRDefaultHash,
+            (defaultItems + tItems.last()).joinToString(separator = "") { it.info.hash }.toByteArray() to storageTDefaultHash,
             rItems.joinToString(separator = "") { it.info.hash }.toByteArray() to storageRHash,
             tItems.joinToString(separator = "") { it.info.hash }.toByteArray() to storageTHash,
         )
@@ -634,27 +638,35 @@ internal class SyncStreamsStorageTest {
             rStorage.add(described.item)
             tStorage.add(described.item)
         }
-        11.also { pointer ->
-            val described = mockDescribed(pointer = pointer)
+        rStorage.assert(
+            id = storageId,
+            hash = storageHash,
+            items = defaultItems,
+        )
+        tStorage.assert(
+            id = storageId,
+            hash = storageHash,
+            items = defaultItems,
+        )
+        mockDescribed(pointer = 11).also { described ->
             itemId = described.id
-            time = (1_000 + pointer).milliseconds
+            time = described.info.created
             rStorage.add(described.item)
         }
-        21.also { pointer ->
-            val described = mockDescribed(pointer = pointer)
+        mockDescribed(pointer = 21).also { described ->
             itemId = described.id
-            time = (1_000 + pointer).milliseconds
+            time = described.info.created
             tStorage.add(described.item)
         }
         rStorage.assert(
             id = storageId,
             hash = storageRDefaultHash,
-            items = defaultItems + rItems[3],
+            items = defaultItems + rItems.last(),
         )
         tStorage.assert(
             id = storageId,
             hash = storageTDefaultHash,
-            items = defaultItems + tItems[3],
+            items = defaultItems + tItems.last(),
         )
         //
         time = (2_000 + 0).milliseconds
@@ -681,9 +693,9 @@ internal class SyncStreamsStorageTest {
         rSyncInfo.assert(meta = rItems.associate { it.id to it.info }, deleted = setOf(defaultItems[1].id))
         val tMergeInfo = tStorage.getMergeInfo(rSyncInfo)
         tMergeInfo.assert(
-            download = setOf(defaultItems[0].id, rItems[3].id),
+            download = setOf(defaultItems[0].id, rItems.last().id),
             items = listOf(
-                tItems[3].map { it.toByteArray() },
+                tItems.last().map { it.toByteArray() },
                 tItems[2].map { it.toByteArray() },
             ),
             deleted = setOf(defaultItems[2].id),
@@ -693,9 +705,9 @@ internal class SyncStreamsStorageTest {
         tSyncInfo.assert(meta = tItems.associate { it.id to it.info }, deleted = setOf(defaultItems[2].id))
         val rMergeInfo = rStorage.getMergeInfo(tSyncInfo)
         rMergeInfo.assert(
-            download = setOf(defaultItems[3].id, tItems[3].id),
+            download = setOf(defaultItems[3].id, tItems.last().id),
             items = listOf(
-                rItems[3].map { it.toByteArray() },
+                rItems.last().map { it.toByteArray() },
                 rItems[0].map { it.toByteArray() },
             ),
             deleted = setOf(defaultItems[1].id),
