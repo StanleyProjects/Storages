@@ -15,7 +15,7 @@ import sp.gx.core.filled
 import sp.gx.core.resolve
 import sp.gx.core.task
 
-version = "0.3.0"
+version = "0.3.1"
 
 val maven = Maven.Artifact(
     group = "com.github.kepocnhh",
