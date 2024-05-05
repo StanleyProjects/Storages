@@ -7,9 +7,22 @@ import org.junit.jupiter.api.Assertions.assertThrowsExactly
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.UUID
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class SyncStreamsStorageTest {
+    private fun ItemInfo.assert(
+        storageId: UUID,
+        itemId: UUID,
+        created: Duration,
+        updated: Duration,
+        hash: String,
+    ) {
+        assertEquals(created, this.created, "storageId: $storageId\nitemId: $itemId\ncreated:\n")
+        assertEquals(updated, this.updated, "storageId: $storageId\nitemId: $itemId\nupdated:\n")
+        assertEquals(hash, this.hash, "storageId: $storageId\nitemId: $itemId\nhash:\n")
+    }
+
     private fun <T : Any> SyncStorage<T>.assert(
         id: UUID,
         deleted: Set<UUID> = emptySet(),
@@ -24,7 +37,13 @@ internal class SyncStreamsStorageTest {
         items.forEachIndexed { index, expected ->
             val actual = this.items[index]
             assertEquals(expected.id, actual.id)
-            assertEquals(expected.info, actual.info, "id: ${expected.id}")
+            actual.info.assert(
+                storageId = id,
+                itemId = expected.id,
+                created = expected.info.created,
+                updated = expected.info.updated,
+                hash = expected.info.hash,
+            )
             assertEquals(expected, actual)
         }
         assertEquals(items, this.items)

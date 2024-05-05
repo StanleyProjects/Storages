@@ -23,5 +23,5 @@ internal fun <T : Any> mockDescribed(pointer: Int, item: T): Described<T> {
 }
 
 internal fun mockDescribed(pointer: Int): Described<String> {
-    return mockDescribed(item = "item:$pointer")
+    return mockDescribed(pointer = pointer, item = "item:$pointer")
 }
