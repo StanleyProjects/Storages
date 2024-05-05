@@ -1,6 +1,7 @@
 package sp.kx.storages
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
 import java.util.Objects
@@ -202,5 +203,19 @@ internal class DescribedTest {
         assertEquals(value.id, mapped.id)
         assertEquals(value.info, mapped.info)
         assertEquals(mapped.item, itemMapped)
+    }
+
+    @Test
+    fun bytesTest() {
+        val expected = mockDescribed(item = "f1".toByteArray())
+        val actual = mockDescribed(item = "f2")
+        assertFalse(expected == actual)
+    }
+
+    @Test
+    fun equalsNotTest() {
+        val expected: Any = mockDescribed(item = "f1".toByteArray())
+        val actual: Any = "f2"
+        assertFalse(expected == actual)
     }
 }

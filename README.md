@@ -5,10 +5,10 @@ A library for storing, changing and synchronizing data between devices.
 
 ## Snapshot
 
-![version](https://img.shields.io/static/v1?label=version&message=0.1.0-SNAPSHOT&labelColor=212121&color=2962ff&style=flat)
+![version](https://img.shields.io/static/v1?label=version&message=0.3.1-SNAPSHOT&labelColor=212121&color=2962ff&style=flat)
 
-- [Maven](https://s01.oss.sonatype.org/content/repositories/snapshots/com/github/kepocnhh/Storages/0.1.0-SNAPSHOT)
-- [Documentation](https://StanleyProjects.github.io/Storages/doc/0.1.0-SNAPSHOT)
+- [Maven](https://s01.oss.sonatype.org/content/repositories/snapshots/com/github/kepocnhh/Storages/0.3.1-SNAPSHOT)
+- [Documentation](https://StanleyProjects.github.io/Storages/doc/0.3.1-SNAPSHOT)
 
 ### Build
 ```
@@ -22,7 +22,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.kepocnhh:Storages:0.1.0-SNAPSHOT")
+    implementation("com.github.kepocnhh:Storages:0.3.1-SNAPSHOT")
 }
 ```
 
@@ -30,9 +30,9 @@ dependencies {
 
 ## Unstable
 
-![version](https://img.shields.io/static/v1?label=version&message=0.2.0u-SNAPSHOT&labelColor=212121&color=2962ff&style=flat)
+![version](https://img.shields.io/static/v1?label=version&message=0.3.1u-SNAPSHOT&labelColor=212121&color=2962ff&style=flat)
 
-- [Maven](https://s01.oss.sonatype.org/content/repositories/snapshots/com/github/kepocnhh/Storages/0.2.0u-SNAPSHOT)
+- [Maven](https://s01.oss.sonatype.org/content/repositories/snapshots/com/github/kepocnhh/Storages/0.3.1u-SNAPSHOT)
 
 ### Build
 ```
@@ -46,7 +46,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.kepocnhh:Storages:0.2.0u-SNAPSHOT")
+    implementation("com.github.kepocnhh:Storages:0.3.1u-SNAPSHOT")
 }
 ```
 

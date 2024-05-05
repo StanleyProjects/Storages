@@ -3,11 +3,10 @@ package sp.kx.storages
 import java.util.UUID
 
 interface SyncStorage<T : Any> : MutableStorage<T> {
-    fun merge(info: MergeInfo): List<Described<ByteArray>>
-    fun merge(
-        items: List<Described<ByteArray>>,
-        deleted: Set<UUID>,
-    )
+    val deleted: Set<UUID>
+
+    fun merge(info: MergeInfo): CommitInfo
+    fun merge(info: CommitInfo)
     fun getSyncInfo(): SyncInfo
     fun getMergeInfo(info: SyncInfo): MergeInfo
 }

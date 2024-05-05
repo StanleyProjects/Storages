@@ -33,6 +33,7 @@ class Described<T : Any>(
         return "{id: $id, info: $info, item: ${item::class.java.name}}"
     }
 
+    @Suppress("ReturnCount")
     override fun equals(other: Any?): Boolean {
         if (other !is Described<*>) return false
         if (other.id != id) return false

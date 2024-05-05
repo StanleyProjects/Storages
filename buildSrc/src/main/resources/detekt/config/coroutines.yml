@@ -1,0 +1,17 @@
+# 2022/06/12
+
+coroutines:
+  active: true
+  GlobalCoroutineUsage:
+    active: true
+  InjectDispatcher:
+    active: true
+    dispatcherNames: ['IO', 'Default', 'Unconfined']
+  RedundantSuspendModifier:
+    active: true
+  SleepInsteadOfDelay:
+    active: true
+#  SuspendFunWithCoroutineScopeReceiver:
+#    active: true # todo
+  SuspendFunWithFlowReturnType:
+    active: true

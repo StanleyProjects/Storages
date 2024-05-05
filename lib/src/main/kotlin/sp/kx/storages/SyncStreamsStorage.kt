@@ -1,10 +1,173 @@
 package sp.kx.storages
 
+import java.io.InputStream
+import java.io.OutputStream
+import java.util.Base64
 import java.util.UUID
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-abstract class SyncStreamsStorage<T : Any>(id: UUID) : StreamsStorage<T>(id), SyncStorage<T> {
-    override fun merge(info: MergeInfo): List<Described<ByteArray>> {
+@Suppress(
+    "MagicNumber",
+    "TooManyFunctions",
+)
+abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<T> {
+    override val hash: String
+        get() {
+            val builder = StringBuilder()
+            inputStream().use { stream ->
+                val reader = stream.bufferedReader()
+                reader.readLine() // 0) deleted
+                val size = reader.readLine().toInt() // 1) items size
+                for (ignored in 0 until size) {
+                    reader.readLine() // 0) item id
+                    val split = reader.readLine().split(",")
+                    check(split.size == 3)
+                    builder.append(split[2])
+                    reader.readLine() // 2) item
+                }
+            }
+            return hash(builder.toString().toByteArray())
+        }
+    override val items: List<Described<T>>
+        get() {
+            return inputStream().use { stream ->
+                val reader = stream.bufferedReader()
+                reader.readLine() // 0) deleted
+                val size = reader.readLine().toInt() // 1) items size
+                (0 until size).map { _ ->
+                    val id = UUID.fromString(reader.readLine()) // 0) item id
+                    val info = reader.readLine().split(",").let { split ->
+                        check(split.size == 3)
+                        ItemInfo(
+                            created = split[0].toLong().milliseconds,
+                            updated = split[1].toLong().milliseconds,
+                            hash = split[2],
+                        )
+                    }
+                    val item = decode(base64(reader.readLine())) // 2) item
+                    Described(
+                        id = id,
+                        info = info,
+                        item = item,
+                    )
+                }
+            }
+        }
+    override val deleted: Set<UUID>
+        get() {
+            return inputStream().use { stream ->
+                val reader = stream.bufferedReader()
+                reader.readLine()
+                    .split(",")
+                    .filter { it.isNotBlank() }
+                    .map(UUID::fromString)
+                    .toSet()
+            }
+        }
+
+    private fun ItemInfo.toLine(): String {
+        return StringBuilder()
+            .append(created.inWholeMilliseconds)
+            .append(",")
+            .append(updated.inWholeMilliseconds)
+            .append(",")
+            .append(hash)
+            .toString()
+    }
+
+    private fun ByteArray.base64(): String {
+        return Base64.getEncoder().encodeToString(this)
+    }
+
+    private fun base64(value: String): ByteArray {
+        return Base64.getDecoder().decode(value)
+    }
+
+    private fun write(
+        items: List<Described<T>>,
+        deleted: Set<UUID> = this.deleted,
+    ) {
+        outputStream().use { stream ->
+            val writer = stream.bufferedWriter()
+            writer.write(deleted.joinToString(separator = ",") { it.toString() })
+            writer.newLine()
+            writer.write(items.size.toString())
+            for (it in items) {
+                writer.newLine()
+                writer.write(it.id.toString())
+                writer.newLine()
+                writer.write(it.info.toLine())
+                writer.newLine()
+                writer.write(encode(it.item).base64())
+            }
+            writer.flush()
+        }
+    }
+
+    protected abstract fun now(): Duration
+    protected abstract fun randomUUID(): UUID
+    protected abstract fun hash(bytes: ByteArray): String
+    protected abstract fun encode(item: T): ByteArray
+    protected abstract fun decode(bytes: ByteArray): T
+    protected abstract fun inputStream(): InputStream
+    protected abstract fun outputStream(): OutputStream
+
+    override fun delete(id: UUID): Boolean {
+        val items = items.toMutableList()
+        for (index in items.indices) {
+            val item = items[index]
+            if (item.id == id) {
+                val oldItem = items.removeAt(index)
+                check(oldItem.id == id)
+                write(
+                    items = items,
+                    deleted = deleted + id,
+                )
+                return true
+            }
+        }
+        return false
+    }
+
+    override fun update(id: UUID, item: T): ItemInfo? {
+        val items = items.toMutableList()
+        for (index in items.indices) {
+            val it = items[index]
+            if (it.id == id) {
+                val oldItem = items.removeAt(index)
+                check(oldItem.id == id)
+                val described = it.copy(
+                    updated = now(),
+                    hash = hash(encode(item)),
+                    item = item,
+                )
+                items.add(described)
+                write(items = items.sortedBy { it.info.created })
+                return described.info
+            }
+        }
+        return null
+    }
+
+    override fun add(item: T): Described<T> {
+        val items = items.toMutableList()
+        val created = now()
+        val described = Described(
+            id = randomUUID(),
+            info = ItemInfo(
+                created = created,
+                updated = created,
+                hash = hash(encode(item)),
+            ),
+            item = item,
+        )
+        items.add(described)
+        write(items = items.sortedBy { it.info.created })
+        return described
+    }
+
+    override fun merge(info: MergeInfo): CommitInfo {
         val download = mutableListOf<Described<ByteArray>>()
         val newItems = mutableListOf<Described<T>>()
         for (item in this.items) {
@@ -16,27 +179,33 @@ abstract class SyncStreamsStorage<T : Any>(id: UUID) : StreamsStorage<T>(id), Sy
         for (item in info.items) {
             newItems += item.map(::decode)
         }
+        val deleted = this.deleted
         write(
             items = newItems.sortedBy { it.info.created },
-            deleted = this.deleted + info.deleted,
+            deleted = deleted + info.deleted,
         )
-        return download
+        return CommitInfo(
+            hash = hash,
+            items = download,
+            deleted = deleted,
+        )
     }
 
-    override fun merge(items: List<Described<ByteArray>>, deleted: Set<UUID>) {
+    override fun merge(info: CommitInfo) {
         val newItems = mutableListOf<Described<T>>()
         for (item in this.items) {
-            if (deleted.contains(item.id)) continue
-            if (items.any { it.id == item.id }) continue
+            if (info.deleted.contains(item.id)) continue
+            if (info.items.any { it.id == item.id }) continue
             newItems += item
         }
-        for (item in items) {
+        for (item in info.items) {
             newItems += item.map(::decode)
         }
         write(
             items = newItems.sortedBy { it.info.created },
-            deleted = this.deleted + deleted,
+            deleted = this.deleted + info.deleted,
         )
+        check(hash == info.hash)
     }
 
     override fun getSyncInfo(): SyncInfo {
@@ -50,18 +219,18 @@ abstract class SyncStreamsStorage<T : Any>(id: UUID) : StreamsStorage<T>(id), Sy
                 .map(UUID::fromString)
                 .toSet()
             val size = reader.readLine().toInt() // 1) items size
-            (0 until size).map { _ ->
+            for (ignored in 0 until size) {
                 val id = UUID.fromString(reader.readLine()) // 0) item id
-                meta[id] = reader.readLine().split(",").let { split ->
-                    check(split.size == 3)
-                    ItemInfo(
-                        created = split[0].toLong().milliseconds,
-                        updated = split[1].toLong().milliseconds,
-                        hash = split[2],
-                    )
-                }
+                val split = reader.readLine().split(",")
+                check(split.size == 3)
+                @Suppress("IgnoredReturnValue")
+                meta[id] = ItemInfo(
+                    created = split[0].toLong().milliseconds,
+                    updated = split[1].toLong().milliseconds,
+                    hash = split[2],
+                )
                 reader.readLine() // 2) item
-            }.toList()
+            }
         }
         return SyncInfo(
             meta = meta,
