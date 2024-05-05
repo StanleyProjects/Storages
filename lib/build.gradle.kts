@@ -155,6 +155,40 @@ task<Detekt>("check", "CodeQuality") {
     }
 }
 
+task<Detekt>("checkDocumentation") {
+    val configs = setOf(
+        "common",
+        "documentation",
+    ).map { config ->
+        buildSrc.dir("src/main/resources/detekt/config")
+            .file("$config.yml")
+            .existing()
+            .file()
+            .filled()
+    }
+    jvmTarget = Version.jvmTarget
+    source = sourceSets.main.get().allSource
+    config.setFrom(configs)
+    val report = buildDir()
+        .dir("reports/analysis/documentation/html")
+        .asFile("index.html")
+    reports {
+        html {
+            required = true
+            outputLocation = report
+        }
+        md.required = false
+        sarif.required = false
+        txt.required = false
+        xml.required = false
+    }
+    val detektTask = tasks.getByName<Detekt>("detektMain")
+    classpath.setFrom(detektTask.classpath)
+    doFirst {
+        println("Analysis report: ${report.absolutePath}")
+    }
+}
+
 "unstable".also { variant ->
     val version = "${version}u-SNAPSHOT"
     tasks.create("check", variant, "Readme") {
