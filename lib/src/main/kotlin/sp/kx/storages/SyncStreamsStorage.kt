@@ -10,22 +10,20 @@ import kotlin.time.Duration.Companion.milliseconds
 abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<T> {
     override val hash: String
         get() {
-            // todo string builder
-            val hashes = inputStream().use { stream ->
+            val builder = StringBuilder()
+            inputStream().use { stream ->
                 val reader = stream.bufferedReader()
                 reader.readLine() // 0) deleted
                 val size = reader.readLine().toInt() // 1) items size
                 (0 until size).map { _ ->
                     reader.readLine() // 0) item id
-                    val hash = reader.readLine().split(",").let { split ->
-                        check(split.size == 3)
-                        split[2]
-                    }
+                    val split = reader.readLine().split(",")
+                    check(split.size == 3)
+                    builder.append(split[2])
                     reader.readLine() // 2) item
-                    hash
                 }
             }
-            return hash(hashes.joinToString(separator = "").toByteArray())
+            return hash(builder.toString().toByteArray())
         }
     override val items: List<Described<T>>
         get() {
@@ -82,7 +80,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
         return Base64.getDecoder().decode(this)
     }
 
-    protected fun write(
+    private fun write(
         items: List<Described<T>>,
         deleted: Set<UUID> = this.deleted,
     ) {
