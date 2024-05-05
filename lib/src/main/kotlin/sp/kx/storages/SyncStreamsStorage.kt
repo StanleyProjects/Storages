@@ -15,7 +15,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
                 val reader = stream.bufferedReader()
                 reader.readLine() // 0) deleted
                 val size = reader.readLine().toInt() // 1) items size
-                (0 until size).map { _ ->
+                for (i in 0 until size) {
                     reader.readLine() // 0) item id
                     val split = reader.readLine().split(",")
                     check(split.size == 3)
@@ -47,7 +47,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
                         info = info,
                         item = item,
                     )
-                }.toList()
+                }
             }
         }
     override val deleted: Set<UUID>
@@ -213,18 +213,17 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
                 .map(UUID::fromString)
                 .toSet()
             val size = reader.readLine().toInt() // 1) items size
-            (0 until size).map { _ ->
+            for (i in 0 until size) {
                 val id = UUID.fromString(reader.readLine()) // 0) item id
-                meta[id] = reader.readLine().split(",").let { split ->
-                    check(split.size == 3)
-                    ItemInfo(
-                        created = split[0].toLong().milliseconds,
-                        updated = split[1].toLong().milliseconds,
-                        hash = split[2],
-                    )
-                }
+                val split = reader.readLine().split(",")
+                check(split.size == 3)
+                meta[id] = ItemInfo(
+                    created = split[0].toLong().milliseconds,
+                    updated = split[1].toLong().milliseconds,
+                    hash = split[2],
+                )
                 reader.readLine() // 2) item
-            }.toList()
+            }
         }
         return SyncInfo(
             meta = meta,
