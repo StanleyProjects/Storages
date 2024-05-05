@@ -129,4 +129,9 @@ internal class SyncStoragesTest {
             }
         }
     }
+
+    @Test
+    fun hashesTest() {
+        TODO("SyncStoragesTest:hashesTest")
+    }
 }
