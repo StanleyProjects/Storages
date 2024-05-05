@@ -1,6 +1,6 @@
 package sp.service.sample
 
-import sp.kx.storages.SyncStorage
+import sp.kx.storages.Storage
 import sp.kx.storages.SyncStreamsStorage
 import java.io.File
 import java.io.InputStream
@@ -48,12 +48,11 @@ private class FileStorage : SyncStreamsStorage<Foo>(
     }
 }
 
-private fun SyncStorage<out Any>.println() {
+private fun Storage<out Any>.println() {
     val message = """
         id: $id
         hash: $hash
         items: $items
-        deleted: $deleted
     """.trimIndent()
     println(message)
 }

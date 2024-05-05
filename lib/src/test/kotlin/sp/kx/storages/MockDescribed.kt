@@ -14,10 +14,14 @@ internal fun <T : Any> mockDescribed(
     )
 }
 
-internal fun mockDescribed(pointer: Int): Described<String> {
+internal fun <T : Any> mockDescribed(pointer: Int, item: T): Described<T> {
     return mockDescribed(
         id = mockUUID(pointer = pointer),
         info = mockItemInfo(pointer = pointer),
-        item = "item:$pointer",
+        item = item,
     )
+}
+
+internal fun mockDescribed(pointer: Int): Described<String> {
+    return mockDescribed(pointer = pointer, item = "item:$pointer")
 }

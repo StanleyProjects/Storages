@@ -7,6 +7,21 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * An implementation of [SyncStorage] that uses input and output streams to write and read data.
+ *
+ * Usage:
+ * ```
+ * class FooStorage : SyncStreamsStorage<Foo>(
+ *     id = UUID.fromString("43518ed6-cda2-48c3-bd28-fed6fab80101"),
+ * ) {
+ * ...
+ * }
+ * val storage: SyncStorage<Foo> = FooStorage()
+ * ```
+ * @author [Stanley Wintergreen](https://github.com/kepocnhh)
+ * @since 0.3.1
+ */
 @Suppress(
     "MagicNumber",
     "TooManyFunctions",
@@ -54,16 +69,17 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
                 }
             }
         }
-    override val deleted: Set<UUID>
+    private val deleted: Set<UUID>
         get() {
-            return inputStream().use { stream ->
+            val line = inputStream().use { stream ->
                 val reader = stream.bufferedReader()
                 reader.readLine()
-                    .split(",")
-                    .filter { it.isNotBlank() }
-                    .map(UUID::fromString)
-                    .toSet()
             }
+            if (line.isEmpty()) return emptySet()
+            return line
+                .split(",")
+                .map(UUID::fromString)
+                .toSet()
         }
 
     private fun ItemInfo.toLine(): String {

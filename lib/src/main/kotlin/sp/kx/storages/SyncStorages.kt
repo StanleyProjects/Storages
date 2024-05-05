@@ -2,9 +2,38 @@ package sp.kx.storages
 
 import java.util.UUID
 
+/**
+ * A tool for working with synchronized data storages.
+ *
+ * Usage:
+ * ```
+ * val storages = SyncStorages.create(FooStorage())
+ * val storage = storages.require(UUID.fromString("43518ed6-cda2-48c3-bd28-fed6fab80101"))
+ * println("storage: ${storage.id}")
+ * ```
+ * @author [Stanley Wintergreen](https://github.com/kepocnhh)
+ * @since 0.4.1
+ */
 class SyncStorages private constructor(
     private val map: Map<Class<out Any>, SyncStorage<out Any>>,
 ) {
+    /**
+     * Builder class for creating [SyncStorages] with multiple [SyncStorage]s.
+     *
+     * Usage:
+     * ```
+     * val storages = SyncStorages.Builder()
+     *     .add(FooStorage())
+     *     .add(BarStorage())
+     *     .build()
+     * val foo = storages.require(UUID.fromString("43518ed6-cda2-48c3-bd28-fed6fab80101"))
+     * println("storage: ${foo.id}")
+     * val bar = storages.require<Bar>()
+     * println("storage: ${bar.id}")
+     * ```
+     * @author [Stanley Wintergreen](https://github.com/kepocnhh)
+     * @since 0.4.1
+     */
     class Builder {
         private val list = mutableListOf<Pair<Class<out Any>, SyncStorage<out Any>>>()
 
@@ -51,6 +80,10 @@ class SyncStorages private constructor(
 
     inline fun <reified T : Any> require(): SyncStorage<T> {
         return get(T::class.java) ?: error("No storage by type: \"${T::class.java.name}\"!")
+    }
+
+    fun hashes(): Map<UUID, String> {
+        return map.values.associate { it.id to it.hash }
     }
 
     companion object {

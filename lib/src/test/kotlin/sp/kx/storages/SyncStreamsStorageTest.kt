@@ -7,24 +7,40 @@ import org.junit.jupiter.api.Assertions.assertThrowsExactly
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.UUID
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class SyncStreamsStorageTest {
+    private fun ItemInfo.assert(
+        storageId: UUID,
+        itemId: UUID,
+        created: Duration,
+        updated: Duration,
+        hash: String,
+    ) {
+        assertEquals(created, this.created, "storageId: $storageId\nitemId: $itemId\ncreated:\n")
+        assertEquals(updated, this.updated, "storageId: $storageId\nitemId: $itemId\nupdated:\n")
+        assertEquals(hash, this.hash, "storageId: $storageId\nitemId: $itemId\nhash:\n")
+    }
+
     private fun <T : Any> SyncStorage<T>.assert(
         id: UUID,
-        deleted: Set<UUID> = emptySet(),
         hash: String,
         items: List<Described<T>> = emptyList(),
     ) {
         assertEquals(id, this.id)
-        assertEquals(deleted.size, this.deleted.size, "deleted:size")
-        assertEquals(deleted, this.deleted, "deleted")
         assertEquals(hash, this.hash)
         assertEquals(items.size, this.items.size)
         items.forEachIndexed { index, expected ->
             val actual = this.items[index]
             assertEquals(expected.id, actual.id)
-            assertEquals(expected.info, actual.info, "id: ${expected.id}")
+            actual.info.assert(
+                storageId = id,
+                itemId = expected.id,
+                created = expected.info.created,
+                updated = expected.info.updated,
+                hash = expected.info.hash,
+            )
             assertEquals(expected, actual)
         }
         assertEquals(items, this.items)
@@ -162,7 +178,6 @@ internal class SyncStreamsStorageTest {
             id = storageId,
             hash = storageHashUpdated,
             items = updatedItems,
-            deleted = setOf(defaultItems[1].id),
         )
     }
 
@@ -180,7 +195,6 @@ internal class SyncStreamsStorageTest {
         )
         storage.assert(
             id = id,
-            deleted = deleted,
             hash = storageHash,
         )
     }
@@ -239,7 +253,6 @@ internal class SyncStreamsStorageTest {
         storage.assert(
             id = storageId,
             hash = storageEmptyHash,
-            deleted = setOf(expected.id),
         )
     }
 
@@ -451,7 +464,6 @@ internal class SyncStreamsStorageTest {
         storage.assert(
             id = id,
             hash = storageEmptyHash,
-            deleted = setOf(expected.id),
         )
         storage.getSyncInfo().assert(deleted = setOf(expected.id))
     }
@@ -576,7 +588,6 @@ internal class SyncStreamsStorageTest {
             id = storageId,
             hash = storageRHash,
             items = rItems,
-            deleted = setOf(defaultItems[1].id),
         )
         //
         time = (3_000 + 0).milliseconds
@@ -586,7 +597,6 @@ internal class SyncStreamsStorageTest {
             id = storageId,
             hash = storageTHash,
             items = tItems,
-            deleted = setOf(defaultItems[2].id),
         )
         //
         val rSyncInfo = rStorage.getSyncInfo()
@@ -623,18 +633,15 @@ internal class SyncStreamsStorageTest {
             deleted = setOf(defaultItems[1].id),
         )
         tStorage.merge(commitInfo)
-        val deletedMerged = setOf(defaultItems[1].id, defaultItems[2].id)
         rStorage.assert(
             id = storageId,
             hash = storageHashMerged,
             items = itemsMerged,
-            deleted = deletedMerged,
         )
         tStorage.assert(
             id = storageId,
             hash = storageHashMerged,
             items = itemsMerged,
-            deleted = deletedMerged,
         )
     }
 
@@ -737,13 +744,11 @@ internal class SyncStreamsStorageTest {
             id = storageId,
             hash = "merged:hash",
             items = itemsMerged,
-            deleted = emptySet(),
         )
         tStorage.assert(
             id = storageId,
             hash = "merged:hash",
             items = itemsMerged,
-            deleted = emptySet(),
         )
     }
 }
