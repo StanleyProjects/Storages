@@ -9,7 +9,7 @@ import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class SyncStreamsStorageTest {
-    private fun <T : Any> Storage<T>.assert(
+    private fun <T : Any> SyncStorage<T>.assert(
         id: UUID,
         deleted: Set<UUID> = emptySet(),
         hash: String,
@@ -49,9 +49,9 @@ internal class SyncStreamsStorageTest {
     ) {
         assertEquals(deleted.size, this.deleted.size)
         assertEquals(deleted, this.deleted)
-        assertEquals(download.size, this.download.size)
+        assertEquals(download.size, this.download.size, "download:\n$download\n${this.download}\n")
         assertEquals(download, this.download)
-        assertEquals(items.size, this.items.size)
+        assertEquals(items.size, this.items.size, "upload:\n${items.map { it.id }}\n${this.items.map { it.id }}\n")
         items.forEachIndexed { index, expected ->
             val actual = this.items[index]
             assertEquals(expected.id, actual.id)
@@ -574,30 +574,25 @@ internal class SyncStreamsStorageTest {
         var itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
         val uuidProvider = mockProvider { itemId }
         val defaultItems = (0..3).map { index ->
-            Described(
-                id = mockUUID(index),
-                info = ItemInfo(
-                    created = (1_000 + index).milliseconds,
-                    updated = (1_000 + index).milliseconds,
-                    hash = "item:hash:$index",
-                ),
-                item = "item:$index",
-            )
+            mockDescribed(pointer = index)
         }
         check(defaultItems.size == 4)
         val rItems = mutableListOf<Described<String>>().also {
             it.add(defaultItems[0].copy(updated = (2_000 + 0).milliseconds, hash = "item:hash:0:updated", item = "item:0:updated"))
             it.add(defaultItems[2])
             it.add(defaultItems[3])
+            it.add(mockDescribed(pointer = 11))
         }
-        check(rItems.size == 3)
+        check(rItems.size == 4)
         val tItems = mutableListOf<Described<String>>().also {
             it.add(defaultItems[0])
             it.add(defaultItems[1])
             it.add(defaultItems[3].copy(updated = (3_000 + 0).milliseconds, hash = "item:hash:3:updated", item = "item:3:updated"))
+            it.add(mockDescribed(pointer = 21))
         }
-        check(tItems.size == 3)
-        val storageHash = "storageHash"
+        check(tItems.size == 4)
+        val storageRDefaultHash = "storageRDHash"
+        val storageTDefaultHash = "storageTDHash"
         val storageRHash = "storageRHash"
         val storageTHash = "storageTHash"
         val hashes = defaultItems.map {
@@ -607,7 +602,8 @@ internal class SyncStreamsStorageTest {
         } + tItems.map {
             it.item.toByteArray() to it.info.hash
         } + listOf(
-            defaultItems.joinToString(separator = "") { it.info.hash }.toByteArray() to storageHash,
+            (defaultItems + rItems[3]).joinToString(separator = "") { it.info.hash }.toByteArray() to storageRDefaultHash,
+            (defaultItems + tItems[3]).joinToString(separator = "") { it.info.hash }.toByteArray() to storageTDefaultHash,
             rItems.joinToString(separator = "") { it.info.hash }.toByteArray() to storageRHash,
             tItems.joinToString(separator = "") { it.info.hash }.toByteArray() to storageTHash,
         )
@@ -638,15 +634,27 @@ internal class SyncStreamsStorageTest {
             rStorage.add(described.item)
             tStorage.add(described.item)
         }
+        11.also { pointer ->
+            val described = mockDescribed(pointer = pointer)
+            itemId = described.id
+            time = (1_000 + pointer).milliseconds
+            rStorage.add(described.item)
+        }
+        21.also { pointer ->
+            val described = mockDescribed(pointer = pointer)
+            itemId = described.id
+            time = (1_000 + pointer).milliseconds
+            tStorage.add(described.item)
+        }
         rStorage.assert(
             id = storageId,
-            hash = storageHash,
-            items = defaultItems,
+            hash = storageRDefaultHash,
+            items = defaultItems + rItems[3],
         )
         tStorage.assert(
             id = storageId,
-            hash = storageHash,
-            items = defaultItems,
+            hash = storageTDefaultHash,
+            items = defaultItems + tItems[3],
         )
         //
         time = (2_000 + 0).milliseconds
@@ -673,8 +681,9 @@ internal class SyncStreamsStorageTest {
         rSyncInfo.assert(meta = rItems.associate { it.id to it.info }, deleted = setOf(defaultItems[1].id))
         val tMergeInfo = tStorage.getMergeInfo(rSyncInfo)
         tMergeInfo.assert(
-            download = setOf(defaultItems[0].id),
+            download = setOf(defaultItems[0].id, rItems[3].id),
             items = listOf(
+                tItems[3].map { it.toByteArray() },
                 tItems[2].map { it.toByteArray() },
             ),
             deleted = setOf(defaultItems[2].id),
@@ -684,8 +693,9 @@ internal class SyncStreamsStorageTest {
         tSyncInfo.assert(meta = tItems.associate { it.id to it.info }, deleted = setOf(defaultItems[2].id))
         val rMergeInfo = rStorage.getMergeInfo(tSyncInfo)
         rMergeInfo.assert(
-            download = setOf(defaultItems[3].id),
+            download = setOf(defaultItems[3].id, tItems[3].id),
             items = listOf(
+                rItems[3].map { it.toByteArray() },
                 rItems[0].map { it.toByteArray() },
             ),
             deleted = setOf(defaultItems[1].id),
