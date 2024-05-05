@@ -86,4 +86,47 @@ internal class SyncStoragesTest {
                 .build()
         }
     }
+
+    @Test
+    fun requireTest() {
+        val storage1 = MockSyncStreamsStorage<String>(id = mockUUID(1))
+        val storage2 = MockSyncStreamsStorage<Int>(id = mockUUID(2))
+        val storages = SyncStorages.Builder()
+            .add(storage1)
+            .add(storage2)
+            .build()
+        val notExists = mockUUID(3)
+        check(notExists != storage1.id)
+        check(notExists != storage2.id)
+        assertThrowsExactly(IllegalStateException::class.java) {
+            storages.require(notExists)
+        }
+        assertThrowsExactly(IllegalStateException::class.java) {
+            storages.require<Boolean>()
+        }
+        storage1.also { expected ->
+            storages.require(expected.id).also { actual ->
+                assertEquals(expected.id, actual.id)
+                assertTrue(expected === actual)
+            }
+        }
+        storage2.also { expected ->
+            storages.require(expected.id).also { actual ->
+                assertEquals(expected.id, actual.id)
+                assertTrue(expected === actual)
+            }
+        }
+        storage1.also { expected ->
+            storages.require<String>().also { actual ->
+                assertEquals(expected.id, actual.id)
+                assertTrue(expected === actual)
+            }
+        }
+        storage2.also { expected ->
+            storages.require<Int>().also { actual ->
+                assertEquals(expected.id, actual.id)
+                assertTrue(expected === actual)
+            }
+        }
+    }
 }
