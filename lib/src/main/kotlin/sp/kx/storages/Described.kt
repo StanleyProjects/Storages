@@ -4,6 +4,12 @@ import java.util.Objects
 import java.util.UUID
 import kotlin.time.Duration
 
+/**
+ * A wrapper for storing data along with technical information about that data.
+ *
+ * @author [Stanley Wintergreen](https://github.com/kepocnhh)
+ * @since 0.4.1
+ */
 class Described<T : Any>(
     val id: UUID,
     val info: ItemInfo,
