@@ -2,6 +2,23 @@ package sp.kx.storages
 
 import java.util.UUID
 
+/**
+ * A tool for working with synchronized data storages.
+ *
+ * Usage:
+ * ```
+ * val storages = SyncStorages.Builder()
+ *     .add(FooStorage())
+ *     .add(BarStorage())
+ *     .build()
+ * val foo = storages.require(UUID.fromString("43518ed6-cda2-48c3-bd28-fed6fab80101"))
+ * println("storage: ${foo.id}")
+ * val bar = storages.require<Bar>()
+ * println("storage: ${bar.id}")
+ * ```
+ * @author [Stanley Wintergreen](https://github.com/kepocnhh)
+ * @since 0.4.1
+ */
 class SyncStorages private constructor(
     private val map: Map<Class<out Any>, SyncStorage<out Any>>,
 ) {
