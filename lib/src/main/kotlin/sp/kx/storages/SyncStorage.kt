@@ -12,15 +12,15 @@ package sp.kx.storages
  * val syncInfo = receiver.getSyncInfo()
  * val mergeInfo = transmitter.getMergeInfo(syncInfo)
  * val commitInfo = receiver.merge(mergeInfo)
- * transmitter.merge(commitInfo)
+ * transmitter.commit(commitInfo)
  * assertEquals(receiver.hash, transmitter.hash)
  * ```
  * @author [Stanley Wintergreen](https://github.com/kepocnhh)
- * @since 0.4.1
+ * @since 0.4.2
  */
 interface SyncStorage<T : Any> : MutableStorage<T> {
     fun getSyncInfo(): SyncInfo
     fun getMergeInfo(info: SyncInfo): MergeInfo
     fun merge(info: MergeInfo): CommitInfo
-    fun merge(info: CommitInfo)
+    fun commit(info: CommitInfo)
 }

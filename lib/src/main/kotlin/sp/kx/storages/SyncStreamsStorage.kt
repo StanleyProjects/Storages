@@ -207,7 +207,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
         )
     }
 
-    override fun merge(info: CommitInfo) {
+    override fun commit(info: CommitInfo) {
         val newItems = mutableListOf<Described<T>>()
         for (item in this.items) {
             if (info.deleted.contains(item.id)) continue

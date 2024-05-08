@@ -86,6 +86,22 @@ class SyncStorages private constructor(
         return map.values.associate { it.id to it.hash }
     }
 
+    fun getSyncInfo(): Map<UUID, SyncInfo> {
+        TODO("SyncStorages:getSyncInfo")
+    }
+
+    fun getMergeInfo(): Map<UUID, MergeInfo> {
+        TODO("SyncStorages:getMergeInfo")
+    }
+
+    fun merge(infos: Map<UUID, MergeInfo>): Map<UUID, CommitInfo> {
+        TODO("SyncStorages:merge")
+    }
+
+    fun commit(infos: Map<UUID, CommitInfo>) {
+        TODO("SyncStorages:commit")
+    }
+
     companion object {
         fun <T : Any> create(storage: SyncStorage<T>, type: Class<T>): SyncStorages {
             return SyncStorages(map = mapOf(type to storage))
