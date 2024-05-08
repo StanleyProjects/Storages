@@ -11,6 +11,38 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class SyncStreamsStorageTest {
+    companion object {
+        fun assert(
+            expected: MergeInfo,
+            actual: MergeInfo,
+        ) {
+            actual.assert(
+                download = expected.download,
+                items = expected.items,
+                deleted = expected.deleted,
+            )
+        }
+
+        private fun MergeInfo.assert(
+            download: Set<UUID>,
+            items: List<Described<ByteArray>>,
+            deleted: Set<UUID>,
+        ) {
+            assertEquals(deleted.size, this.deleted.size, "deleted:\n$deleted\n${this.deleted}\n")
+            assertEquals(deleted, this.deleted, "deleted:\n")
+            assertEquals(download.size, this.download.size, "download:\n$download\n${this.download}\n")
+            assertEquals(download, this.download, "download:\n")
+            assertEquals(items.size, this.items.size, "upload:\n${items.map { it.id }}\n${this.items.map { it.id }}\n")
+            val sorted = this.items.sortedBy { it.info.created }
+            items.sortedBy { it.info.created }.forEachIndexed { index, expected ->
+                val actual = sorted[index]
+                assertEquals(expected.id, actual.id)
+                assertEquals(expected.info, actual.info, "id: ${expected.id}")
+                assertEquals(expected, actual)
+            }
+        }
+    }
+
     private fun ItemInfo.assert(
         storageId: UUID,
         itemId: UUID,
@@ -57,24 +89,6 @@ internal class SyncStreamsStorageTest {
         }
         assertEquals(deleted.size, this.deleted.size)
         assertEquals(deleted, this.deleted)
-    }
-
-    private fun MergeInfo.assert(
-        download: Set<UUID>,
-        items: List<Described<ByteArray>>,
-        deleted: Set<UUID>,
-    ) {
-        assertEquals(deleted.size, this.deleted.size)
-        assertEquals(deleted, this.deleted)
-        assertEquals(download.size, this.download.size, "download:\n$download\n${this.download}\n")
-        assertEquals(download, this.download)
-        assertEquals(items.size, this.items.size, "upload:\n${items.map { it.id }}\n${this.items.map { it.id }}\n")
-        items.forEachIndexed { index, expected ->
-            val actual = this.items[index]
-            assertEquals(expected.id, actual.id)
-            assertEquals(expected.info, actual.info, "id: ${expected.id}")
-            assertEquals(expected, actual)
-        }
     }
 
     private fun CommitInfo.assert(
