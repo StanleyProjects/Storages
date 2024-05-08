@@ -50,9 +50,9 @@ internal class SyncStreamsStorageTest {
         meta: Map<UUID, ItemInfo> = emptyMap(),
         deleted: Set<UUID> = emptySet(),
     ) {
-        assertEquals(meta.size, this.meta.size)
+        assertEquals(meta.size, this.infos.size)
         meta.forEach { (itemId, expected) ->
-            val actual = this.meta[itemId] ?: error("No item info!")
+            val actual = this.infos[itemId] ?: error("No item info!")
             assertEquals(expected, actual, "id: $itemId")
         }
         assertEquals(deleted.size, this.deleted.size)

@@ -87,7 +87,7 @@ class SyncStorages private constructor(
     }
 
     fun getSyncInfo(): Map<UUID, SyncInfo> {
-        TODO("SyncStorages:getSyncInfo")
+        return map.values.associate { it.id to it.getSyncInfo() }
     }
 
     fun getMergeInfo(): Map<UUID, MergeInfo> {

@@ -141,6 +141,14 @@ internal class SyncStoragesTest {
         }
     }
 
+    private fun SyncStorages.assertSyncInfo(expected: Map<UUID, SyncInfo>) {
+        val actual = getSyncInfo()
+        assertEquals(expected.size, actual.size, "SyncInfo:\n$expected\n$actual\n")
+        for ((id, value) in expected) {
+            assertEquals(value, actual[id] ?: error("No hash by ID: \"$id\"!"))
+        }
+    }
+
     @Test
     fun hashesTest() {
         val storage1Items = listOf(
@@ -204,7 +212,70 @@ internal class SyncStoragesTest {
 
     @Test
     fun getSyncInfoTest() {
-        TODO("SyncStoragesTest:getSyncInfoTest")
+        val storage1Items = listOf(
+            mockDescribed(pointer = 11),
+            mockDescribed(pointer = 12),
+        )
+        val storage2Items = listOf(
+            mockDescribed(pointer = 21, 21),
+        )
+        val hashes = listOf(
+            storage1Items.joinToString(separator = "") { it.info.hash }.toByteArray() to "1:default",
+            storage2Items.joinToString(separator = "") { it.info.hash }.toByteArray() to "2:default",
+        ) + storage1Items.map {
+            it.item.toByteArray() to it.info.hash
+        } + storage2Items.map {
+            it.item.toString().toByteArray() to it.info.hash
+        }
+        var time = 1.milliseconds
+        val timeProvider = mockProvider { time }
+        var itemId = mockUUID()
+        val uuidProvider = mockProvider { itemId }
+        val storages = SyncStorages.Builder()
+            .add(
+                MockSyncStreamsStorage<String>(
+                    id = mockUUID(1),
+                    hashes = hashes,
+                    timeProvider = timeProvider,
+                    uuidProvider = uuidProvider,
+                    transformer = storage1Items.map {
+                        it.item.toByteArray() to it.item
+                    },
+                ),
+            )
+            .add(
+                MockSyncStreamsStorage<Int>(
+                    id = mockUUID(2),
+                    hashes = hashes,
+                    timeProvider = timeProvider,
+                    uuidProvider = uuidProvider,
+                    transformer = storage2Items.map {
+                        it.item.toString().toByteArray() to it.item
+                    },
+                ),
+            )
+            .build()
+        storage1Items.forEach { described ->
+            itemId = described.id
+            time = described.info.created
+            storages.require<String>().add(described.item)
+        }
+        check(storages.require<String>().delete(storage1Items.last().id))
+        storage2Items.forEach { described ->
+            itemId = described.id
+            time = described.info.created
+            storages.require<Int>().add(described.item)
+        }
+        val expected = mapOf(
+            mockUUID(1) to mockSyncInfo(
+                infos = mapOf(storage1Items.first().let { it.id to it.info }),
+                deleted = setOf(storage1Items.last().id),
+            ),
+            mockUUID(2) to mockSyncInfo(
+                infos = mapOf(storage2Items.first().let { it.id to it.info }),
+            ),
+        )
+        storages.assertSyncInfo(expected = expected)
     }
 
     @Test
