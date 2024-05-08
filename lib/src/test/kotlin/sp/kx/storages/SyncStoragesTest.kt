@@ -224,60 +224,97 @@ internal class SyncStoragesTest {
 
     @Test
     fun getSyncInfoTest() {
-        val strings = (1..7).map { number ->
+        val strings = (1..5).map { number ->
             mockDescribed(pointer = 10 + number)
         }
-        val stringUpdated = strings[2].copy(
+        val stringTUpdated = strings[2].copy(
             updated = 13.milliseconds,
-            hash = "item:hash:13:updated",
-            item = "item:13:updated",
+            hash = "item:hash:13:t:updated",
+            item = "item:13:t:updated",
         )
-        val stringsUpdated = strings.toMutableList().also {
+        val stringRUpdated = strings[3].copy(
+            updated = 14.milliseconds,
+            hash = "item:hash:14:r:updated",
+            item = "item:14:r:updated",
+        )
+        val stringsTUpdated = strings.toMutableList().also {
             it.removeAt(0)
             it.removeAt(1)
-            it.add(1, stringUpdated)
-            it.add(mockDescribed(pointer = 18))
+            it.add(1, stringTUpdated)
+            it.add(mockDescribed(pointer = 16))
         }.toList()
-        val ints = (1..7).map { number ->
+        val stringsRUpdated = strings.toMutableList().also {
+            it.removeAt(1)
+            it.removeAt(2)
+            it.add(2, stringRUpdated)
+            it.add(mockDescribed(pointer = 17))
+        }.toList()
+        //        01 23 4 5
+        // items: 12|34|5|
+        //         0 12 3 4
+        //     T: _2|T4|5|6
+        //     R: 1_|3R|5| 7
+        val ints = (1..5).map { number ->
             mockDescribed(pointer = 20 + number, item = number)
         }
-        val intUpdated = ints[2].copy(
+        val intTUpdated = ints[2].copy(
             updated = 23.milliseconds,
-            hash = "item:hash:23:updated",
+            hash = "item:hash:23:t:updated",
             item = 123,
         )
-        val intsUpdated = ints.toMutableList().also {
+        val intRUpdated = ints[3].copy(
+            updated = 24.milliseconds,
+            hash = "item:hash:24:r:updated",
+            item = 124,
+        )
+        val intsTUpdated = ints.toMutableList().also {
+            it.removeAt(0)
             it.removeAt(1)
+            it.add(1, intTUpdated)
+            it.add(mockDescribed(pointer = 26, item = 26))
+        }.toList()
+        val intsRUpdated = ints.toMutableList().also {
             it.removeAt(1)
-            it.add(1, intUpdated)
-            it.add(mockDescribed(pointer = 28, item = 28))
+            it.removeAt(2)
+            it.add(2, intRUpdated)
+            it.add(mockDescribed(pointer = 27, item = 27))
         }.toList()
         val stringsTransformer = strings.map {
             it.item.toByteArray() to it.item
         } + listOf(
-            mockDescribed(pointer = 18).let { it.item.toByteArray() to it.item },
-            stringUpdated.let { it.item.toByteArray() to it.item },
+            mockDescribed(pointer = 16).let { it.item.toByteArray() to it.item },
+            mockDescribed(pointer = 17).let { it.item.toByteArray() to it.item },
+            stringTUpdated.let { it.item.toByteArray() to it.item },
+            stringRUpdated.let { it.item.toByteArray() to it.item },
         )
         val intsTransformer = ints.map {
             it.item.toString().toByteArray() to it.item
         } + listOf(
-            mockDescribed(pointer = 28, item = 28).let { it.item.toString().toByteArray() to it.item },
-            intUpdated.let { it.item.toString().toByteArray() to it.item },
+            mockDescribed(pointer = 26, item = 26).let { it.item.toString().toByteArray() to it.item },
+            mockDescribed(pointer = 27, item = 27).let { it.item.toString().toByteArray() to it.item },
+            intTUpdated.let { it.item.toString().toByteArray() to it.item },
+            intRUpdated.let { it.item.toString().toByteArray() to it.item },
         )
         val hashes = listOf(
             strings.hash() to "strings:hash",
             ints.hash() to "ints:hash",
-            stringsUpdated.hash() to "strings:hash:updated",
-            intsUpdated.hash() to "ints:hash:updated",
+            stringsTUpdated.hash() to "strings:hash:t:updated",
+            stringsRUpdated.hash() to "strings:hash:R:updated",
+            intsTUpdated.hash() to "ints:hash:t:updated",
+            intsRUpdated.hash() to "ints:hash:r:updated",
         ) + strings.map {
             it.item.toByteArray() to it.info.hash
         } + ints.map {
             it.item.toString().toByteArray() to it.info.hash
         } + listOf(
-            mockDescribed(pointer = 18).let { it.item.toByteArray() to it.info.hash },
-            stringUpdated.let { it.item.toByteArray() to it.info.hash },
-            mockDescribed(pointer = 28, item = 28).let { it.item.toString().toByteArray() to it.info.hash },
-            intUpdated.let { it.item.toString().toByteArray() to it.info.hash },
+            mockDescribed(pointer = 16).let { it.item.toByteArray() to it.info.hash },
+            mockDescribed(pointer = 17).let { it.item.toByteArray() to it.info.hash },
+            stringTUpdated.let { it.item.toByteArray() to it.info.hash },
+            stringRUpdated.let { it.item.toByteArray() to it.info.hash },
+            mockDescribed(pointer = 26, item = 26).let { it.item.toString().toByteArray() to it.info.hash },
+            mockDescribed(pointer = 27, item = 27).let { it.item.toString().toByteArray() to it.info.hash },
+            intTUpdated.let { it.item.toString().toByteArray() to it.info.hash },
+            intRUpdated.let { it.item.toString().toByteArray() to it.info.hash },
         )
         var time = 1.milliseconds
         val timeProvider = mockProvider { time }
@@ -337,40 +374,81 @@ internal class SyncStoragesTest {
         }
         check(tStorages.hashes() == rStorages.hashes())
         //
-        mockDescribed(pointer = 18).also { described ->
+        mockDescribed(pointer = 16).also { described ->
             itemId = described.id
             time = described.info.created
             tStorages.require<String>().add(described.item)
         }
+        mockDescribed(pointer = 17).also { described ->
+            itemId = described.id
+            time = described.info.created
+            rStorages.require<String>().add(described.item)
+        }
         check(tStorages.require<String>().delete(strings[0].id))
-        stringUpdated.also { described ->
+        check(rStorages.require<String>().delete(strings[1].id))
+        stringTUpdated.also { described ->
             itemId = described.id
             time = described.info.updated
             val info = tStorages.require<String>().update(described.id, described.item)
             checkNotNull(info)
         }
+        stringRUpdated.also { described ->
+            itemId = described.id
+            time = described.info.updated
+            val info = rStorages.require<String>().update(described.id, described.item)
+            checkNotNull(info)
+        }
         //
-        mockDescribed(pointer = 28, item = 28).also { described ->
+        mockDescribed(pointer = 26, item = 26).also { described ->
             itemId = described.id
             time = described.info.created
             tStorages.require<Int>().add(described.item)
         }
-        check(tStorages.require<Int>().delete(ints[1].id))
-        intUpdated.also { described ->
+        mockDescribed(pointer = 27, item = 27).also { described ->
+            itemId = described.id
+            time = described.info.created
+            rStorages.require<Int>().add(described.item)
+        }
+        check(tStorages.require<Int>().delete(ints[0].id))
+        check(rStorages.require<Int>().delete(ints[1].id))
+        intTUpdated.also { described ->
             itemId = described.id
             time = described.info.updated
             val info = tStorages.require<Int>().update(described.id, described.item)
             checkNotNull(info)
         }
+        intRUpdated.also { described ->
+            itemId = described.id
+            time = described.info.updated
+            val info = rStorages.require<Int>().update(described.id, described.item)
+            checkNotNull(info)
+        }
         //
-//        error(strings.map {it.item}) // todo
         tStorages.assertSyncInfo(
             hashes = rStorages.hashes(),
-            expected = mapOf(),
+            expected = mapOf(
+                mockUUID(1) to mockSyncInfo(
+                    infos = stringsTUpdated.associate { it.id to it.info },
+                    deleted = setOf(strings[0].id),
+                ),
+                mockUUID(2) to mockSyncInfo(
+                    infos = intsTUpdated.associate { it.id to it.info },
+                    deleted = setOf(ints[0].id),
+                ),
+            ),
         )
         rStorages.assertSyncInfo(
             hashes = tStorages.hashes(),
-            expected = mapOf(),
+            expected = mapOf(
+                mockUUID(1) to mockSyncInfo(
+                    infos = stringsRUpdated.associate { it.id to it.info },
+                    deleted = setOf(strings[1].id),
+                ),
+                mockUUID(2) to mockSyncInfo(
+                    infos = intsRUpdated.associate { it.id to it.info },
+                    deleted = setOf(ints[1].id),
+                ),
+            ),
         )
     }
 
