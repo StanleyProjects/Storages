@@ -97,16 +97,15 @@ class SyncStorages private constructor(
     }
 
     fun getMergeInfo(infos: Map<UUID, SyncInfo>): Map<UUID, MergeInfo> {
-        val result = mutableMapOf<UUID, MergeInfo>()
-        for ((id, info) in infos) {
-            val storage = get(id = id) ?: continue // todo
-            result[id] = storage.getMergeInfo(info)
+        return infos.mapValues { (id, info) ->
+            require(id = id).getMergeInfo(info)
         }
-        return result
     }
 
     fun merge(infos: Map<UUID, MergeInfo>): Map<UUID, CommitInfo> {
-        TODO("SyncStorages:merge")
+        return infos.mapValues { (id, info) ->
+            require(id = id).merge(info)
+        }
     }
 
     fun commit(infos: Map<UUID, CommitInfo>) {

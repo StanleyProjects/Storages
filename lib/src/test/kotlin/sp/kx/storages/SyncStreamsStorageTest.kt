@@ -41,6 +41,34 @@ internal class SyncStreamsStorageTest {
                 assertEquals(expected, actual)
             }
         }
+
+        fun assert(
+            expected: CommitInfo,
+            actual: CommitInfo,
+        ) {
+            actual.assert(
+                hash = expected.hash,
+                items = expected.items,
+                deleted = expected.deleted,
+            )
+        }
+
+        private fun CommitInfo.assert(
+            hash: String,
+            items: List<Described<ByteArray>>,
+            deleted: Set<UUID>,
+        ) {
+            assertEquals(hash, this.hash)
+            assertEquals(deleted.size, this.deleted.size, "deleted:\n$deleted\n${this.deleted}\n")
+            assertEquals(deleted, this.deleted)
+            assertEquals(items.size, this.items.size, "upload:\n${items.map { it.id }}\n${this.items.map { it.id }}\n")
+            items.forEachIndexed { index, expected ->
+                val actual = this.items[index]
+                assertEquals(expected.id, actual.id)
+                assertEquals(expected.info, actual.info, "id: ${expected.id}")
+                assertEquals(expected, actual)
+            }
+        }
     }
 
     private fun ItemInfo.assert(
@@ -89,23 +117,6 @@ internal class SyncStreamsStorageTest {
         }
         assertEquals(deleted.size, this.deleted.size)
         assertEquals(deleted, this.deleted)
-    }
-
-    private fun CommitInfo.assert(
-        hash: String,
-        items: List<Described<ByteArray>>,
-        deleted: Set<UUID>,
-    ) {
-        assertEquals(hash, this.hash)
-        assertEquals(deleted.size, this.deleted.size, "deleted:\n$deleted\n${this.deleted}\n")
-        assertEquals(deleted, this.deleted)
-        assertEquals(items.size, this.items.size, "upload:\n${items.map { it.id }}\n${this.items.map { it.id }}\n")
-        items.forEachIndexed { index, expected ->
-            val actual = this.items[index]
-            assertEquals(expected.id, actual.id)
-            assertEquals(expected.info, actual.info, "id: ${expected.id}")
-            assertEquals(expected, actual)
-        }
     }
 
     @Test
