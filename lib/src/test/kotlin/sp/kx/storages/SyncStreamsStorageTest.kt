@@ -13,6 +13,15 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class SyncStreamsStorageTest {
     companion object {
         fun assert(
+            expected: Described<out Any>,
+            actual: Described<out Any>,
+        ) {
+            assertEquals(expected.id, actual.id)
+            assert(expected.info, actual.info)
+            assertEquals(expected.item, actual.item, "described: ${expected.id}\n")
+        }
+
+        fun assert(
             expected: MergeInfo,
             actual: MergeInfo,
         ) {
@@ -69,18 +78,27 @@ internal class SyncStreamsStorageTest {
                 assertEquals(expected, actual)
             }
         }
-    }
 
-    private fun ItemInfo.assert(
-        storageId: UUID,
-        itemId: UUID,
-        created: Duration,
-        updated: Duration,
-        hash: String,
-    ) {
-        assertEquals(created, this.created, "storageId: $storageId\nitemId: $itemId\ncreated:\n")
-        assertEquals(updated, this.updated, "storageId: $storageId\nitemId: $itemId\nupdated:\n")
-        assertEquals(hash, this.hash, "storageId: $storageId\nitemId: $itemId\nhash:\n")
+        fun assert(
+            expected: ItemInfo,
+            actual: ItemInfo,
+        ) {
+            assertEquals(expected.created, actual.created)
+            assertEquals(expected.updated, actual.updated)
+            assertEquals(expected.hash, actual.hash)
+        }
+
+        private fun ItemInfo.assert(
+            storageId: UUID,
+            itemId: UUID,
+            created: Duration,
+            updated: Duration,
+            hash: String,
+        ) {
+            assertEquals(created, this.created, "storageId: $storageId\nitemId: $itemId\ncreated:\n")
+            assertEquals(updated, this.updated, "storageId: $storageId\nitemId: $itemId\nupdated:\n")
+            assertEquals(hash, this.hash, "storageId: $storageId\nitemId: $itemId\nhash:\n")
+        }
     }
 
     private fun <T : Any> SyncStorage<T>.assert(

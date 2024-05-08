@@ -253,7 +253,7 @@ internal class SyncStoragesTest {
             it.add(mockDescribed(pointer = 17))
         }.toList()
         val ints = (1..5).map { number ->
-            mockDescribed(pointer = 20 + number, item = number)
+            mockDescribed(pointer = 20 + number, item = 20 + number)
         }
         val intTUpdated = ints[2].copy(
             updated = (1_000 + 123).milliseconds,
@@ -478,7 +478,7 @@ internal class SyncStoragesTest {
             it.add(mockDescribed(pointer = 17))
         }.toList()
         val ints = (1..5).map { number ->
-            mockDescribed(pointer = 20 + number, item = number)
+            mockDescribed(pointer = 20 + number, item = 20 + number)
         }
         val intTUpdated = ints[2].copy(
             updated = (1_000 + 123).milliseconds,
@@ -729,7 +729,7 @@ internal class SyncStoragesTest {
             mockDescribed(pointer = pointer)
         }
         val ints = (1..5).map { number ->
-            mockDescribed(pointer = 20 + number, item = number)
+            mockDescribed(pointer = 20 + number, item = 20 + number)
         }
         val intTUpdated = ints[2].copy(
             updated = (1_000 + 123).milliseconds,
@@ -911,7 +911,9 @@ internal class SyncStoragesTest {
         //     T: _2|T4|5|6
         //     R: 1_|3R|5| 7
         // final:    TR|5|67
-        val tCommitInfo = tStorages.merge(rStorages.getMergeInfo(tStorages.getSyncInfo(rStorages.hashes())))
+        val rMergeInfo = rStorages.getMergeInfo(tStorages.getSyncInfo(rStorages.hashes()))
+        val tMergeInfo = tStorages.getMergeInfo(rStorages.getSyncInfo(tStorages.hashes()))
+        val tCommitInfo = tStorages.merge(rMergeInfo)
         check(tCommitInfo.keys.sorted() == listOf(mockUUID(1), mockUUID(2)))
         SyncStreamsStorageTest.assert(
             expected = mockCommitInfo(
@@ -935,9 +937,46 @@ internal class SyncStoragesTest {
             ),
             actual = tCommitInfo[mockUUID(2)] ?: TODO(),
         )
-        TODO("tStorages:items")
-        TODO("rStorages:merge")
-        TODO("rStorages:items")
+        tStorages.require(mockUUID(1)).items.forEachIndexed { index, actual ->
+            val expected = stringsFinal[index]
+            SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+        }
+        tStorages.require(mockUUID(2)).items.forEachIndexed { index, actual ->
+            val expected = intsFinal[index]
+            SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+        }
+        val rCommitInfo = rStorages.merge(tMergeInfo)
+        check(rCommitInfo.keys.sorted() == listOf(mockUUID(1), mockUUID(2)))
+        SyncStreamsStorageTest.assert(
+            expected = mockCommitInfo(
+                hash = "strings:hash:final",
+                items = listOf(
+                    stringsRUpdated[2].map { it.toByteArray() },
+                    stringsRUpdated[4].map { it.toByteArray() },
+                ),
+                deleted = setOf(strings[1].id),
+            ),
+            actual = rCommitInfo[mockUUID(1)] ?: TODO(),
+        )
+        SyncStreamsStorageTest.assert(
+            expected = mockCommitInfo(
+                hash = "ints:hash:final",
+                items = listOf(
+                    intsRUpdated[2].map { it.toString().toByteArray() },
+                    intsRUpdated[4].map { it.toString().toByteArray() },
+                ),
+                deleted = setOf(ints[1].id),
+            ),
+            actual = rCommitInfo[mockUUID(2)] ?: TODO(),
+        )
+        rStorages.require(mockUUID(1)).items.forEachIndexed { index, actual ->
+            val expected = stringsFinal[index]
+            SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+        }
+        rStorages.require(mockUUID(2)).items.forEachIndexed { index, actual ->
+            val expected = intsFinal[index]
+            SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+        }
     }
 
     @Test
