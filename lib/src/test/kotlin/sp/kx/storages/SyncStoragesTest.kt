@@ -201,4 +201,24 @@ internal class SyncStoragesTest {
         )
         storages.assertHashes(expected = expected)
     }
+
+    @Test
+    fun getSyncInfoTest() {
+        TODO("SyncStoragesTest:getSyncInfoTest")
+    }
+
+    @Test
+    fun getMergeInfoTest() {
+        TODO("SyncStoragesTest:getMergeInfoTest")
+    }
+
+    @Test
+    fun mergeTest() {
+        TODO("SyncStoragesTest:mergeTest")
+    }
+
+    @Test
+    fun commitTest() {
+        TODO("SyncStoragesTest:commitTest")
+    }
 }

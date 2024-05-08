@@ -469,7 +469,7 @@ internal class SyncStreamsStorageTest {
     }
 
     @Test
-    fun mergeTest() {
+    fun mergeAndCommitTest() {
         val storageId = UUID.fromString("dc4092c6-e7a1-433e-9169-c2f6f92fc4c1")
         var time = 1.milliseconds
         val timeProvider = mockProvider { time }
@@ -632,7 +632,7 @@ internal class SyncStreamsStorageTest {
             ),
             deleted = setOf(defaultItems[1].id),
         )
-        tStorage.merge(commitInfo)
+        tStorage.commit(commitInfo)
         rStorage.assert(
             id = storageId,
             hash = storageHashMerged,
@@ -734,11 +734,11 @@ internal class SyncStreamsStorageTest {
                 ),
                 deleted = emptySet(),
             )
-            tStorage.merge(info)
+            tStorage.commit(info)
         }
         assertEquals("Wrong hash!", error.message)
         val rCommitInfo = rStorage.merge(tMergeInfo)
-        tStorage.merge(rCommitInfo)
+        tStorage.commit(rCommitInfo)
         assertEquals(rStorage.hash, tStorage.hash)
         rStorage.assert(
             id = storageId,
