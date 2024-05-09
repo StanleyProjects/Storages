@@ -451,6 +451,53 @@ internal class SyncStoragesTest {
     }
 
     @Test
+    fun getSyncInfoEmptyTest() {
+        val strings = (1..5).map { number ->
+            mockDescribed(pointer = 10 + number)
+        }
+        var time = 1.milliseconds
+        val timeProvider = mockProvider { time }
+        var itemId = mockUUID()
+        val uuidProvider = mockProvider { itemId }
+        val hashes = listOf(
+            strings.hash() to "strings:hash",
+        ) + strings.map {
+            it.item.toByteArray() to it.info.hash
+        }
+        val stringsTransformer = strings.map {
+            it.item.toByteArray() to it.item
+        }
+        val storages = SyncStorages.Builder()
+            .add(
+                MockSyncStreamsStorage<String>(
+                    id = mockUUID(1),
+                    hashes = hashes,
+                    timeProvider = timeProvider,
+                    uuidProvider = uuidProvider,
+                    transformer = stringsTransformer,
+                ),
+            )
+            .build()
+        strings.forEach { described ->
+            itemId = described.id
+            time = described.info.created
+            storages.require<String>().add(described.item)
+        }
+        storages.assertSyncInfo(
+            hashes = emptyMap(),
+            expected = emptyMap(),
+        )
+        storages.assertSyncInfo(
+            hashes = mapOf(mockUUID(2) to "2"),
+            expected = emptyMap(),
+        )
+        storages.assertSyncInfo(
+            hashes = mapOf(mockUUID(1) to "strings:hash"),
+            expected = emptyMap(),
+        )
+    }
+
+    @Test
     fun getMergeInfoTest() {
         val strings = (1..5).map { number ->
             mockDescribed(pointer = 10 + number)
@@ -1213,6 +1260,50 @@ internal class SyncStoragesTest {
         }
         rStorages.require(mockUUID(2)).items.forEachIndexed { index, actual ->
             val expected = intsFinal[index]
+            SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+        }
+    }
+
+    @Test
+    fun commitEmptyTest() {
+        val strings = (1..5).map { number ->
+            mockDescribed(pointer = 10 + number)
+        }
+        var time = 1.milliseconds
+        val timeProvider = mockProvider { time }
+        var itemId = mockUUID()
+        val uuidProvider = mockProvider { itemId }
+        val hashes = listOf(
+            strings.hash() to "strings:hash",
+        ) + strings.map {
+            it.item.toByteArray() to it.info.hash
+        }
+        val stringsTransformer = strings.map {
+            it.item.toByteArray() to it.item
+        }
+        val storages = SyncStorages.Builder()
+            .add(
+                MockSyncStreamsStorage<String>(
+                    id = mockUUID(1),
+                    hashes = hashes,
+                    timeProvider = timeProvider,
+                    uuidProvider = uuidProvider,
+                    transformer = stringsTransformer,
+                ),
+            )
+            .build()
+        storages.require(mockUUID(1)).items.forEachIndexed { index, actual ->
+            val expected = strings[index]
+            SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+        }
+        storages.commit(emptyMap())
+        storages.require(mockUUID(1)).items.forEachIndexed { index, actual ->
+            val expected = strings[index]
+            SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+        }
+        storages.commit(infos = mapOf(mockUUID(2) to mockCommitInfo()))
+        storages.require(mockUUID(1)).items.forEachIndexed { index, actual ->
+            val expected = strings[index]
             SyncStreamsStorageTest.assert(expected = expected, actual = actual)
         }
     }
