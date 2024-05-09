@@ -109,7 +109,10 @@ class SyncStorages private constructor(
     }
 
     fun commit(infos: Map<UUID, CommitInfo>) {
-        TODO("SyncStorages:commit")
+        for ((id, info) in infos) {
+            val storage = get(id = id) ?: continue // todo
+            storage.commit(info)
+        }
     }
 
     companion object {
