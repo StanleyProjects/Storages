@@ -86,6 +86,35 @@ class SyncStorages private constructor(
         return map.values.associate { it.id to it.hash }
     }
 
+    fun getSyncInfo(hashes: Map<UUID, String>): Map<UUID, SyncInfo> {
+        val result = mutableMapOf<UUID, SyncInfo>()
+        for ((id, hash) in hashes) {
+            val storage = get(id = id) ?: continue // todo
+            if (storage.hash == hash) continue
+            result[id] = storage.getSyncInfo()
+        }
+        return result
+    }
+
+    fun getMergeInfo(infos: Map<UUID, SyncInfo>): Map<UUID, MergeInfo> {
+        return infos.mapValues { (id, info) ->
+            require(id = id).getMergeInfo(info)
+        }
+    }
+
+    fun merge(infos: Map<UUID, MergeInfo>): Map<UUID, CommitInfo> {
+        return infos.mapValues { (id, info) ->
+            require(id = id).merge(info)
+        }
+    }
+
+    fun commit(infos: Map<UUID, CommitInfo>) {
+        for ((id, info) in infos) {
+            val storage = get(id = id) ?: continue // todo
+            storage.commit(info)
+        }
+    }
+
     companion object {
         fun <T : Any> create(storage: SyncStorage<T>, type: Class<T>): SyncStorages {
             return SyncStorages(map = mapOf(type to storage))

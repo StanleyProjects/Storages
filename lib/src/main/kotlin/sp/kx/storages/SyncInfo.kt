@@ -14,6 +14,6 @@ import java.util.UUID
  * @since 0.4.1
  */
 data class SyncInfo(
-    val meta: Map<UUID, ItemInfo>,
+    val infos: Map<UUID, ItemInfo>,
     val deleted: Set<UUID>,
 )

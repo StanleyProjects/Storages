@@ -207,7 +207,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
         )
     }
 
-    override fun merge(info: CommitInfo) {
+    override fun commit(info: CommitInfo) {
         val newItems = mutableListOf<Described<T>>()
         for (item in this.items) {
             if (info.deleted.contains(item.id)) continue
@@ -228,7 +228,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
     }
 
     override fun getSyncInfo(): SyncInfo {
-        val meta = mutableMapOf<UUID, ItemInfo>()
+        val infos = mutableMapOf<UUID, ItemInfo>()
         val deleted: Set<UUID>
         inputStream().use { stream ->
             val reader = stream.bufferedReader()
@@ -243,7 +243,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
                 val split = reader.readLine().split(",")
                 check(split.size == 3)
                 @Suppress("IgnoredReturnValue")
-                meta[id] = ItemInfo(
+                infos[id] = ItemInfo(
                     created = split[0].toLong().milliseconds,
                     updated = split[1].toLong().milliseconds,
                     hash = split[2],
@@ -252,7 +252,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
             }
         }
         return SyncInfo(
-            meta = meta,
+            infos = infos,
             deleted = deleted,
         )
     }
@@ -262,12 +262,12 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
         val upload = mutableListOf<Described<ByteArray>>()
         val items = items
         for (described in items) {
-            if (info.meta.containsKey(described.id)) continue
+            if (info.infos.containsKey(described.id)) continue
             if (info.deleted.contains(described.id)) continue
             upload.add(described.map(::encode))
         }
         val deleted = deleted
-        for ((itemId, itemInfo) in info.meta) {
+        for ((itemId, itemInfo) in info.infos) {
             val described = items.firstOrNull { it.id == itemId }
             if (described == null) {
                 if (deleted.contains(itemId)) continue

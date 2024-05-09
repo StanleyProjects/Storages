@@ -11,16 +11,94 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class SyncStreamsStorageTest {
-    private fun ItemInfo.assert(
-        storageId: UUID,
-        itemId: UUID,
-        created: Duration,
-        updated: Duration,
-        hash: String,
-    ) {
-        assertEquals(created, this.created, "storageId: $storageId\nitemId: $itemId\ncreated:\n")
-        assertEquals(updated, this.updated, "storageId: $storageId\nitemId: $itemId\nupdated:\n")
-        assertEquals(hash, this.hash, "storageId: $storageId\nitemId: $itemId\nhash:\n")
+    companion object {
+        fun assert(
+            expected: Described<out Any>,
+            actual: Described<out Any>,
+        ) {
+            assertEquals(expected.id, actual.id)
+            assert(expected.info, actual.info)
+            assertEquals(expected.item, actual.item, "described: ${expected.id}\n")
+        }
+
+        fun assert(
+            expected: MergeInfo,
+            actual: MergeInfo,
+        ) {
+            actual.assert(
+                download = expected.download,
+                items = expected.items,
+                deleted = expected.deleted,
+            )
+        }
+
+        private fun MergeInfo.assert(
+            download: Set<UUID>,
+            items: List<Described<ByteArray>>,
+            deleted: Set<UUID>,
+        ) {
+            assertEquals(deleted.size, this.deleted.size, "deleted:\n$deleted\n${this.deleted}\n")
+            assertEquals(deleted, this.deleted, "deleted:\n")
+            assertEquals(download.size, this.download.size, "download:\n$download\n${this.download}\n")
+            assertEquals(download, this.download, "download:\n")
+            assertEquals(items.size, this.items.size, "upload:\n${items.map { it.id }}\n${this.items.map { it.id }}\n")
+            val sorted = this.items.sortedBy { it.info.created }
+            items.sortedBy { it.info.created }.forEachIndexed { index, expected ->
+                val actual = sorted[index]
+                assertEquals(expected.id, actual.id)
+                assertEquals(expected.info, actual.info, "id: ${expected.id}")
+                assertEquals(expected, actual)
+            }
+        }
+
+        fun assert(
+            expected: CommitInfo,
+            actual: CommitInfo,
+        ) {
+            actual.assert(
+                hash = expected.hash,
+                items = expected.items,
+                deleted = expected.deleted,
+            )
+        }
+
+        private fun CommitInfo.assert(
+            hash: String,
+            items: List<Described<ByteArray>>,
+            deleted: Set<UUID>,
+        ) {
+            assertEquals(hash, this.hash)
+            assertEquals(deleted.size, this.deleted.size, "deleted:\n$deleted\n${this.deleted}\n")
+            assertEquals(deleted, this.deleted)
+            assertEquals(items.size, this.items.size, "upload:\n${items.map { it.id }}\n${this.items.map { it.id }}\n")
+            items.forEachIndexed { index, expected ->
+                val actual = this.items[index]
+                assertEquals(expected.id, actual.id)
+                assertEquals(expected.info, actual.info, "id: ${expected.id}")
+                assertEquals(expected, actual)
+            }
+        }
+
+        fun assert(
+            expected: ItemInfo,
+            actual: ItemInfo,
+        ) {
+            assertEquals(expected.created, actual.created)
+            assertEquals(expected.updated, actual.updated)
+            assertEquals(expected.hash, actual.hash)
+        }
+
+        private fun ItemInfo.assert(
+            storageId: UUID,
+            itemId: UUID,
+            created: Duration,
+            updated: Duration,
+            hash: String,
+        ) {
+            assertEquals(created, this.created, "storageId: $storageId\nitemId: $itemId\ncreated:\n")
+            assertEquals(updated, this.updated, "storageId: $storageId\nitemId: $itemId\nupdated:\n")
+            assertEquals(hash, this.hash, "storageId: $storageId\nitemId: $itemId\nhash:\n")
+        }
     }
 
     private fun <T : Any> SyncStorage<T>.assert(
@@ -50,48 +128,13 @@ internal class SyncStreamsStorageTest {
         meta: Map<UUID, ItemInfo> = emptyMap(),
         deleted: Set<UUID> = emptySet(),
     ) {
-        assertEquals(meta.size, this.meta.size)
+        assertEquals(meta.size, this.infos.size)
         meta.forEach { (itemId, expected) ->
-            val actual = this.meta[itemId] ?: error("No item info!")
+            val actual = this.infos[itemId] ?: error("No item info!")
             assertEquals(expected, actual, "id: $itemId")
         }
         assertEquals(deleted.size, this.deleted.size)
         assertEquals(deleted, this.deleted)
-    }
-
-    private fun MergeInfo.assert(
-        download: Set<UUID>,
-        items: List<Described<ByteArray>>,
-        deleted: Set<UUID>,
-    ) {
-        assertEquals(deleted.size, this.deleted.size)
-        assertEquals(deleted, this.deleted)
-        assertEquals(download.size, this.download.size, "download:\n$download\n${this.download}\n")
-        assertEquals(download, this.download)
-        assertEquals(items.size, this.items.size, "upload:\n${items.map { it.id }}\n${this.items.map { it.id }}\n")
-        items.forEachIndexed { index, expected ->
-            val actual = this.items[index]
-            assertEquals(expected.id, actual.id)
-            assertEquals(expected.info, actual.info, "id: ${expected.id}")
-            assertEquals(expected, actual)
-        }
-    }
-
-    private fun CommitInfo.assert(
-        hash: String,
-        items: List<Described<ByteArray>>,
-        deleted: Set<UUID>,
-    ) {
-        assertEquals(hash, this.hash)
-        assertEquals(deleted.size, this.deleted.size, "deleted:\n$deleted\n${this.deleted}\n")
-        assertEquals(deleted, this.deleted)
-        assertEquals(items.size, this.items.size, "upload:\n${items.map { it.id }}\n${this.items.map { it.id }}\n")
-        items.forEachIndexed { index, expected ->
-            val actual = this.items[index]
-            assertEquals(expected.id, actual.id)
-            assertEquals(expected.info, actual.info, "id: ${expected.id}")
-            assertEquals(expected, actual)
-        }
     }
 
     @Test
@@ -469,7 +512,7 @@ internal class SyncStreamsStorageTest {
     }
 
     @Test
-    fun mergeTest() {
+    fun mergeAndCommitTest() {
         val storageId = UUID.fromString("dc4092c6-e7a1-433e-9169-c2f6f92fc4c1")
         var time = 1.milliseconds
         val timeProvider = mockProvider { time }
@@ -632,7 +675,7 @@ internal class SyncStreamsStorageTest {
             ),
             deleted = setOf(defaultItems[1].id),
         )
-        tStorage.merge(commitInfo)
+        tStorage.commit(commitInfo)
         rStorage.assert(
             id = storageId,
             hash = storageHashMerged,
@@ -734,11 +777,11 @@ internal class SyncStreamsStorageTest {
                 ),
                 deleted = emptySet(),
             )
-            tStorage.merge(info)
+            tStorage.commit(info)
         }
         assertEquals("Wrong hash!", error.message)
         val rCommitInfo = rStorage.merge(tMergeInfo)
-        tStorage.merge(rCommitInfo)
+        tStorage.commit(rCommitInfo)
         assertEquals(rStorage.hash, tStorage.hash)
         rStorage.assert(
             id = storageId,
