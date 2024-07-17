@@ -1,6 +1,7 @@
 package sp.service.sample
 
 import sp.kx.storages.Storage
+import sp.kx.storages.SyncStorages
 import sp.kx.storages.SyncStreamsStorage
 import java.io.File
 import java.io.InputStream
@@ -46,44 +47,57 @@ private class FileStorage : SyncStreamsStorage<Foo>(
     }
 }
 
-private fun Storage<out Any>.println() {
-    val message = """
-        id: $id
-        hash: ${hash.toList()}
-        items: $items
-    """.trimIndent()
+private fun SyncStorages.println() {
+    val message = hashes().toList().joinToString { (id, hash) ->
+        """
+            >
+            id: $id
+            hash: ${hash.toList()}
+            items: ${require(id).items}
+            <
+        """.trimIndent()
+    }
     println(message)
 }
 
+private fun Map<UUID, ByteArray>.assert(actual: Map<UUID, ByteArray>) {
+    check(keys.sorted() == actual.keys.sorted())
+    for (key in keys) {
+        check(get(key).contentEquals(actual[key]!!))
+    }
+}
+
 fun main() {
-    val storage = FileStorage()
-    storage.println()
-    val e1 = storage.hash
+    val storages = SyncStorages.create(FileStorage())
+    storages.println()
+    val e1 = storages.hashes()
     println("---")
     Foo(text = "42").also { item ->
         println("item: $item")
-        storage.add(item)
-        storage.println()
+        storages.require<Foo>().add(item)
+        storages.println()
     }
-    val e2 = storage.hash
+    val e2 = storages.hashes()
     println("---")
     Foo(text = "128").also { item ->
         println("item: $item")
-        storage.add(item)
-        storage.println()
+        storages.require<Foo>().add(item)
+        storages.println()
     }
+    check(e1 != storages.hashes())
+    check(e2 != storages.hashes())
     println("---")
-    storage.items.lastOrNull()!!.also { item ->
+    storages.require<Foo>().items.lastOrNull()!!.also { item ->
         println("delete: ${item.id}")
-        storage.delete(item.id)
-        storage.println()
+        storages.require<Foo>().delete(item.id)
+        storages.println()
     }
-    check(e2.contentEquals(storage.hash))
+    e2.assert(storages.hashes())
     println("---")
-    storage.items.lastOrNull()!!.also { item ->
+    storages.require<Foo>().items.lastOrNull()!!.also { item ->
         println("delete: ${item.id}")
-        storage.delete(item.id)
-        storage.println()
+        storages.require<Foo>().delete(item.id)
+        storages.println()
     }
-    check(e1.contentEquals(storage.hash))
+    e1.assert(storages.hashes())
 }
