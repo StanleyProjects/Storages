@@ -40,7 +40,7 @@ internal class MockSyncStreamsStorage<T : Any>(
     }
 
     override fun decode(bytes: ByteArray): T {
-        return transformer.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second ?: error("No decoded: ${bytes.toHEX()}(${String(bytes)})!")
+        return transformer.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second ?: error("No decoded: ${bytes.toHEX()}(${bytes.size})(${String(bytes)})!")
     }
 
     override fun inputStream(): InputStream {

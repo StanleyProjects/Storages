@@ -2,7 +2,6 @@ package sp.kx.storages
 
 import java.io.InputStream
 import java.io.OutputStream
-import java.nio.ByteBuffer
 import java.util.Base64
 import java.util.HashMap
 import java.util.HashSet
@@ -35,35 +34,31 @@ abstract class SyncStreamsStorage<T : Any>(
 ) : SyncStorage<T> {
     override val hash: ByteArray
         get() {
-            val buffer = inputStream().use { stream ->
+            return inputStream().use { stream ->
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
                 val itemsSize = BytesUtil.readInt(stream)
-                val buffer = ByteBuffer.allocate(itemsSize * hf.size)
-                for (ignored in 0 until itemsSize) {
+                val bytes = ByteArray(itemsSize * hf.size)
+                for (index in 0 until itemsSize) {
                     stream.skip(16) // skip id
                     stream.skip(8) // skip info created
                     stream.skip(8) // skip info updated
-                    buffer.put(stream.readNBytes(hf.size)) // info hash
+                    System.arraycopy(stream.readNBytes(hf.size), 0, bytes, index * hf.size, hf.size)
                     stream.skip(BytesUtil.readInt(stream).toLong()) // skip encoded
                 }
-                buffer
+                hf.map(bytes)
             }
-            return hf.map(buffer.array())
         }
     override val items: List<Described<T>>
         get() {
             return inputStream().use { stream ->
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
-                val itemsSize = BytesUtil.readInt(stream)
-//                error("$id/items:size: $itemsSize") // todo
-                List(itemsSize) { index -> // todo
+                List(BytesUtil.readInt(stream)) { _ ->
                     val id = BytesUtil.readUUID(stream)
                     val info = ItemInfo(
                         created = BytesUtil.readLong(stream).milliseconds,
                         updated = BytesUtil.readLong(stream).milliseconds,
                         hash = stream.readNBytes(hf.size),
                     )
-//                    error("${this.id}/$index($itemsSize)/$id/$info/${String(stream.readNBytes(BytesUtil.readInt(stream)))}") // todo
                     Described(
                         id = id,
                         info = info,
@@ -207,9 +202,11 @@ abstract class SyncStreamsStorage<T : Any>(
             newItems += item.map(::decode)
         }
         val sorted = newItems.sortedBy { it.info.created }
-        val buffer = ByteBuffer.allocate(sorted.size * hf.size)
-        for (item in sorted) buffer.put(item.info.hash)
-        check(hf.map(buffer.array()).contentEquals(info.hash)) { "Wrong hash!" }
+        val bytes = ByteArray(sorted.size * hf.size)
+        for (index in sorted.indices) {
+            System.arraycopy(sorted[index].info.hash, 0, bytes, index * hf.size, hf.size)
+        }
+        check(hf.map(bytes).contentEquals(info.hash)) { "Wrong hash!" }
         write(
             items = sorted,
             deleted = this.deleted + info.deleted,

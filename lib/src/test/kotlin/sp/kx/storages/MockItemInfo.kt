@@ -19,6 +19,6 @@ internal fun mockItemInfo(pointer: Int): ItemInfo {
     return mockItemInfo(
         created = (1_000 + pointer).milliseconds,
         updated = (1_000 + pointer).milliseconds,
-        hash = "item:hash:$pointer".toByteArray(),
+        hash = MockHashFunction.map("item:hash:$pointer"),
     )
 }
