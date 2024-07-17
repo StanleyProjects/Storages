@@ -10,7 +10,7 @@ internal class MockHashFunction(
     }
 
     companion object {
-        private const val _size = 8
+        private const val _size = 16
 
         fun map(value: String): ByteArray {
             return String.format("%0${_size}d", value.hashCode()).toByteArray()

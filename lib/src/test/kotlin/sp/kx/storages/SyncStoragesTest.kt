@@ -132,12 +132,12 @@ internal class SyncStoragesTest {
         }
     }
 
-    private fun SyncStorages.assertHashes(expected: Map<UUID, String>) {
+    private fun SyncStorages.assertHashes(expected: Map<UUID, ByteArray>) {
         val actual = hashes()
         assertEquals(expected.size, actual.size, "hashes:\n$expected\n$actual\n")
         for ((ei, eh) in expected) {
             val ah = actual[ei] ?: error("No hash by ID: \"$ei\"!")
-            assertEquals(eh, ah)
+            assertEquals(eh.toHEX(), ah.toHEX())
         }
     }
 
@@ -215,8 +215,8 @@ internal class SyncStoragesTest {
             storages.require<Int>().add(described.item)
         }
         val expected = mapOf(
-            mockUUID(1) to "1:default",
-            mockUUID(2) to "2:default",
+            mockUUID(1) to MockHashFunction.map("1:default"),
+            mockUUID(2) to MockHashFunction.map("2:default"),
         )
         storages.assertHashes(expected = expected)
     }

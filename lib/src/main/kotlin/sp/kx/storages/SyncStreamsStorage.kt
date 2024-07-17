@@ -54,13 +54,16 @@ abstract class SyncStreamsStorage<T : Any>(
         get() {
             return inputStream().use { stream ->
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
-                List(BytesUtil.readInt(stream)) { _ ->
+                val itemsSize = BytesUtil.readInt(stream)
+//                error("$id/items:size: $itemsSize") // todo
+                List(itemsSize) { index -> // todo
                     val id = BytesUtil.readUUID(stream)
                     val info = ItemInfo(
                         created = BytesUtil.readLong(stream).milliseconds,
                         updated = BytesUtil.readLong(stream).milliseconds,
                         hash = stream.readNBytes(hf.size),
                     )
+//                    error("${this.id}/$index($itemsSize)/$id/$info/${String(stream.readNBytes(BytesUtil.readInt(stream)))}") // todo
                     Described(
                         id = id,
                         info = info,

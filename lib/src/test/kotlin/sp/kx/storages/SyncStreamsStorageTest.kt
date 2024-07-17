@@ -107,7 +107,7 @@ internal class SyncStreamsStorageTest {
         items: List<Described<T>> = emptyList(),
     ) {
         assertEquals(id, this.id)
-        assertEquals(hash, this.hash)
+        assertEquals(hash.toHEX(), this.hash.toHEX())
         assertEquals(items.size, this.items.size)
         items.forEachIndexed { index, expected ->
             val actual = this.items[index]
@@ -307,11 +307,11 @@ internal class SyncStreamsStorageTest {
 
     @Test
     fun addTest() {
-        val id = UUID.fromString("dc4092c6-e7a1-433e-9169-c2f6f92fc4c1")
+        val id = mockUUID(1)
         val itemHash = MockHashFunction.map("itemHash")
         val time = 1.milliseconds
         val timeProvider = mockProvider { time }
-        val itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
+        val itemId = mockUUID(2)
         val uuidProvider = mockProvider { itemId }
         val expected = Described(
             id = itemId,

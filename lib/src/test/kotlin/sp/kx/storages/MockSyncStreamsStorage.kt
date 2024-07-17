@@ -19,7 +19,12 @@ internal class MockSyncStreamsStorage<T : Any>(
     hf = MockHashFunction(hashes = hashes),
 ) {
     private val stream = ByteArrayOutputStream().also { stream ->
-        stream.write("${defaultDeleted.joinToString(separator = "") { it.toString() }}\n0".toByteArray())
+        BytesUtil.writeBytes(stream, defaultDeleted.size)
+        defaultDeleted.forEach {
+            BytesUtil.writeBytes(stream, it)
+        }
+        val itemsSize: Int = 0
+        BytesUtil.writeBytes(stream, itemsSize)
     }
 
     override fun now(): Duration {
@@ -35,7 +40,7 @@ internal class MockSyncStreamsStorage<T : Any>(
     }
 
     override fun decode(bytes: ByteArray): T {
-        return transformer.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second ?: error("No decoded!")
+        return transformer.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second ?: error("No decoded: ${bytes.toHEX()}(${String(bytes)})!")
     }
 
     override fun inputStream(): InputStream {
