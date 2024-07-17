@@ -85,7 +85,7 @@ internal class SyncStreamsStorageTest {
         ) {
             assertEquals(expected.created, actual.created)
             assertEquals(expected.updated, actual.updated)
-            assertEquals(expected.hash, actual.hash)
+            assertEquals(expected.hash.toHEX(), actual.hash.toHEX())
         }
 
         private fun ItemInfo.assert(
