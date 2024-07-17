@@ -15,7 +15,7 @@ internal class DescribedTest {
         val info = ItemInfo(
             created = 1.milliseconds,
             updated = 2.milliseconds,
-            hash = "hash",
+            hash = "hash".toByteArray(),
         )
         val item = "DescribedTest:createTest"
         val value = Described(
@@ -34,7 +34,7 @@ internal class DescribedTest {
         val info = ItemInfo(
             created = 1.milliseconds,
             updated = 2.milliseconds,
-            hash = "hash",
+            hash = "hash".toByteArray(),
         )
         val item = "DescribedTest:toStringTest"
         val value = Described(
@@ -51,7 +51,7 @@ internal class DescribedTest {
         val info = ItemInfo(
             created = 1.milliseconds,
             updated = 2.milliseconds,
-            hash = "hash",
+            hash = "hash".toByteArray(),
         )
         val item = "DescribedTest:equalsTest"
         val expected = Described(
@@ -73,7 +73,7 @@ internal class DescribedTest {
         val info = ItemInfo(
             created = 1.milliseconds,
             updated = 2.milliseconds,
-            hash = "hash",
+            hash = "hash".toByteArray(),
         )
         val item = "DescribedTest:equalsBytesTest".toByteArray()
         val value = Described(
@@ -101,7 +101,7 @@ internal class DescribedTest {
         val info = ItemInfo(
             created = 1.milliseconds,
             updated = 2.milliseconds,
-            hash = "hash",
+            hash = "hash".toByteArray(),
         )
         val item = "DescribedTest:notEqualsTest"
         val value = Described(
@@ -120,7 +120,7 @@ internal class DescribedTest {
                 info = ItemInfo(
                     created = 1.milliseconds,
                     updated = 2.milliseconds,
-                    hash = "hash:notEquals",
+                    hash = "hash:notEquals".toByteArray(),
                 ),
                 item = item,
             ),
@@ -140,7 +140,7 @@ internal class DescribedTest {
         val info = ItemInfo(
             created = 1.milliseconds,
             updated = 2.milliseconds,
-            hash = "hash",
+            hash = "hash".toByteArray(),
         )
         val item = "DescribedTest:hashCodeTest"
         val value = Described(
@@ -162,7 +162,7 @@ internal class DescribedTest {
         val info = ItemInfo(
             created = 1.milliseconds,
             updated = 2.milliseconds,
-            hash = "hash",
+            hash = "hash".toByteArray(),
         )
         val item = "DescribedTest:copyTest"
         val value = Described(
@@ -171,7 +171,7 @@ internal class DescribedTest {
             item = item,
         )
         val updated = 3.milliseconds
-        val copiedHash = "hash:copied"
+        val copiedHash = "hash:copied".toByteArray()
         val copiedItem = "copied"
         val copied = value.copy(
             updated = updated,
@@ -191,7 +191,7 @@ internal class DescribedTest {
         val info = ItemInfo(
             created = 1.milliseconds,
             updated = 2.milliseconds,
-            hash = "hash",
+            hash = "hash".toByteArray(),
         )
         val itemMapped = 42
         val value = Described(

@@ -8,13 +8,16 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class MockSyncStreamsStorage<T : Any>(
-    id: UUID = mockUUID(),
     private val timeProvider: MockProvider<Duration> = mockProvider { 1.milliseconds },
     private val uuidProvider: MockProvider<UUID> = mockProvider { UUID.fromString("d2d7c21b-f99a-4f78-80d4-8bf05ee25f62") },
-    defaultDeleted: Set<UUID> = emptySet(),
-    private val hashes: List<Pair<ByteArray, String>> = emptyList(),
     private val transformer: List<Pair<ByteArray, T>> = emptyList(),
-) : SyncStreamsStorage<T>(id = id) {
+    id: UUID = mockUUID(),
+    defaultDeleted: Set<UUID> = emptySet(),
+    hashes: List<Pair<ByteArray, ByteArray>> = emptyList(),
+) : SyncStreamsStorage<T>(
+    id = id,
+    hf = MockHashFunction(hashes = hashes),
+) {
     private val stream = ByteArrayOutputStream().also { stream ->
         stream.write("${defaultDeleted.joinToString(separator = "") { it.toString() }}\n0".toByteArray())
     }
@@ -25,10 +28,6 @@ internal class MockSyncStreamsStorage<T : Any>(
 
     override fun randomUUID(): UUID {
         return uuidProvider.provide()
-    }
-
-    override fun hash(bytes: ByteArray): String {
-        return hashes.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second ?: error("No hash!\n---\n${String(bytes)}\n---")
     }
 
     override fun encode(item: T): ByteArray {
