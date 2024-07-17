@@ -17,7 +17,7 @@ class Described<T : Any>(
 ) {
     fun copy(
         updated: Duration,
-        hash: String,
+        hash: ByteArray,
         item: T,
     ): Described<T> {
         return Described(
