@@ -15,7 +15,11 @@ private class FileStorage : SyncStreamsStorage<Foo>(
     id = UUID.fromString("dbb81949-54c9-42e7-91b4-7be1a84bc875"),
     hf = MD5HashFunction(),
 ) {
-    private val file = File.createTempFile("storage", id.toString())
+    private val file = File.createTempFile("storage", id.toString()).also { file ->
+        file.outputStream().use { stream ->
+            stream.write(ByteArray(8))
+        }
+    }
 
     override fun now(): Duration {
         return System.currentTimeMillis().milliseconds
@@ -45,7 +49,7 @@ private class FileStorage : SyncStreamsStorage<Foo>(
 private fun Storage<out Any>.println() {
     val message = """
         id: $id
-        hash: $hash
+        hash: ${hash.toList()}
         items: $items
     """.trimIndent()
     println(message)
@@ -54,12 +58,14 @@ private fun Storage<out Any>.println() {
 fun main() {
     val storage = FileStorage()
     storage.println()
+    val e1 = storage.hash
     println("---")
     Foo(text = "42").also { item ->
         println("item: $item")
         storage.add(item)
         storage.println()
     }
+    val e2 = storage.hash
     println("---")
     Foo(text = "128").also { item ->
         println("item: $item")
@@ -72,10 +78,12 @@ fun main() {
         storage.delete(item.id)
         storage.println()
     }
+    check(e2.contentEquals(storage.hash))
     println("---")
     storage.items.lastOrNull()!!.also { item ->
         println("delete: ${item.id}")
         storage.delete(item.id)
         storage.println()
     }
+    check(e1.contentEquals(storage.hash))
 }
