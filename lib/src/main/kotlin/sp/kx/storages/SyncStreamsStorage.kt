@@ -213,15 +213,13 @@ abstract class SyncStreamsStorage<T : Any>(
                 deleted.add(BytesUtil.readUUID(stream))
             }
             val itemsSize = BytesUtil.readInt(stream)
-            val infos = HashMap<UUID, ItemInfo>(1)
-            for (i in 0 until itemsSize) {
-                val id = BytesUtil.readUUID(stream)
-                val info = ItemInfo(
+            val infos = HashMap<UUID, ItemInfo>(itemsSize)
+            for (ignored in 0 until itemsSize) {
+                infos[BytesUtil.readUUID(stream)] = ItemInfo(
                     created = BytesUtil.readLong(stream).milliseconds,
                     updated = BytesUtil.readLong(stream).milliseconds,
                     hash = stream.readNBytes(hf.size),
                 )
-                infos[id] = info
                 stream.skip(BytesUtil.readInt(stream).toLong()) // skip encoded
             }
             SyncInfo(

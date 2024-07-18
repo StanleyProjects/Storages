@@ -4,6 +4,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
 
+@Suppress("MagicNumber")
 internal object BytesUtil {
     fun writeBytes(stream: OutputStream, value: Int) {
         stream.write(value.shr(8 * 3).toByte().toInt())
