@@ -31,10 +31,10 @@ internal class CommitInfoTest {
             deleted = setOf(mockUUID(pointer = 2)),
         )
         val expected = "{" +
-                "items: [$item], " +
-                "deleted: [cbae2ba0-6be9-40f5-b565-d6152a120002], " +
-                "hash: \"016e9ed6\"" +
-                "}"
+            "items: [$item], " +
+            "deleted: [cbae2ba0-6be9-40f5-b565-d6152a120002], " +
+            "hash: \"016e9ed6\"" +
+            "}"
         assertEquals(expected, commitInfo.toString())
     }
 
