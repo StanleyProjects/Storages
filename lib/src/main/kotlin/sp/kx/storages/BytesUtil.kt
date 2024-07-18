@@ -6,9 +6,9 @@ import java.util.UUID
 
 internal object BytesUtil {
     fun writeBytes(stream: OutputStream, value: Int) {
-        stream.write(value.shr(24).toByte().toInt())
-        stream.write(value.shr(16).toByte().toInt())
-        stream.write(value.shr(8).toByte().toInt())
+        stream.write(value.shr(8 * 3).toByte().toInt())
+        stream.write(value.shr(8 * 2).toByte().toInt())
+        stream.write(value.shr(8 * 1).toByte().toInt())
         stream.write(value.toByte().toInt())
     }
 
