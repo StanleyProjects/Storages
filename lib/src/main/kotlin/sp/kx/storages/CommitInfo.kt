@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import java.util.Objects
 import java.util.UUID
 
 /**
@@ -16,8 +17,33 @@ import java.util.UUID
  * @author [Stanley Wintergreen](https://github.com/kepocnhh)
  * @since 0.3.1
  */
-data class CommitInfo(
-    val hash: String,
+class CommitInfo(
+    val hash: ByteArray,
     val items: List<Described<ByteArray>>,
     val deleted: Set<UUID>,
-)
+) {
+    override fun toString(): String {
+        return "{" +
+            "items: $items, " +
+            "deleted: $deleted, " +
+            "hash: \"${hash.toHEX()}\"" +
+            "}"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return when (other) {
+            is CommitInfo -> {
+                other.hash.contentEquals(hash) && other.items == items && other.deleted == deleted
+            }
+            else -> false
+        }
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(
+            hash.contentHashCode(),
+            items,
+            deleted,
+        )
+    }
+}

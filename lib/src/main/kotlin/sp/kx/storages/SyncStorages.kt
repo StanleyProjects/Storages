@@ -82,15 +82,15 @@ class SyncStorages private constructor(
         return get(T::class.java) ?: error("No storage by type: \"${T::class.java.name}\"!")
     }
 
-    fun hashes(): Map<UUID, String> {
+    fun hashes(): Map<UUID, ByteArray> {
         return map.values.associate { it.id to it.hash }
     }
 
-    fun getSyncInfo(hashes: Map<UUID, String>): Map<UUID, SyncInfo> {
+    fun getSyncInfo(hashes: Map<UUID, ByteArray>): Map<UUID, SyncInfo> {
         val result = mutableMapOf<UUID, SyncInfo>()
         for ((id, hash) in hashes) {
             val storage = get(id = id) ?: continue // todo
-            if (storage.hash == hash) continue
+            if (storage.hash.contentEquals(hash)) continue
             result[id] = storage.getSyncInfo()
         }
         return result

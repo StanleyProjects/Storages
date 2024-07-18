@@ -18,7 +18,7 @@ internal class ItemInfoTest {
         val expected: Any = mockItemInfo()
         assertFalse(expected == mockItemInfo(created = 11.milliseconds))
         assertFalse(expected == mockItemInfo(updated = 12.milliseconds))
-        assertFalse(expected == mockItemInfo(hash = "42"))
+        assertFalse(expected == mockItemInfo(hash = "42".toByteArray()))
         assertFalse(expected == "42")
     }
 }

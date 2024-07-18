@@ -2,7 +2,8 @@ package sp.kx.storages
 
 import java.io.InputStream
 import java.io.OutputStream
-import java.util.Base64
+import java.util.HashMap
+import java.util.HashSet
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -26,104 +27,82 @@ import kotlin.time.Duration.Companion.milliseconds
     "MagicNumber",
     "TooManyFunctions",
 )
-abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<T> {
-    override val hash: String
+abstract class SyncStreamsStorage<T : Any>(
+    override val id: UUID,
+    private val hf: HashFunction,
+) : SyncStorage<T> {
+    override val hash: ByteArray
         get() {
-            val builder = StringBuilder()
-            inputStream().use { stream ->
-                val reader = stream.bufferedReader()
-                reader.readLine() // 0) deleted
-                val size = reader.readLine().toInt() // 1) items size
-                for (ignored in 0 until size) {
-                    reader.readLine() // 0) item id
-                    val split = reader.readLine().split(",")
-                    check(split.size == 3)
-                    builder.append(split[2])
-                    reader.readLine() // 2) item
+            return inputStream().use { stream ->
+                stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
+                val itemsSize = BytesUtil.readInt(stream)
+                val bytes = ByteArray(itemsSize * hf.size)
+                for (index in 0 until itemsSize) {
+                    stream.skip(16) // skip id
+                    stream.skip(8) // skip info created
+                    stream.skip(8) // skip info updated
+                    System.arraycopy(stream.readNBytes(hf.size), 0, bytes, index * hf.size, hf.size)
+                    stream.skip(BytesUtil.readInt(stream).toLong()) // skip encoded
                 }
+                hf.map(bytes)
             }
-            return hash(builder.toString().toByteArray())
         }
     override val items: List<Described<T>>
         get() {
             return inputStream().use { stream ->
-                val reader = stream.bufferedReader()
-                reader.readLine() // 0) deleted
-                val size = reader.readLine().toInt() // 1) items size
-                (0 until size).map { _ ->
-                    val id = UUID.fromString(reader.readLine()) // 0) item id
-                    val info = reader.readLine().split(",").let { split ->
-                        check(split.size == 3)
-                        ItemInfo(
-                            created = split[0].toLong().milliseconds,
-                            updated = split[1].toLong().milliseconds,
-                            hash = split[2],
-                        )
-                    }
-                    val item = decode(base64(reader.readLine())) // 2) item
+                stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
+                List(BytesUtil.readInt(stream)) { _ ->
+                    val id = BytesUtil.readUUID(stream)
+                    val info = ItemInfo(
+                        created = BytesUtil.readLong(stream).milliseconds,
+                        updated = BytesUtil.readLong(stream).milliseconds,
+                        hash = stream.readNBytes(hf.size),
+                    )
                     Described(
                         id = id,
                         info = info,
-                        item = item,
+                        item = decode(stream.readNBytes(BytesUtil.readInt(stream))),
                     )
                 }
             }
         }
     private val deleted: Set<UUID>
         get() {
-            val line = inputStream().use { stream ->
-                val reader = stream.bufferedReader()
-                reader.readLine()
+            val set = HashSet<UUID>()
+            inputStream().use { stream ->
+                val deletedSize = BytesUtil.readInt(stream)
+                for (index in 0 until deletedSize) {
+                    set.add(BytesUtil.readUUID(stream))
+                }
             }
-            if (line.isEmpty()) return emptySet()
-            return line
-                .split(",")
-                .map(UUID::fromString)
-                .toSet()
+            return set
         }
-
-    private fun ItemInfo.toLine(): String {
-        return StringBuilder()
-            .append(created.inWholeMilliseconds)
-            .append(",")
-            .append(updated.inWholeMilliseconds)
-            .append(",")
-            .append(hash)
-            .toString()
-    }
-
-    private fun ByteArray.base64(): String {
-        return Base64.getEncoder().encodeToString(this)
-    }
-
-    private fun base64(value: String): ByteArray {
-        return Base64.getDecoder().decode(value)
-    }
 
     private fun write(
         items: List<Described<T>>,
         deleted: Set<UUID> = this.deleted,
     ) {
         outputStream().use { stream ->
-            val writer = stream.bufferedWriter()
-            writer.write(deleted.joinToString(separator = ",") { it.toString() })
-            writer.newLine()
-            writer.write(items.size.toString())
-            for (it in items) {
-                writer.newLine()
-                writer.write(it.id.toString())
-                writer.newLine()
-                writer.write(it.info.toLine())
-                writer.newLine()
-                writer.write(encode(it.item).base64())
+            BytesUtil.writeBytes(stream, deleted.size)
+            for (it in deleted) {
+                BytesUtil.writeBytes(stream, it)
             }
-            writer.flush()
+            BytesUtil.writeBytes(stream, items.size)
+            for (it in items) {
+                BytesUtil.writeBytes(stream, it.id)
+                BytesUtil.writeBytes(stream, it.info.created.inWholeMilliseconds)
+                BytesUtil.writeBytes(stream, it.info.updated.inWholeMilliseconds)
+                stream.write(it.info.hash)
+                val bytes = encode(it.item)
+                BytesUtil.writeBytes(stream, bytes.size)
+                stream.write(bytes)
+            }
+            stream.flush()
         }
     }
 
     protected abstract fun now(): Duration
     protected abstract fun randomUUID(): UUID
-    protected abstract fun hash(bytes: ByteArray): String
     protected abstract fun encode(item: T): ByteArray
     protected abstract fun decode(bytes: ByteArray): T
     protected abstract fun inputStream(): InputStream
@@ -132,8 +111,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
     override fun delete(id: UUID): Boolean {
         val items = items.toMutableList()
         for (index in items.indices) {
-            val item = items[index]
-            if (item.id == id) {
+            if (items[index].id == id) {
                 val oldItem = items.removeAt(index)
                 check(oldItem.id == id)
                 write(
@@ -149,18 +127,16 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
     override fun update(id: UUID, item: T): ItemInfo? {
         val items = items.toMutableList()
         for (index in items.indices) {
-            val it = items[index]
-            if (it.id == id) {
-                val oldItem = items.removeAt(index)
-                check(oldItem.id == id)
-                val described = it.copy(
+            val oldItem = items[index]
+            if (oldItem.id == id) {
+                val newItem = oldItem.copy(
                     updated = now(),
-                    hash = hash(encode(item)),
+                    hash = hf.map(encode(item)),
                     item = item,
                 )
-                items.add(described)
-                write(items = items.sortedBy { it.info.created })
-                return described.info
+                items[index] = newItem
+                write(items = items)
+                return newItem.info
             }
         }
         return null
@@ -174,7 +150,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
             info = ItemInfo(
                 created = created,
                 updated = created,
-                hash = hash(encode(item)),
+                hash = hf.map(encode(item)),
             ),
             item = item,
         )
@@ -218,9 +194,11 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
             newItems += item.map(::decode)
         }
         val sorted = newItems.sortedBy { it.info.created }
-        val builder = StringBuilder()
-        for (item in sorted) builder.append(item.info.hash)
-        check(hash(builder.toString().toByteArray()) == info.hash) { "Wrong hash!" }
+        val bytes = ByteArray(sorted.size * hf.size)
+        for (index in sorted.indices) {
+            System.arraycopy(sorted[index].info.hash, 0, bytes, index * hf.size, hf.size)
+        }
+        check(hf.map(bytes).contentEquals(info.hash)) { "Wrong hash!" }
         write(
             items = sorted,
             deleted = this.deleted + info.deleted,
@@ -228,33 +206,27 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
     }
 
     override fun getSyncInfo(): SyncInfo {
-        val infos = mutableMapOf<UUID, ItemInfo>()
-        val deleted: Set<UUID>
-        inputStream().use { stream ->
-            val reader = stream.bufferedReader()
-            deleted = reader.readLine()
-                .split(",")
-                .filter { it.isNotBlank() }
-                .map(UUID::fromString)
-                .toSet()
-            val size = reader.readLine().toInt() // 1) items size
-            for (ignored in 0 until size) {
-                val id = UUID.fromString(reader.readLine()) // 0) item id
-                val split = reader.readLine().split(",")
-                check(split.size == 3)
-                @Suppress("IgnoredReturnValue")
-                infos[id] = ItemInfo(
-                    created = split[0].toLong().milliseconds,
-                    updated = split[1].toLong().milliseconds,
-                    hash = split[2],
-                )
-                reader.readLine() // 2) item
+        return inputStream().use { stream ->
+            val deletedSize = BytesUtil.readInt(stream)
+            val deleted = HashSet<UUID>(deletedSize)
+            for (index in 0 until deletedSize) {
+                deleted.add(BytesUtil.readUUID(stream))
             }
+            val itemsSize = BytesUtil.readInt(stream)
+            val infos = HashMap<UUID, ItemInfo>(itemsSize)
+            for (ignored in 0 until itemsSize) {
+                infos[BytesUtil.readUUID(stream)] = ItemInfo(
+                    created = BytesUtil.readLong(stream).milliseconds,
+                    updated = BytesUtil.readLong(stream).milliseconds,
+                    hash = stream.readNBytes(hf.size),
+                )
+                stream.skip(BytesUtil.readInt(stream).toLong()) // skip encoded
+            }
+            SyncInfo(
+                infos = infos,
+                deleted = deleted,
+            )
         }
-        return SyncInfo(
-            infos = infos,
-            deleted = deleted,
-        )
     }
 
     override fun getMergeInfo(info: SyncInfo): MergeInfo {
@@ -272,7 +244,7 @@ abstract class SyncStreamsStorage<T : Any>(override val id: UUID) : SyncStorage<
             if (described == null) {
                 if (deleted.contains(itemId)) continue
                 download.add(itemId)
-            } else if (itemInfo.hash != described.info.hash) {
+            } else if (!itemInfo.hash.contentEquals(described.info.hash)) {
                 if (itemInfo.updated > described.info.updated) {
                     download.add(itemId)
                 } else {

@@ -13,11 +13,11 @@ import kotlin.time.Duration
 class ItemInfo(
     val created: Duration,
     val updated: Duration,
-    val hash: String,
+    val hash: ByteArray,
 ) {
     fun copy(
         updated: Duration,
-        hash: String,
+        hash: ByteArray,
     ): ItemInfo {
         return ItemInfo(
             created = created,
@@ -30,13 +30,13 @@ class ItemInfo(
         return "{" +
             "created: ${created.inWholeMilliseconds}ms, " +
             "updated: ${updated.inWholeMilliseconds}ms, " +
-            "hash: \"$hash\"" +
+            "hash: \"${hash.toHEX()}\"" +
             "}"
     }
 
     override fun equals(other: Any?): Boolean {
         return when (other) {
-            is ItemInfo -> other.created == created && other.updated == updated && other.hash == hash
+            is ItemInfo -> other.created == created && other.updated == updated && other.hash.contentEquals(hash)
             else -> false
         }
     }
@@ -45,7 +45,7 @@ class ItemInfo(
         return Objects.hash(
             created,
             updated,
-            hash,
+            hash.contentHashCode(),
         )
     }
 }

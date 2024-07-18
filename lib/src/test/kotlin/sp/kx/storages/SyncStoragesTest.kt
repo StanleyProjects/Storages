@@ -132,16 +132,16 @@ internal class SyncStoragesTest {
         }
     }
 
-    private fun SyncStorages.assertHashes(expected: Map<UUID, String>) {
+    private fun SyncStorages.assertHashes(expected: Map<UUID, ByteArray>) {
         val actual = hashes()
         assertEquals(expected.size, actual.size, "hashes:\n$expected\n$actual\n")
         for ((ei, eh) in expected) {
             val ah = actual[ei] ?: error("No hash by ID: \"$ei\"!")
-            assertEquals(eh, ah)
+            assertEquals(eh.toHEX(), ah.toHEX())
         }
     }
 
-    private fun SyncStorages.assertSyncInfo(hashes: Map<UUID, String>, expected: Map<UUID, SyncInfo>) {
+    private fun SyncStorages.assertSyncInfo(hashes: Map<UUID, ByteArray>, expected: Map<UUID, SyncInfo>) {
         val actual = getSyncInfo(hashes)
         assertEquals(expected.size, actual.size, "SyncInfo:\n$expected\n$actual\n")
         for ((id, value) in expected) {
@@ -168,9 +168,9 @@ internal class SyncStoragesTest {
         val storage2Items = listOf(
             mockDescribed(pointer = 21, 21),
         )
-        val hashes = listOf(
-            storage1Items.joinToString(separator = "") { it.info.hash }.toByteArray() to "1:default",
-            storage2Items.joinToString(separator = "") { it.info.hash }.toByteArray() to "2:default",
+        val hashes = MockHashFunction.hashes(
+            storage1Items to "1:default",
+            storage2Items to "2:default",
         ) + storage1Items.map {
             it.item.toByteArray() to it.info.hash
         } + storage2Items.map {
@@ -215,14 +215,10 @@ internal class SyncStoragesTest {
             storages.require<Int>().add(described.item)
         }
         val expected = mapOf(
-            mockUUID(1) to "1:default",
-            mockUUID(2) to "2:default",
+            mockUUID(1) to MockHashFunction.map("1:default"),
+            mockUUID(2) to MockHashFunction.map("2:default"),
         )
         storages.assertHashes(expected = expected)
-    }
-
-    private fun <T : Any> List<Described<T>>.hash(): ByteArray {
-        return joinToString(separator = "") { it.info.hash }.toByteArray()
     }
 
     @Test
@@ -232,12 +228,12 @@ internal class SyncStoragesTest {
         }
         val stringTUpdated = strings[2].copy(
             updated = (1_000 + 113).milliseconds,
-            hash = "item:hash:13:t:updated",
+            hash = MockHashFunction.map("item:hash:13:t:updated"),
             item = "item:13:t:updated",
         )
         val stringRUpdated = strings[3].copy(
             updated = (1_000 + 114).milliseconds,
-            hash = "item:hash:14:r:updated",
+            hash = MockHashFunction.map("item:hash:14:r:updated"),
             item = "item:14:r:updated",
         )
         val stringsTUpdated = strings.toMutableList().also {
@@ -257,12 +253,12 @@ internal class SyncStoragesTest {
         }
         val intTUpdated = ints[2].copy(
             updated = (1_000 + 123).milliseconds,
-            hash = "item:hash:23:t:updated",
+            hash = MockHashFunction.map("item:hash:23:t:updated"),
             item = 123,
         )
         val intRUpdated = ints[3].copy(
             updated = (1_000 + 124).milliseconds,
-            hash = "item:hash:24:r:updated",
+            hash = MockHashFunction.map("item:hash:24:r:updated"),
             item = 124,
         )
         val intsTUpdated = ints.toMutableList().also {
@@ -293,13 +289,13 @@ internal class SyncStoragesTest {
             intTUpdated.let { it.item.toString().toByteArray() to it.item },
             intRUpdated.let { it.item.toString().toByteArray() to it.item },
         )
-        val hashes = listOf(
-            strings.hash() to "strings:hash",
-            ints.hash() to "ints:hash",
-            stringsTUpdated.hash() to "strings:hash:t:updated",
-            stringsRUpdated.hash() to "strings:hash:R:updated",
-            intsTUpdated.hash() to "ints:hash:t:updated",
-            intsRUpdated.hash() to "ints:hash:r:updated",
+        val hashes = MockHashFunction.hashes(
+            strings to "strings:hash",
+            ints to "ints:hash",
+            stringsTUpdated to "strings:hash:t:updated",
+            stringsRUpdated to "strings:hash:R:updated",
+            intsTUpdated to "ints:hash:t:updated",
+            intsRUpdated to "ints:hash:r:updated",
         ) + strings.map {
             it.item.toByteArray() to it.info.hash
         } + ints.map {
@@ -459,8 +455,8 @@ internal class SyncStoragesTest {
         val timeProvider = mockProvider { time }
         var itemId = mockUUID()
         val uuidProvider = mockProvider { itemId }
-        val hashes = listOf(
-            strings.hash() to "strings:hash",
+        val hashes = MockHashFunction.hashes(
+            strings to "strings:hash",
         ) + strings.map {
             it.item.toByteArray() to it.info.hash
         }
@@ -488,11 +484,11 @@ internal class SyncStoragesTest {
             expected = emptyMap(),
         )
         storages.assertSyncInfo(
-            hashes = mapOf(mockUUID(2) to "2"),
+            hashes = mapOf(mockUUID(2) to MockHashFunction.map("2")),
             expected = emptyMap(),
         )
         storages.assertSyncInfo(
-            hashes = mapOf(mockUUID(1) to "strings:hash"),
+            hashes = mapOf(mockUUID(1) to MockHashFunction.map("strings:hash")),
             expected = emptyMap(),
         )
     }
@@ -504,12 +500,12 @@ internal class SyncStoragesTest {
         }
         val stringTUpdated = strings[2].copy(
             updated = (1_000 + 113).milliseconds,
-            hash = "item:hash:13:t:updated",
+            hash = MockHashFunction.map("item:hash:13:t:updated"),
             item = "item:13:t:updated",
         )
         val stringRUpdated = strings[3].copy(
             updated = (1_000 + 114).milliseconds,
-            hash = "item:hash:14:r:updated",
+            hash = MockHashFunction.map("item:hash:14:r:updated"),
             item = "item:14:r:updated",
         )
         val stringsTUpdated = strings.toMutableList().also {
@@ -529,12 +525,12 @@ internal class SyncStoragesTest {
         }
         val intTUpdated = ints[2].copy(
             updated = (1_000 + 123).milliseconds,
-            hash = "item:hash:23:t:updated",
+            hash = MockHashFunction.map("item:hash:23:t:updated"),
             item = 123,
         )
         val intRUpdated = ints[3].copy(
             updated = (1_000 + 124).milliseconds,
-            hash = "item:hash:24:r:updated",
+            hash = MockHashFunction.map("item:hash:24:r:updated"),
             item = 124,
         )
         val intsTUpdated = ints.toMutableList().also {
@@ -565,13 +561,13 @@ internal class SyncStoragesTest {
             intTUpdated.let { it.item.toString().toByteArray() to it.item },
             intRUpdated.let { it.item.toString().toByteArray() to it.item },
         )
-        val hashes = listOf(
-            strings.hash() to "strings:hash",
-            ints.hash() to "ints:hash",
-            stringsTUpdated.hash() to "strings:hash:t:updated",
-            stringsRUpdated.hash() to "strings:hash:R:updated",
-            intsTUpdated.hash() to "ints:hash:t:updated",
-            intsRUpdated.hash() to "ints:hash:r:updated",
+        val hashes = MockHashFunction.hashes(
+            strings to "strings:hash",
+            ints to "ints:hash",
+            stringsTUpdated to "strings:hash:t:updated",
+            stringsRUpdated to "strings:hash:R:updated",
+            intsTUpdated to "ints:hash:t:updated",
+            intsRUpdated to "ints:hash:r:updated",
         ) + strings.map {
             it.item.toByteArray() to it.info.hash
         } + ints.map {
@@ -749,12 +745,12 @@ internal class SyncStoragesTest {
         }
         val stringTUpdated = strings[2].copy(
             updated = (1_000 + 113).milliseconds,
-            hash = "item:hash:13:t:updated",
+            hash = MockHashFunction.map("item:hash:13:t:updated"),
             item = "item:13:t:updated",
         )
         val stringRUpdated = strings[3].copy(
             updated = (1_000 + 114).milliseconds,
-            hash = "item:hash:14:r:updated",
+            hash = MockHashFunction.map("item:hash:14:r:updated"),
             item = "item:14:r:updated",
         )
         val stringsTUpdated = strings.toMutableList().also {
@@ -780,12 +776,12 @@ internal class SyncStoragesTest {
         }
         val intTUpdated = ints[2].copy(
             updated = (1_000 + 123).milliseconds,
-            hash = "item:hash:23:t:updated",
+            hash = MockHashFunction.map("item:hash:23:t:updated"),
             item = 123,
         )
         val intRUpdated = ints[3].copy(
             updated = (1_000 + 124).milliseconds,
-            hash = "item:hash:24:r:updated",
+            hash = MockHashFunction.map("item:hash:24:r:updated"),
             item = 124,
         )
         val intsTUpdated = ints.toMutableList().also {
@@ -822,15 +818,15 @@ internal class SyncStoragesTest {
             intTUpdated.let { it.item.toString().toByteArray() to it.item },
             intRUpdated.let { it.item.toString().toByteArray() to it.item },
         )
-        val hashes = listOf(
-            strings.hash() to "strings:hash",
-            ints.hash() to "ints:hash",
-            stringsTUpdated.hash() to "strings:hash:t:updated",
-            stringsRUpdated.hash() to "strings:hash:R:updated",
-            stringsFinal.hash() to "strings:hash:final",
-            intsTUpdated.hash() to "ints:hash:t:updated",
-            intsRUpdated.hash() to "ints:hash:r:updated",
-            intsFinal.hash() to "ints:hash:final",
+        val hashes = MockHashFunction.hashes(
+            strings to "strings:hash",
+            ints to "ints:hash",
+            stringsTUpdated to "strings:hash:t:updated",
+            stringsRUpdated to "strings:hash:R:updated",
+            stringsFinal to "strings:hash:final",
+            intsTUpdated to "ints:hash:t:updated",
+            intsRUpdated to "ints:hash:r:updated",
+            intsFinal to "ints:hash:final",
         ) + strings.map {
             it.item.toByteArray() to it.info.hash
         } + ints.map {
@@ -964,7 +960,7 @@ internal class SyncStoragesTest {
         check(tCommitInfo.keys.sorted() == listOf(mockUUID(1), mockUUID(2)))
         SyncStreamsStorageTest.assert(
             expected = mockCommitInfo(
-                hash = "strings:hash:final",
+                hash = MockHashFunction.map("strings:hash:final"),
                 items = listOf(
                     stringsTUpdated[1].map { it.toByteArray() },
                     stringsTUpdated[4].map { it.toByteArray() },
@@ -975,7 +971,7 @@ internal class SyncStoragesTest {
         )
         SyncStreamsStorageTest.assert(
             expected = mockCommitInfo(
-                hash = "ints:hash:final",
+                hash = MockHashFunction.map("ints:hash:final"),
                 items = listOf(
                     intsTUpdated[1].map { it.toString().toByteArray() },
                     intsTUpdated[4].map { it.toString().toByteArray() },
@@ -996,7 +992,7 @@ internal class SyncStoragesTest {
         check(rCommitInfo.keys.sorted() == listOf(mockUUID(1), mockUUID(2)))
         SyncStreamsStorageTest.assert(
             expected = mockCommitInfo(
-                hash = "strings:hash:final",
+                hash = MockHashFunction.map("strings:hash:final"),
                 items = listOf(
                     stringsRUpdated[2].map { it.toByteArray() },
                     stringsRUpdated[4].map { it.toByteArray() },
@@ -1007,7 +1003,7 @@ internal class SyncStoragesTest {
         )
         SyncStreamsStorageTest.assert(
             expected = mockCommitInfo(
-                hash = "ints:hash:final",
+                hash = MockHashFunction.map("ints:hash:final"),
                 items = listOf(
                     intsRUpdated[2].map { it.toString().toByteArray() },
                     intsRUpdated[4].map { it.toString().toByteArray() },
@@ -1033,12 +1029,12 @@ internal class SyncStoragesTest {
         }
         val stringTUpdated = strings[2].copy(
             updated = (1_000 + 113).milliseconds,
-            hash = "item:hash:13:t:updated",
+            hash = MockHashFunction.map("item:hash:13:t:updated"),
             item = "item:13:t:updated",
         )
         val stringRUpdated = strings[3].copy(
             updated = (1_000 + 114).milliseconds,
-            hash = "item:hash:14:r:updated",
+            hash = MockHashFunction.map("item:hash:14:r:updated"),
             item = "item:14:r:updated",
         )
         val stringsTUpdated = strings.toMutableList().also {
@@ -1064,12 +1060,12 @@ internal class SyncStoragesTest {
         }
         val intTUpdated = ints[2].copy(
             updated = (1_000 + 123).milliseconds,
-            hash = "item:hash:23:t:updated",
+            hash = MockHashFunction.map("item:hash:23:t:updated"),
             item = 123,
         )
         val intRUpdated = ints[3].copy(
             updated = (1_000 + 124).milliseconds,
-            hash = "item:hash:24:r:updated",
+            hash = MockHashFunction.map("item:hash:24:r:updated"),
             item = 124,
         )
         val intsTUpdated = ints.toMutableList().also {
@@ -1106,15 +1102,15 @@ internal class SyncStoragesTest {
             intTUpdated.let { it.item.toString().toByteArray() to it.item },
             intRUpdated.let { it.item.toString().toByteArray() to it.item },
         )
-        val hashes = listOf(
-            strings.hash() to "strings:hash",
-            ints.hash() to "ints:hash",
-            stringsTUpdated.hash() to "strings:hash:t:updated",
-            stringsRUpdated.hash() to "strings:hash:R:updated",
-            stringsFinal.hash() to "strings:hash:final",
-            intsTUpdated.hash() to "ints:hash:t:updated",
-            intsRUpdated.hash() to "ints:hash:r:updated",
-            intsFinal.hash() to "ints:hash:final",
+        val hashes = MockHashFunction.hashes(
+            strings to "strings:hash",
+            ints to "ints:hash",
+            stringsTUpdated to "strings:hash:t:updated",
+            stringsRUpdated to "strings:hash:R:updated",
+            stringsFinal to "strings:hash:final",
+            intsTUpdated to "ints:hash:t:updated",
+            intsRUpdated to "ints:hash:r:updated",
+            intsFinal to "ints:hash:final",
         ) + strings.map {
             it.item.toByteArray() to it.info.hash
         } + ints.map {
@@ -1273,8 +1269,8 @@ internal class SyncStoragesTest {
         val timeProvider = mockProvider { time }
         var itemId = mockUUID()
         val uuidProvider = mockProvider { itemId }
-        val hashes = listOf(
-            strings.hash() to "strings:hash",
+        val hashes = MockHashFunction.hashes(
+            strings to "strings:hash",
         ) + strings.map {
             it.item.toByteArray() to it.info.hash
         }
