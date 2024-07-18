@@ -1,6 +1,5 @@
 package sp.service.sample
 
-import sp.kx.storages.Storage
 import sp.kx.storages.SyncStorages
 import sp.kx.storages.SyncStreamsStorage
 import java.io.File

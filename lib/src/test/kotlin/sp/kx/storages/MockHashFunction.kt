@@ -1,7 +1,7 @@
 package sp.kx.storages
 
 internal class MockHashFunction(
-    private val hashes: List<Pair<ByteArray, ByteArray>>
+    private val hashes: List<Pair<ByteArray, ByteArray>>,
 ) : HashFunction {
     override val size = _size
 
