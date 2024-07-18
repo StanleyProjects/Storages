@@ -2,7 +2,6 @@ package sp.kx.storages
 
 import java.io.InputStream
 import java.io.OutputStream
-import java.util.Base64
 import java.util.HashMap
 import java.util.HashSet
 import java.util.UUID
@@ -79,10 +78,6 @@ abstract class SyncStreamsStorage<T : Any>(
             return set
         }
 
-    private fun base64(value: String): ByteArray {
-        return Base64.getDecoder().decode(value)
-    }
-
     private fun write(
         items: List<Described<T>>,
         deleted: Set<UUID> = this.deleted,
@@ -116,8 +111,7 @@ abstract class SyncStreamsStorage<T : Any>(
     override fun delete(id: UUID): Boolean {
         val items = items.toMutableList()
         for (index in items.indices) {
-            val item = items[index]
-            if (item.id == id) {
+            if (items[index].id == id) {
                 val oldItem = items.removeAt(index)
                 check(oldItem.id == id)
                 write(
@@ -133,18 +127,16 @@ abstract class SyncStreamsStorage<T : Any>(
     override fun update(id: UUID, item: T): ItemInfo? {
         val items = items.toMutableList()
         for (index in items.indices) {
-            val it = items[index]
-            if (it.id == id) {
-                val oldItem = items.removeAt(index)
-                check(oldItem.id == id)
-                val described = it.copy(
+            val oldItem = items[index]
+            if (oldItem.id == id) {
+                val newItem = oldItem.copy(
                     updated = now(),
                     hash = hf.map(encode(item)),
                     item = item,
                 )
-                items.add(described)
-                write(items = items.sortedBy { it.info.created })
-                return described.info
+                items[index] = newItem
+                write(items = items)
+                return newItem.info
             }
         }
         return null
