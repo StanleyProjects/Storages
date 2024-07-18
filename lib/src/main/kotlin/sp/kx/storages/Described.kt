@@ -42,11 +42,9 @@ class Described<T : Any>(
     @Suppress("ReturnCount")
     override fun equals(other: Any?): Boolean {
         if (other !is Described<*>) return false
-        if (other.id != id) return false
-        if (other.info != info) return false
+        if (other.id != id || other.info != info) return false
         if (item is ByteArray) {
-            if (other.item !is ByteArray) return false
-            return item.contentEquals(other.item)
+            return other.item is ByteArray && item.contentEquals(other.item)
         }
         return other.item == item
     }
@@ -55,7 +53,7 @@ class Described<T : Any>(
         return Objects.hash(
             id,
             info,
-            item,
+            if (item is ByteArray) item.contentHashCode() else item,
         )
     }
 }

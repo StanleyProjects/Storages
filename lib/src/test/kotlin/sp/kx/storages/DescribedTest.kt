@@ -157,6 +157,28 @@ internal class DescribedTest {
     }
 
     @Test
+    fun hashCodeByteArrayTest() {
+        val id = UUID.fromString("43518ed6-cda2-48c3-bd28-fed6fab80196")
+        val info = ItemInfo(
+            created = 1.milliseconds,
+            updated = 2.milliseconds,
+            hash = "hash".toByteArray(),
+        )
+        val item = "DescribedTest:hashCodeTest".toByteArray()
+        val value = Described(
+            id = id,
+            info = info,
+            item = item,
+        )
+        val expected = Objects.hash(
+            id,
+            info,
+            item.contentHashCode(),
+        )
+        assertEquals(expected, value.hashCode())
+    }
+
+    @Test
     fun copyTest() {
         val id = UUID.fromString("43518ed6-cda2-48c3-bd28-fed6fab80196")
         val info = ItemInfo(

@@ -24,8 +24,8 @@ class CommitInfo(
 ) {
     override fun toString(): String {
         return "{" +
-            "items: $items," +
-            "deleted: $deleted," +
+            "items: $items, " +
+            "deleted: $deleted, " +
             "hash: \"${hash.toHEX()}\"" +
             "}"
     }

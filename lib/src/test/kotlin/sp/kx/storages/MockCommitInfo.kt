@@ -3,7 +3,7 @@ package sp.kx.storages
 import java.util.UUID
 
 internal fun mockCommitInfo(
-    hash: ByteArray = "mock:hash".toByteArray(),
+    hash: ByteArray = MockHashFunction.map("mock:hash"),
     items: List<Described<ByteArray>> = emptyList(),
     deleted: Set<UUID> = emptySet(),
 ): CommitInfo {
