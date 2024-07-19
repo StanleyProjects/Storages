@@ -130,7 +130,7 @@ internal class BytesUtilTest {
             byteArrayOf(0x0a),
             byteArrayOf(0x0a, 0x06),
             byteArrayOf(0x0a, 0x06, 0x16),
-            bytes
+            bytes,
         ).forEach { expected ->
             val actual = BytesUtil.readBytes(ByteArrayInputStream(bytes), expected.size)
             assertEquals(expected.size, actual.size)
