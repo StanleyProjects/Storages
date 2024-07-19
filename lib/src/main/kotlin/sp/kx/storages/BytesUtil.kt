@@ -50,4 +50,10 @@ internal object BytesUtil {
     fun readUUID(stream: InputStream): UUID {
         return UUID(readLong(stream), readLong(stream))
     }
+
+    fun readBytes(stream: InputStream, size: Int): ByteArray {
+        val bytes = ByteArray(size)
+        stream.read(bytes)
+        return bytes
+    }
 }
