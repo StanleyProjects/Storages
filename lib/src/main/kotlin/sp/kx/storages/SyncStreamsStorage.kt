@@ -38,10 +38,8 @@ abstract class SyncStreamsStorage<T : Any>(
                 val itemsSize = BytesUtil.readInt(stream)
                 val bytes = ByteArray(itemsSize * hf.size)
                 for (index in 0 until itemsSize) {
-                    stream.skip(16) // skip id
-                    stream.skip(8) // skip info created
-                    stream.skip(8) // skip info updated
-                    System.arraycopy(stream.readNBytes(hf.size), 0, bytes, index * hf.size, hf.size)
+                    stream.skip(16 + 8 + 8)
+                    stream.read(bytes, index * hf.size, hf.size)
                     stream.skip(BytesUtil.readInt(stream).toLong()) // skip encoded
                 }
                 hf.map(bytes)
@@ -56,12 +54,12 @@ abstract class SyncStreamsStorage<T : Any>(
                     val info = ItemInfo(
                         created = BytesUtil.readLong(stream).milliseconds,
                         updated = BytesUtil.readLong(stream).milliseconds,
-                        hash = stream.readNBytes(hf.size),
+                        hash = BytesUtil.readBytes(stream, hf.size),
                     )
                     Described(
                         id = id,
                         info = info,
-                        item = decode(stream.readNBytes(BytesUtil.readInt(stream))),
+                        item = decode(BytesUtil.readBytes(stream, BytesUtil.readInt(stream))),
                     )
                 }
             }
@@ -218,7 +216,7 @@ abstract class SyncStreamsStorage<T : Any>(
                 infos[BytesUtil.readUUID(stream)] = ItemInfo(
                     created = BytesUtil.readLong(stream).milliseconds,
                     updated = BytesUtil.readLong(stream).milliseconds,
-                    hash = stream.readNBytes(hf.size),
+                    hash = BytesUtil.readBytes(stream, hf.size),
                 )
                 stream.skip(BytesUtil.readInt(stream).toLong()) // skip encoded
             }
