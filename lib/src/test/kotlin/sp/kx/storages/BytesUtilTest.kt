@@ -1,6 +1,7 @@
 package sp.kx.storages
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -110,5 +111,30 @@ internal class BytesUtilTest {
             0x2d.toByte(),
         )
         assertEquals(expected, BytesUtil.readUUID(ByteArrayInputStream(bytes)))
+    }
+
+    @Test
+    fun readBytesTest() {
+        val bytes = byteArrayOf(
+            0x0a.toByte(),
+            0x06.toByte(),
+            0x16.toByte(),
+            0xff.toByte(),
+            0xbe.toByte(),
+            0xea.toByte(),
+            0xdb.toByte(),
+            0x8d.toByte(),
+        )
+        listOf(
+            byteArrayOf(),
+            byteArrayOf(0x0a),
+            byteArrayOf(0x0a, 0x06),
+            byteArrayOf(0x0a, 0x06, 0x16),
+            bytes
+        ).forEach { expected ->
+            val actual = BytesUtil.readBytes(ByteArrayInputStream(bytes), expected.size)
+            assertEquals(expected.size, actual.size)
+            assertTrue(expected.contentEquals(actual))
+        }
     }
 }
