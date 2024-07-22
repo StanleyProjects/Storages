@@ -5,6 +5,7 @@ import java.io.OutputStream
 import java.util.HashMap
 import java.util.HashSet
 import java.util.UUID
+import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -30,10 +31,11 @@ import kotlin.time.Duration.Companion.milliseconds
 abstract class SyncStreamsStorage<T : Any>(
     override val id: UUID,
     private val hf: HashFunction,
+    private val pointers: SyncStorages.Pointers,
 ) : SyncStorage<T> {
     override val hash: ByteArray
         get() {
-            return inputStream().use { stream ->
+            return inputStream(pointer = getPointer()).use { stream ->
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
                 val itemsSize = BytesUtil.readInt(stream)
                 val bytes = ByteArray(itemsSize * hf.size)
@@ -47,7 +49,7 @@ abstract class SyncStreamsStorage<T : Any>(
         }
     override val items: List<Described<T>>
         get() {
-            return inputStream().use { stream ->
+            return inputStream(pointer = getPointer()).use { stream ->
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
                 List(BytesUtil.readInt(stream)) { _ ->
                     val id = BytesUtil.readUUID(stream)
@@ -67,7 +69,7 @@ abstract class SyncStreamsStorage<T : Any>(
     private val deleted: Set<UUID>
         get() {
             val set = HashSet<UUID>()
-            inputStream().use { stream ->
+            inputStream(pointer = getPointer()).use { stream ->
                 val deletedSize = BytesUtil.readInt(stream)
                 for (index in 0 until deletedSize) {
                     set.add(BytesUtil.readUUID(stream))
@@ -79,8 +81,9 @@ abstract class SyncStreamsStorage<T : Any>(
     private fun write(
         items: List<Described<T>>,
         deleted: Set<UUID> = this.deleted,
+        pointer: Int,
     ) {
-        outputStream().use { stream ->
+        outputStream(pointer = pointer).use { stream ->
             BytesUtil.writeBytes(stream, deleted.size)
             for (it in deleted) {
                 BytesUtil.writeBytes(stream, it)
@@ -103,8 +106,12 @@ abstract class SyncStreamsStorage<T : Any>(
     protected abstract fun randomUUID(): UUID
     protected abstract fun encode(item: T): ByteArray
     protected abstract fun decode(bytes: ByteArray): T
-    protected abstract fun inputStream(): InputStream
-    protected abstract fun outputStream(): OutputStream
+    protected abstract fun inputStream(pointer: Int): InputStream
+    protected abstract fun outputStream(pointer: Int): OutputStream
+
+    private fun getPointer(): Int {
+        return pointers.getAll()[id] ?: 0
+    }
 
     override fun delete(id: UUID): Boolean {
         val items = items.toMutableList()
@@ -115,6 +122,7 @@ abstract class SyncStreamsStorage<T : Any>(
                 write(
                     items = items,
                     deleted = deleted + id,
+                    pointer = getPointer(),
                 )
                 return true
             }
@@ -133,7 +141,10 @@ abstract class SyncStreamsStorage<T : Any>(
                     item = item,
                 )
                 items[index] = newItem
-                write(items = items)
+                write(
+                    items = items,
+                    pointer = getPointer(),
+                )
                 return newItem.info
             }
         }
@@ -141,7 +152,6 @@ abstract class SyncStreamsStorage<T : Any>(
     }
 
     override fun add(item: T): Described<T> {
-        val items = items.toMutableList()
         val created = now()
         val described = Described(
             id = randomUUID(),
@@ -152,8 +162,11 @@ abstract class SyncStreamsStorage<T : Any>(
             ),
             item = item,
         )
-        items.add(described)
-        write(items = items.sortedBy { it.info.created })
+        val items = items + described
+        write(
+            items = items.sortedBy { it.info.created },
+            pointer = getPointer(),
+        )
         return described
     }
 
@@ -170,9 +183,16 @@ abstract class SyncStreamsStorage<T : Any>(
             newItems += item.map(::decode)
         }
         val deleted = this.deleted
+        val sorted = newItems.sortedBy { it.info.created }
+        val bytes = ByteArray(sorted.size * hf.size)
+        for (index in sorted.indices) {
+            System.arraycopy(sorted[index].info.hash, 0, bytes, index * hf.size, hf.size)
+        }
+        val hash = hf.map(bytes)
         write(
-            items = newItems.sortedBy { it.info.created },
+            items = sorted,
             deleted = deleted + info.deleted,
+            pointer = hash.contentHashCode().absoluteValue,
         )
         return CommitInfo(
             hash = hash,
@@ -196,15 +216,17 @@ abstract class SyncStreamsStorage<T : Any>(
         for (index in sorted.indices) {
             System.arraycopy(sorted[index].info.hash, 0, bytes, index * hf.size, hf.size)
         }
-        check(hf.map(bytes).contentEquals(info.hash)) { "Wrong hash!" }
+        val hash = hf.map(bytes)
+        check(hash.contentEquals(info.hash)) { "Wrong hash!" }
         write(
             items = sorted,
             deleted = this.deleted + info.deleted,
+            pointer = hash.contentHashCode().absoluteValue,
         )
     }
 
     override fun getSyncInfo(): SyncInfo {
-        return inputStream().use { stream ->
+        return inputStream(pointer = getPointer()).use { stream ->
             val deletedSize = BytesUtil.readInt(stream)
             val deleted = HashSet<UUID>(deletedSize)
             for (index in 0 until deletedSize) {

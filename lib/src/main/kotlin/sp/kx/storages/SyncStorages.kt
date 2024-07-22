@@ -1,6 +1,7 @@
 package sp.kx.storages
 
 import java.util.UUID
+import kotlin.math.absoluteValue
 
 /**
  * A tool for working with synchronized data storages.
@@ -15,7 +16,8 @@ import java.util.UUID
  * @since 0.4.1
  */
 class SyncStorages private constructor(
-    private val map: Map<Class<out Any>, SyncStorage<out Any>>,
+    private val map: Map<Class<out Any>, SyncStorage<out Any>>, // todo storages
+    private val pointers: Pointers,
 ) {
     /**
      * Builder class for creating [SyncStorages] with multiple [SyncStorage]s.
@@ -46,7 +48,7 @@ class SyncStorages private constructor(
             return add(storage, T::class.java)
         }
 
-        fun build(): SyncStorages {
+        fun build(pointers: Pointers): SyncStorages {
             if (list.isEmpty()) error("Empty storages!")
             for (i in list.indices) {
                 val (type, storage) = list[i]
@@ -57,8 +59,13 @@ class SyncStorages private constructor(
                     if (storage.id == pair.second.id) error("ID \"${storage.id}\" is repeated!")
                 }
             }
-            return SyncStorages(list.toMap())
+            return SyncStorages(list.toMap(), pointers = pointers)
         }
+    }
+
+    interface Pointers {
+        fun getAll(): Map<UUID, Int>
+        fun setAll(values: Map<UUID, Int>)
     }
 
     operator fun get(id: UUID): SyncStorage<out Any>? {
@@ -70,7 +77,7 @@ class SyncStorages private constructor(
     }
 
     fun <T : Any> get(type: Class<T>): SyncStorage<T>? {
-        val entry = map.entries.firstOrNull { it.key == type } ?: return null
+        val entry = map.entries.firstOrNull { it.key == type } ?: return null // todo get operator
         return entry.value as SyncStorage<T>
     }
 
@@ -103,9 +110,12 @@ class SyncStorages private constructor(
     }
 
     fun merge(infos: Map<UUID, MergeInfo>): Map<UUID, CommitInfo> {
-        return infos.mapValues { (id, info) ->
+        val result = infos.mapValues { (id, info) ->
             require(id = id).merge(info)
         }
+        val newPointers = result.mapValues { (_, info) -> info.hash.contentHashCode().absoluteValue }
+        pointers.setAll(pointers.getAll() + newPointers)
+        return result
     }
 
     fun commit(infos: Map<UUID, CommitInfo>) {
@@ -113,11 +123,21 @@ class SyncStorages private constructor(
             val storage = get(id = id) ?: continue // todo
             storage.commit(info)
         }
+        val newPointers = infos.mapValues { (_, info) -> info.hash.contentHashCode().absoluteValue }
+        pointers.setAll(pointers.getAll() + newPointers)
     }
 
     companion object {
+        private object EmptyPointers : Pointers {
+            override fun getAll(): Map<UUID, Int> {
+                return emptyMap()
+            }
+
+            override fun setAll(values: Map<UUID, Int>) {/*noop*/}
+        }
+
         fun <T : Any> create(storage: SyncStorage<T>, type: Class<T>): SyncStorages {
-            return SyncStorages(map = mapOf(type to storage))
+            return SyncStorages(map = mapOf(type to storage), pointers = EmptyPointers)
         }
 
         inline fun <reified T : Any> create(storage: SyncStorage<T>): SyncStorages {
