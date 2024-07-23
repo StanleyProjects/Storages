@@ -177,9 +177,9 @@ internal class SyncStoragesTest {
             it.item.toString().toByteArray() to it.info.hash
         }
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         var itemId = mockUUID()
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val storages = SyncStorages.Builder()
             .add(
                 MockSyncStreamsStorage<String>(
@@ -311,9 +311,9 @@ internal class SyncStoragesTest {
             intRUpdated.let { it.item.toString().toByteArray() to it.info.hash },
         )
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         var itemId = mockUUID()
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val tStorages = SyncStorages.Builder()
             .add(
                 MockSyncStreamsStorage<String>(
@@ -452,9 +452,9 @@ internal class SyncStoragesTest {
             mockDescribed(pointer = 10 + number)
         }
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         var itemId = mockUUID()
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val hashes = MockHashFunction.hashes(
             strings to "strings:hash",
         ) + strings.map {
@@ -583,9 +583,9 @@ internal class SyncStoragesTest {
             intRUpdated.let { it.item.toString().toByteArray() to it.info.hash },
         )
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         var itemId = mockUUID()
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val tStorages = SyncStorages.Builder()
             .add(
                 MockSyncStreamsStorage<String>(
@@ -842,9 +842,9 @@ internal class SyncStoragesTest {
             intRUpdated.let { it.item.toString().toByteArray() to it.info.hash },
         )
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         var itemId = mockUUID()
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val tStorages = SyncStorages.Builder()
             .add(
                 MockSyncStreamsStorage<String>(
@@ -1126,9 +1126,9 @@ internal class SyncStoragesTest {
             intRUpdated.let { it.item.toString().toByteArray() to it.info.hash },
         )
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         var itemId = mockUUID()
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val tStorages = SyncStorages.Builder()
             .add(
                 MockSyncStreamsStorage<String>(
@@ -1266,9 +1266,9 @@ internal class SyncStoragesTest {
             mockDescribed(pointer = 10 + number)
         }
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         var itemId = mockUUID()
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val hashes = MockHashFunction.hashes(
             strings to "strings:hash",
         ) + strings.map {

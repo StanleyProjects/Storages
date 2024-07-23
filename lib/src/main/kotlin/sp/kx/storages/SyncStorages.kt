@@ -14,6 +14,7 @@ import java.util.UUID
  * @author [Stanley Wintergreen](https://github.com/kepocnhh)
  * @since 0.4.1
  */
+@Deprecated(message = "sp.kx.storages.SyncStreamsStorages")
 class SyncStorages private constructor(
     private val map: Map<Class<out Any>, SyncStorage<out Any>>,
 ) {

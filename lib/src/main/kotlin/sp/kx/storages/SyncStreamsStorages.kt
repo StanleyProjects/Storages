@@ -3,7 +3,7 @@ package sp.kx.storages
 import java.util.UUID
 import kotlin.time.Duration
 
-abstract class FooStorages(
+abstract class SyncStreamsStorages(
     private val hf: HashFunction,
     private val pointers: Pointers,
     private val transformers: Map<UUID, Transformer<*>>,
@@ -47,18 +47,19 @@ abstract class FooStorages(
     }
 
     private fun <T : Any> getSyncStorage(id: UUID, streamer: Streamer): SyncStorage<T>? {
+        val transformer = transformers[id] ?: return null
         return object : SyncStreamsStorage<T>(
             id = id,
             hf = hf,
             streamer = streamer,
-            transformer = transformers[id] as Transformer<T>,
+            transformer = transformer as Transformer<T>,
         ) {
             override fun now(): Duration {
-                return this@FooStorages.now()
+                return this@SyncStreamsStorages.now()
             }
 
             override fun randomUUID(): UUID {
-                return this@FooStorages.randomUUID()
+                return this@SyncStreamsStorages.randomUUID()
             }
         }
     }

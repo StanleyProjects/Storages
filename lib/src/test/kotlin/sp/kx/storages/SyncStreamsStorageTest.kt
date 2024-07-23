@@ -157,9 +157,9 @@ internal class SyncStreamsStorageTest {
     fun hashTest() {
         val storageId = UUID.fromString("dc4092c6-e7a1-433e-9169-c2f6f92fc4c1")
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         var itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val defaultItems = (0..3).map { index ->
             Described(
                 id = mockUUID(index),
@@ -253,9 +253,9 @@ internal class SyncStreamsStorageTest {
         val storageId = UUID.fromString("dc4092c6-e7a1-433e-9169-c2f6f92fc4c1")
         val itemHash = MockHashFunction.map("itemHash")
         val time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         val itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val expected = Described(
             id = itemId,
             info = ItemInfo(
@@ -310,9 +310,9 @@ internal class SyncStreamsStorageTest {
         val id = mockUUID(1)
         val itemHash = MockHashFunction.map("itemHash")
         val time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         val itemId = mockUUID(2)
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val expected = Described(
             id = itemId,
             info = ItemInfo(
@@ -356,9 +356,9 @@ internal class SyncStreamsStorageTest {
         val itemUpdated = "itemUpdated"
         val itemUpdatedHash = MockHashFunction.map("itemUpdatedHash")
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         val itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val expected = Described(
             id = itemId,
             info = ItemInfo(
@@ -433,9 +433,9 @@ internal class SyncStreamsStorageTest {
         val itemUpdated = "itemUpdated"
         val itemUpdatedHash = MockHashFunction.map("itemUpdatedHash")
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         val itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val expected = Described(
             id = itemId,
             info = ItemInfo(
@@ -521,9 +521,9 @@ internal class SyncStreamsStorageTest {
     fun mergeAndCommitTest() {
         val storageId = UUID.fromString("dc4092c6-e7a1-433e-9169-c2f6f92fc4c1")
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         var itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val defaultItems = (0..4).map { index ->
             mockDescribed(pointer = index)
         }
@@ -714,9 +714,9 @@ internal class SyncStreamsStorageTest {
         check(itemsMerged.size == 3)
         //
         var time = 1.milliseconds
-        val timeProvider = mockProvider { time }
+        val timeProvider = MockProvider { time }
         var itemId = mockUUID()
-        val uuidProvider = mockProvider { itemId }
+        val uuidProvider = MockProvider { itemId }
         val hashes = MockHashFunction.hashes(
             rItems to "r:default",
             tItems to "t:default",
