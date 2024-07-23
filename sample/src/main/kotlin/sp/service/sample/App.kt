@@ -1,7 +1,9 @@
 package sp.service.sample
 
+import sp.kx.storages.Streamer
 import sp.kx.storages.SyncStorages
 import sp.kx.storages.SyncStreamsStorage
+import sp.kx.storages.Transformer
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -11,38 +13,40 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private data class Foo(val text: String)
 
-private class FileStorage : SyncStreamsStorage<Foo>(
-    id = UUID.fromString("dbb81949-54c9-42e7-91b4-7be1a84bc875"),
+private class FileStorage(id: UUID) : SyncStreamsStorage<Foo>(
+    id = id,
     hf = MD5HashFunction(),
-) {
-    private val file = File.createTempFile("storage", id.toString()).also { file ->
-        file.outputStream().use { stream ->
-            stream.write(ByteArray(8))
+    streamer = object : Streamer {
+        private val file = File.createTempFile("storage", id.toString()).also { file ->
+            file.outputStream().use { stream ->
+                stream.write(ByteArray(8))
+            }
         }
-    }
 
+        override fun inputStream(): InputStream {
+            return file.inputStream()
+        }
+
+        override fun outputStream(): OutputStream {
+            return file.outputStream()
+        }
+    },
+    transformer = object : Transformer<Foo> {
+        override fun encode(decoded: Foo): ByteArray {
+            return decoded.text.toByteArray()
+        }
+
+        override fun decode(encoded: ByteArray): Foo {
+            return Foo(text = String(encoded))
+        }
+    },
+) {
     override fun now(): Duration {
         return System.currentTimeMillis().milliseconds
     }
 
     override fun randomUUID(): UUID {
         return UUID.randomUUID()
-    }
-
-    override fun encode(item: Foo): ByteArray {
-        return item.text.toByteArray()
-    }
-
-    override fun decode(bytes: ByteArray): Foo {
-        return Foo(text = String(bytes))
-    }
-
-    override fun inputStream(): InputStream {
-        return file.inputStream()
-    }
-
-    override fun outputStream(): OutputStream {
-        return file.outputStream()
     }
 }
 
@@ -67,7 +71,7 @@ private fun Map<UUID, ByteArray>.assert(actual: Map<UUID, ByteArray>) {
 }
 
 fun main() {
-    val storages = SyncStorages.create(FileStorage())
+    val storages = SyncStorages.create(FileStorage(id = UUID.fromString("dbb81949-54c9-42e7-91b4-7be1a84bc875")))
     storages.println()
     val e1 = storages.hashes()
     println("---")

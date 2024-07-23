@@ -1,9 +1,5 @@
 package sp.kx.storages
 
-import java.io.InputStream
-import java.io.OutputStream
-import java.util.HashMap
-import java.util.HashSet
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -30,10 +26,12 @@ import kotlin.time.Duration.Companion.milliseconds
 abstract class SyncStreamsStorage<T : Any>(
     override val id: UUID,
     private val hf: HashFunction,
+    private val streamer: Streamer,
+    private val transformer: Transformer<T>,
 ) : SyncStorage<T> {
     override val hash: ByteArray
         get() {
-            return inputStream().use { stream ->
+            return streamer.inputStream().use { stream ->
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
                 val itemsSize = BytesUtil.readInt(stream)
                 val bytes = ByteArray(itemsSize * hf.size)
@@ -47,7 +45,7 @@ abstract class SyncStreamsStorage<T : Any>(
         }
     override val items: List<Described<T>>
         get() {
-            return inputStream().use { stream ->
+            return streamer.inputStream().use { stream ->
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
                 List(BytesUtil.readInt(stream)) { _ ->
                     val id = BytesUtil.readUUID(stream)
@@ -59,7 +57,7 @@ abstract class SyncStreamsStorage<T : Any>(
                     Described(
                         id = id,
                         info = info,
-                        item = decode(BytesUtil.readBytes(stream, BytesUtil.readInt(stream))),
+                        item = transformer.decode(BytesUtil.readBytes(stream, BytesUtil.readInt(stream))),
                     )
                 }
             }
@@ -67,7 +65,7 @@ abstract class SyncStreamsStorage<T : Any>(
     private val deleted: Set<UUID>
         get() {
             val set = HashSet<UUID>()
-            inputStream().use { stream ->
+            streamer.inputStream().use { stream ->
                 val deletedSize = BytesUtil.readInt(stream)
                 for (index in 0 until deletedSize) {
                     set.add(BytesUtil.readUUID(stream))
@@ -80,7 +78,7 @@ abstract class SyncStreamsStorage<T : Any>(
         items: List<Described<T>>,
         deleted: Set<UUID> = this.deleted,
     ) {
-        outputStream().use { stream ->
+        streamer.outputStream().use { stream ->
             BytesUtil.writeBytes(stream, deleted.size)
             for (it in deleted) {
                 BytesUtil.writeBytes(stream, it)
@@ -91,7 +89,7 @@ abstract class SyncStreamsStorage<T : Any>(
                 BytesUtil.writeBytes(stream, it.info.created.inWholeMilliseconds)
                 BytesUtil.writeBytes(stream, it.info.updated.inWholeMilliseconds)
                 stream.write(it.info.hash)
-                val bytes = encode(it.item)
+                val bytes = transformer.encode(it.item)
                 BytesUtil.writeBytes(stream, bytes.size)
                 stream.write(bytes)
             }
@@ -101,10 +99,6 @@ abstract class SyncStreamsStorage<T : Any>(
 
     protected abstract fun now(): Duration
     protected abstract fun randomUUID(): UUID
-    protected abstract fun encode(item: T): ByteArray
-    protected abstract fun decode(bytes: ByteArray): T
-    protected abstract fun inputStream(): InputStream
-    protected abstract fun outputStream(): OutputStream
 
     override fun delete(id: UUID): Boolean {
         val items = items.toMutableList()
@@ -129,7 +123,7 @@ abstract class SyncStreamsStorage<T : Any>(
             if (oldItem.id == id) {
                 val newItem = oldItem.copy(
                     updated = now(),
-                    hash = hf.map(encode(item)),
+                    hash = hf.map(transformer.encode(item)),
                     item = item,
                 )
                 items[index] = newItem
@@ -148,7 +142,7 @@ abstract class SyncStreamsStorage<T : Any>(
             info = ItemInfo(
                 created = created,
                 updated = created,
-                hash = hf.map(encode(item)),
+                hash = hf.map(transformer.encode(item)),
             ),
             item = item,
         )
@@ -163,11 +157,11 @@ abstract class SyncStreamsStorage<T : Any>(
         for (item in this.items) {
             if (info.deleted.contains(item.id)) continue
             if (info.items.any { it.id == item.id }) continue
-            if (info.download.contains(item.id)) download.add(item.map(::encode))
+            if (info.download.contains(item.id)) download.add(item.map(transformer::encode))
             newItems += item
         }
         for (item in info.items) {
-            newItems += item.map(::decode)
+            newItems += item.map(transformer::decode)
         }
         val deleted = this.deleted
         write(
@@ -189,7 +183,7 @@ abstract class SyncStreamsStorage<T : Any>(
             newItems += item
         }
         for (item in info.items) {
-            newItems += item.map(::decode)
+            newItems += item.map(transformer::decode)
         }
         val sorted = newItems.sortedBy { it.info.created }
         val bytes = ByteArray(sorted.size * hf.size)
@@ -204,7 +198,7 @@ abstract class SyncStreamsStorage<T : Any>(
     }
 
     override fun getSyncInfo(): SyncInfo {
-        return inputStream().use { stream ->
+        return streamer.inputStream().use { stream ->
             val deletedSize = BytesUtil.readInt(stream)
             val deleted = HashSet<UUID>(deletedSize)
             for (index in 0 until deletedSize) {
@@ -234,7 +228,7 @@ abstract class SyncStreamsStorage<T : Any>(
         for (described in items) {
             if (info.infos.containsKey(described.id)) continue
             if (info.deleted.contains(described.id)) continue
-            upload.add(described.map(::encode))
+            upload.add(described.map(transformer::encode))
         }
         val deleted = deleted
         for ((itemId, itemInfo) in info.infos) {
@@ -246,7 +240,7 @@ abstract class SyncStreamsStorage<T : Any>(
                 if (itemInfo.updated > described.info.updated) {
                     download.add(itemId)
                 } else {
-                    upload.add(described.map(::encode))
+                    upload.add(described.map(transformer::encode))
                 }
             }
         }
