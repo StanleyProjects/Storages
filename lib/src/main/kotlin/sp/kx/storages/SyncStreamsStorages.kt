@@ -18,6 +18,10 @@ class SyncStreamsStorages private constructor(
             return this
         }
 
+        inline fun <reified T : Any> add(id: UUID, transformer: Transformer<T>): Builder {
+            return add(id = id, type = T::class.java, transformer = transformer)
+        }
+
         fun build(
             hf: HashFunction,
             pointers: Pointers,
@@ -72,6 +76,14 @@ class SyncStreamsStorages private constructor(
             )
         }
         return null
+    }
+
+    inline fun <reified T : Any> get(): MutableStorage<T>? {
+        return get(T::class.java)
+    }
+
+    inline fun <reified T : Any> require(): MutableStorage<T> {
+        return get(T::class.java) ?: error("No storage by type: \"${T::class.java.name}\"!")
     }
 
     private fun <T : Any> getSyncStorage(id: UUID, streamer: Streamer, transformer: Transformer<T>): SyncStorage<T> {

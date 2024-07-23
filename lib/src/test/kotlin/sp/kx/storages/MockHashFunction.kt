@@ -6,7 +6,21 @@ internal class MockHashFunction(
     override val size = _size
 
     override fun map(bytes: ByteArray): ByteArray {
-        return hashes.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second ?: error("No hash!\n---\n${String(bytes)}\n---")
+        val hash = hashes.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second
+        if (hash == null) {
+            val message = """
+                No hash!
+                ---
+                hashes: ${hashes.map { (key, _) -> String(key)}}
+                -
+                ${bytes.size}
+                -
+                ${String(bytes)}
+                ---
+            """.trimIndent()
+            error(message)
+        }
+        return hash
     }
 
     companion object {

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 
+@Deprecated(message = "sp.kx.storages.SyncStreamsStoragesTest")
 internal class SyncStoragesTest {
     @Test
     fun createTest() {
