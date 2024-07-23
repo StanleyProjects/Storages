@@ -1,12 +1,12 @@
 package sp.kx.storages
 
 import java.util.UUID
-import kotlin.time.Duration
 
 abstract class SyncStreamsStorages(
     private val hf: HashFunction,
     private val pointers: Pointers,
     private val transformers: Map<UUID, Transformer<*>>,
+    private val env: SyncStreamsStorage.Environment,
 ) {
     interface Pointers {
         fun getAll(): Map<UUID, Long>
@@ -29,11 +29,10 @@ abstract class SyncStreamsStorages(
         outputPointer: Long,
     ): Streamer
 
-    protected abstract fun now(): Duration
-    protected abstract fun randomUUID(): UUID
     protected abstract fun onPointers(pointers: Map<UUID, Long>)
 
     fun get(id: UUID): MutableStorage<out Any>? {
+        if (!transformers.containsKey(id)) return null
         return getSyncStorage(id = id, getStreamer(id = id))
     }
 
@@ -48,20 +47,13 @@ abstract class SyncStreamsStorages(
 
     private fun <T : Any> getSyncStorage(id: UUID, streamer: Streamer): SyncStorage<T>? {
         val transformer = transformers[id] ?: return null
-        return object : SyncStreamsStorage<T>(
+        return SyncStreamsStorage(
             id = id,
             hf = hf,
             streamer = streamer,
             transformer = transformer as Transformer<T>,
-        ) {
-            override fun now(): Duration {
-                return this@SyncStreamsStorages.now()
-            }
-
-            override fun randomUUID(): UUID {
-                return this@SyncStreamsStorages.randomUUID()
-            }
-        }
+            env = env,
+        )
     }
 
     fun merge(infos: Map<UUID, MergeInfo>): Map<UUID, CommitInfo> {

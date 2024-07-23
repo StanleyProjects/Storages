@@ -12,21 +12,21 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class SyncStoragesTest {
     @Test
     fun createTest() {
-        val ignored = SyncStorages.create(MockSyncStreamsStorage<String>())
+        val ignored = SyncStorages.create(mockSyncStreamsStorage<String>())
     }
 
     @Test
     fun buildTest() {
         val ignored = SyncStorages.Builder()
-            .add(MockSyncStreamsStorage<String>(id = mockUUID(1)))
-            .add(MockSyncStreamsStorage<Int>(id = mockUUID(2)))
+            .add(mockSyncStreamsStorage<String>(id = mockUUID(1)))
+            .add(mockSyncStreamsStorage<Int>(id = mockUUID(2)))
             .build()
     }
 
     @Test
     fun getTest() {
-        val storage1 = MockSyncStreamsStorage<String>(id = mockUUID(1))
-        val storage2 = MockSyncStreamsStorage<Int>(id = mockUUID(2))
+        val storage1 = mockSyncStreamsStorage<String>(id = mockUUID(1))
+        val storage2 = mockSyncStreamsStorage<Int>(id = mockUUID(2))
         val storages = SyncStorages.Builder()
             .add(storage1)
             .add(storage2)
@@ -77,22 +77,22 @@ internal class SyncStoragesTest {
         }
         assertThrowsExactly(IllegalStateException::class.java) {
             SyncStorages.Builder()
-                .add(MockSyncStreamsStorage<String>())
-                .add(MockSyncStreamsStorage<String>())
+                .add(mockSyncStreamsStorage<String>())
+                .add(mockSyncStreamsStorage<String>())
                 .build()
         }
         assertThrowsExactly(IllegalStateException::class.java) {
             SyncStorages.Builder()
-                .add(MockSyncStreamsStorage<String>())
-                .add(MockSyncStreamsStorage<Int>())
+                .add(mockSyncStreamsStorage<String>())
+                .add(mockSyncStreamsStorage<Int>())
                 .build()
         }
     }
 
     @Test
     fun requireTest() {
-        val storage1 = MockSyncStreamsStorage<String>(id = mockUUID(1))
-        val storage2 = MockSyncStreamsStorage<Int>(id = mockUUID(2))
+        val storage1 = mockSyncStreamsStorage<String>(id = mockUUID(1))
+        val storage2 = mockSyncStreamsStorage<Int>(id = mockUUID(2))
         val storages = SyncStorages.Builder()
             .add(storage1)
             .add(storage2)
@@ -182,7 +182,7 @@ internal class SyncStoragesTest {
         val uuidProvider = MockProvider { itemId }
         val storages = SyncStorages.Builder()
             .add(
-                MockSyncStreamsStorage<String>(
+                mockSyncStreamsStorage<String>(
                     id = mockUUID(1),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -193,7 +193,7 @@ internal class SyncStoragesTest {
                 ),
             )
             .add(
-                MockSyncStreamsStorage<Int>(
+                mockSyncStreamsStorage<Int>(
                     id = mockUUID(2),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -316,7 +316,7 @@ internal class SyncStoragesTest {
         val uuidProvider = MockProvider { itemId }
         val tStorages = SyncStorages.Builder()
             .add(
-                MockSyncStreamsStorage<String>(
+                mockSyncStreamsStorage<String>(
                     id = mockUUID(1),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -325,7 +325,7 @@ internal class SyncStoragesTest {
                 ),
             )
             .add(
-                MockSyncStreamsStorage<Int>(
+                mockSyncStreamsStorage<Int>(
                     id = mockUUID(2),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -336,7 +336,7 @@ internal class SyncStoragesTest {
             .build()
         val rStorages = SyncStorages.Builder()
             .add(
-                MockSyncStreamsStorage<String>(
+                mockSyncStreamsStorage<String>(
                     id = mockUUID(1),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -345,7 +345,7 @@ internal class SyncStoragesTest {
                 ),
             )
             .add(
-                MockSyncStreamsStorage<Int>(
+                mockSyncStreamsStorage<Int>(
                     id = mockUUID(2),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -465,7 +465,7 @@ internal class SyncStoragesTest {
         }
         val storages = SyncStorages.Builder()
             .add(
-                MockSyncStreamsStorage<String>(
+                mockSyncStreamsStorage<String>(
                     id = mockUUID(1),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -588,7 +588,7 @@ internal class SyncStoragesTest {
         val uuidProvider = MockProvider { itemId }
         val tStorages = SyncStorages.Builder()
             .add(
-                MockSyncStreamsStorage<String>(
+                mockSyncStreamsStorage<String>(
                     id = mockUUID(1),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -597,7 +597,7 @@ internal class SyncStoragesTest {
                 ),
             )
             .add(
-                MockSyncStreamsStorage<Int>(
+                mockSyncStreamsStorage<Int>(
                     id = mockUUID(2),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -608,7 +608,7 @@ internal class SyncStoragesTest {
             .build()
         val rStorages = SyncStorages.Builder()
             .add(
-                MockSyncStreamsStorage<String>(
+                mockSyncStreamsStorage<String>(
                     id = mockUUID(1),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -617,7 +617,7 @@ internal class SyncStoragesTest {
                 ),
             )
             .add(
-                MockSyncStreamsStorage<Int>(
+                mockSyncStreamsStorage<Int>(
                     id = mockUUID(2),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -847,7 +847,7 @@ internal class SyncStoragesTest {
         val uuidProvider = MockProvider { itemId }
         val tStorages = SyncStorages.Builder()
             .add(
-                MockSyncStreamsStorage<String>(
+                mockSyncStreamsStorage<String>(
                     id = mockUUID(1),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -856,7 +856,7 @@ internal class SyncStoragesTest {
                 ),
             )
             .add(
-                MockSyncStreamsStorage<Int>(
+                mockSyncStreamsStorage<Int>(
                     id = mockUUID(2),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -867,7 +867,7 @@ internal class SyncStoragesTest {
             .build()
         val rStorages = SyncStorages.Builder()
             .add(
-                MockSyncStreamsStorage<String>(
+                mockSyncStreamsStorage<String>(
                     id = mockUUID(1),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -876,7 +876,7 @@ internal class SyncStoragesTest {
                 ),
             )
             .add(
-                MockSyncStreamsStorage<Int>(
+                mockSyncStreamsStorage<Int>(
                     id = mockUUID(2),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -1131,7 +1131,7 @@ internal class SyncStoragesTest {
         val uuidProvider = MockProvider { itemId }
         val tStorages = SyncStorages.Builder()
             .add(
-                MockSyncStreamsStorage<String>(
+                mockSyncStreamsStorage<String>(
                     id = mockUUID(1),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -1140,7 +1140,7 @@ internal class SyncStoragesTest {
                 ),
             )
             .add(
-                MockSyncStreamsStorage<Int>(
+                mockSyncStreamsStorage<Int>(
                     id = mockUUID(2),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -1151,7 +1151,7 @@ internal class SyncStoragesTest {
             .build()
         val rStorages = SyncStorages.Builder()
             .add(
-                MockSyncStreamsStorage<String>(
+                mockSyncStreamsStorage<String>(
                     id = mockUUID(1),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -1160,7 +1160,7 @@ internal class SyncStoragesTest {
                 ),
             )
             .add(
-                MockSyncStreamsStorage<Int>(
+                mockSyncStreamsStorage<Int>(
                     id = mockUUID(2),
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -1279,7 +1279,7 @@ internal class SyncStoragesTest {
         }
         val storages = SyncStorages.Builder()
             .add(
-                MockSyncStreamsStorage<String>(
+                mockSyncStreamsStorage<String>(
                     id = mockUUID(1),
                     hashes = hashes,
                     timeProvider = timeProvider,

@@ -23,12 +23,18 @@ import kotlin.time.Duration.Companion.milliseconds
     "MagicNumber",
     "TooManyFunctions",
 )
-abstract class SyncStreamsStorage<T : Any>(
+class SyncStreamsStorage<T : Any>(
     override val id: UUID,
     private val hf: HashFunction,
     private val streamer: Streamer,
     private val transformer: Transformer<T>,
+    private val env: Environment,
 ) : SyncStorage<T> {
+    interface Environment {
+        fun now(): Duration
+        fun randomUUID(): UUID
+    }
+
     override val hash: ByteArray
         get() {
             return streamer.inputStream().use { stream ->
@@ -97,9 +103,6 @@ abstract class SyncStreamsStorage<T : Any>(
         }
     }
 
-    protected abstract fun now(): Duration
-    protected abstract fun randomUUID(): UUID
-
     override fun delete(id: UUID): Boolean {
         val items = items.toMutableList()
         for (index in items.indices) {
@@ -122,7 +125,7 @@ abstract class SyncStreamsStorage<T : Any>(
             val oldItem = items[index]
             if (oldItem.id == id) {
                 val newItem = oldItem.copy(
-                    updated = now(),
+                    updated = env.now(),
                     hash = hf.map(transformer.encode(item)),
                     item = item,
                 )
@@ -136,9 +139,9 @@ abstract class SyncStreamsStorage<T : Any>(
 
     override fun add(item: T): Described<T> {
         val items = items.toMutableList()
-        val created = now()
+        val created = env.now()
         val described = Described(
-            id = randomUUID(),
+            id = env.randomUUID(),
             info = ItemInfo(
                 created = created,
                 updated = created,

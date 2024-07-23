@@ -2,12 +2,14 @@ package sp.kx.storages
 
 import java.util.UUID
 
-internal class MockPointers : SyncStreamsStorages.Pointers {
+internal class MockPointers(
+    private val values: MutableMap<UUID, Long> = mutableMapOf(),
+) : SyncStreamsStorages.Pointers {
     override fun getAll(): Map<UUID, Long> {
-        TODO("getAll")
+        return values
     }
 
     override fun putAll(values: Map<UUID, Long>) {
-        TODO("putAll")
+        this.values.putAll(values)
     }
 }

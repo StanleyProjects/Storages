@@ -7,14 +7,14 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-internal class MockSyncStreamsStorage<T : Any>(
-    private val timeProvider: MockProvider<Duration> = MockProvider { 1.milliseconds },
-    private val uuidProvider: MockProvider<UUID> = MockProvider { UUID.fromString("d2d7c21b-f99a-4f78-80d4-8bf05ee25f62") },
-    private val transformer: List<Pair<ByteArray, T>> = emptyList(),
+internal fun <T : Any> mockSyncStreamsStorage(
+    timeProvider: MockProvider<Duration> = MockProvider { 1.milliseconds },
+    uuidProvider: MockProvider<UUID> = MockProvider { UUID.fromString("d2d7c21b-f99a-4f78-80d4-8bf05ee25f62") },
+    transformer: List<Pair<ByteArray, T>> = emptyList(),
     id: UUID = mockUUID(),
     defaultDeleted: Set<UUID> = emptySet(),
     hashes: List<Pair<ByteArray, ByteArray>> = emptyList(),
-) : SyncStreamsStorage<T>(
+) = SyncStreamsStorage(
     id = id,
     hf = MockHashFunction(hashes = hashes),
     streamer = object : Streamer {
@@ -45,12 +45,13 @@ internal class MockSyncStreamsStorage<T : Any>(
             return transformer.firstOrNull { (key, _) -> key.contentEquals(encoded) }?.second ?: error("No decoded: ${encoded.toHEX()}(${encoded.size})(${String(encoded)})!")
         }
     },
-) {
-    override fun now(): Duration {
-        return timeProvider.provide()
-    }
+    env = object : SyncStreamsStorage.Environment {
+        override fun now(): Duration {
+            return timeProvider.provide()
+        }
 
-    override fun randomUUID(): UUID {
-        return uuidProvider.provide()
-    }
-}
+        override fun randomUUID(): UUID {
+            return uuidProvider.provide()
+        }
+    },
+)
