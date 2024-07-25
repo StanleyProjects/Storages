@@ -184,9 +184,13 @@ internal class SyncStreamsStoragesTest {
             it.add(2, intRUpdated)
             it.add(mockDescribed(pointer = 27, item = 27))
         }.toList()
+        val longs = (1..5).map { number ->
+            mockDescribed(pointer = 30 + number, item = number.toLong())
+        }
         val hashes = MockHashFunction.hashes(
             strings to "strings:hash",
             ints to "ints:hash",
+            longs to "ints:longs",
             stringsTUpdated to "strings:hash:t:updated",
             stringsRUpdated to "strings:hash:R:updated",
             intsTUpdated to "ints:hash:t:updated",
@@ -195,6 +199,8 @@ internal class SyncStreamsStoragesTest {
             StringTransformer.hashPair(it)
         } + ints.map {
             IntTransformer.hashPair(it)
+        } + longs.map {
+            LongTransformer.hashPair(it)
         } + listOf(
             StringTransformer.hashPair(mockDescribed(pointer = 16)),
             StringTransformer.hashPair(mockDescribed(pointer = 17)),
@@ -212,10 +218,12 @@ internal class SyncStreamsStoragesTest {
         val tStreamers = mapOf(
             mockUUID(1) to FileStreamer(File.createTempFile("storage", "1")),
             mockUUID(2) to FileStreamer(File.createTempFile("storage", "2")),
+            mockUUID(3) to FileStreamer(File.createTempFile("storage", "3")),
         )
         val tStorages = SyncStreamsStorages.Builder()
             .add(mockUUID(1), StringTransformer)
             .add(mockUUID(2), IntTransformer)
+            .add(mockUUID(3), LongTransformer)
             .mock(
                 hashes = hashes,
                 timeProvider = timeProvider,
@@ -225,10 +233,12 @@ internal class SyncStreamsStoragesTest {
         val rStreamers = mapOf(
             mockUUID(1) to FileStreamer(File.createTempFile("storage", "1")),
             mockUUID(2) to FileStreamer(File.createTempFile("storage", "2")),
+            mockUUID(3) to FileStreamer(File.createTempFile("storage", "3")),
         )
         val rStorages = SyncStreamsStorages.Builder()
             .add(mockUUID(1), StringTransformer)
             .add(mockUUID(2), IntTransformer)
+            .add(mockUUID(3), LongTransformer)
             .mock(
                 hashes = hashes,
                 timeProvider = timeProvider,
@@ -246,6 +256,12 @@ internal class SyncStreamsStoragesTest {
             time = described.info.created
             tStorages.require<Int>().add(described.item)
             rStorages.require<Int>().add(described.item)
+        }
+        longs.forEach { described ->
+            itemId = described.id
+            time = described.info.created
+            tStorages.require<Long>().add(described.item)
+            rStorages.require<Long>().add(described.item)
         }
         check(tStorages.hashes() == rStorages.hashes())
         //
@@ -300,6 +316,15 @@ internal class SyncStreamsStoragesTest {
         }
         //
         tStorages.assertSyncInfo(
+            hashes = mapOf(),
+            expected = emptyMap(),
+        )
+        tStorages.assertSyncInfo(
+            hashes = mapOf(mockUUID(11) to ByteArray(0)),
+            expected = emptyMap(),
+        )
+        check(rStorages.hashes().keys.sorted() == (1..3).map { mockUUID(it) })
+        tStorages.assertSyncInfo(
             hashes = rStorages.hashes(),
             expected = mapOf(
                 mockUUID(1) to mockSyncInfo(
@@ -312,6 +337,15 @@ internal class SyncStreamsStoragesTest {
                 ),
             ),
         )
+        rStorages.assertSyncInfo(
+            hashes = mapOf(),
+            expected = emptyMap(),
+        )
+        rStorages.assertSyncInfo(
+            hashes = mapOf(mockUUID(11) to ByteArray(0)),
+            expected = emptyMap(),
+        )
+        check(tStorages.hashes().keys.sorted() == (1..3).map { mockUUID(it) })
         rStorages.assertSyncInfo(
             hashes = tStorages.hashes(),
             expected = mapOf(
