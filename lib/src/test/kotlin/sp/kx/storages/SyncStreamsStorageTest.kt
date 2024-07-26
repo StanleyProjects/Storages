@@ -47,6 +47,13 @@ internal class SyncStreamsStorageTest {
                 val actual = sorted[index]
                 assertEquals(expected.id, actual.id)
                 assertEquals(expected.info, actual.info, "id: ${expected.id}")
+                val message = """
+                    expected: $expected
+                    actual: $actual
+                    expected.item(${expected.item.size}): ${expected.item.toHEX()} "${String(expected.item)}"
+                    actual.item  (${actual.item.size}): ${actual.item.toHEX()} "${String(actual.item)}"
+                """.trimIndent()
+                assertTrue(expected.item.contentEquals(actual.item), message)
                 assertEquals(expected, actual)
             }
         }

@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import java.util.Date
 import java.util.Objects
 import kotlin.time.Duration
 
@@ -28,8 +29,8 @@ class ItemInfo(
 
     override fun toString(): String {
         return "{" +
-            "created: ${created.inWholeMilliseconds}ms, " +
-            "updated: ${updated.inWholeMilliseconds}ms, " +
+            "created: ${Date(created.inWholeMilliseconds)}, " +
+            "updated: ${Date(updated.inWholeMilliseconds)}, " +
             "hash: \"${hash.toHEX()}\"" +
             "}"
     }

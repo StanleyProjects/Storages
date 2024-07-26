@@ -120,7 +120,7 @@ class SyncStreamsStorages private constructor(
 
     fun getMergeInfo(infos: Map<UUID, SyncInfo>): Map<UUID, MergeInfo> {
         return infos.mapValues { (id, info) ->
-            val (_, transformer) = transformers[id] ?: TODO()
+            val (_, transformer) = transformers[id] ?: error("No storage by ID: \"$id\"!")
             val pointer = pointers.get(id)
             val streamer = streamerProvider.get(id = id, inputPointer = pointer, outputPointer = pointer)
             val storage = getSyncStorage(id, streamer, transformer)
