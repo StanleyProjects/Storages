@@ -219,7 +219,7 @@ class SyncStreamsStorage<T : Any>(
 
     override fun commit(info: CommitInfo): Boolean {
         val oldDeleted = deleted
-        if (info.items.isEmpty() && info.deleted.sorted() == oldDeleted.sorted()) {
+        if (info.items.isEmpty() && oldDeleted.containsAll(info.deleted) && locals.isEmpty()) {
             check(hash.contentEquals(info.hash)) { "Wrong hash!" }
             return false
         }

@@ -435,13 +435,13 @@ internal class SyncStreamsStorageTest {
 
     @Test
     fun getSyncInfoTest() {
-        val id = UUID.fromString("dc4092c6-e7a1-433e-9169-c2f6f92fc4c1")
+        val id = mockUUID(1)
         val itemHash = MockHashFunction.map("itemHash")
         val itemUpdated = "itemUpdated"
         val itemUpdatedHash = MockHashFunction.map("itemUpdatedHash")
         var time = 1.milliseconds
         val timeProvider = MockProvider { time }
-        val itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
+        val itemId = mockUUID(11)
         val uuidProvider = MockProvider { itemId }
         val expected = Described(
             id = itemId,
@@ -482,7 +482,7 @@ internal class SyncStreamsStorageTest {
             hash = storageHash,
             items = listOf(expected),
         )
-        val notExists = UUID.fromString("35ca49c2-d716-4eb3-ad1e-3f87337ce360")
+        val notExists = mockUUID(12)
         check(notExists != expected.id)
         assertNull(storage.update(id = notExists, item = itemUpdated))
         storage.assert(
@@ -521,12 +521,12 @@ internal class SyncStreamsStorageTest {
             id = id,
             hash = storageEmptyHash,
         )
-        storage.getSyncInfo().assert(deleted = setOf(expected.id))
+        storage.getSyncInfo().assert(deleted = emptySet())
     }
 
     @Test
     fun mergeAndCommitTest() {
-        val storageId = UUID.fromString("dc4092c6-e7a1-433e-9169-c2f6f92fc4c1")
+        val storageId = mockUUID(1)
         var time = 1.milliseconds
         val timeProvider = MockProvider { time }
         var itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
@@ -604,8 +604,8 @@ internal class SyncStreamsStorageTest {
             itemId = described.id
             time = (1_000 + index).milliseconds
             rStorage.add(described.item)
-            tStorage.add(described.item)
         }
+        rStorage.commit(tStorage.merge(rStorage.getMergeInfo(tStorage.getSyncInfo())))
         rStorage.assert(
             id = storageId,
             hash = storageHash,
