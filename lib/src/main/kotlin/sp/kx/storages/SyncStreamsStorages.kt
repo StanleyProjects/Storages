@@ -128,7 +128,8 @@ class SyncStreamsStorages private constructor(
 
     fun merge(infos: Map<UUID, MergeInfo>): Map<UUID, CommitInfo> {
         val newPointers = mutableMapOf<UUID, Int>()
-        val result = infos.mapValues { (id, info) ->
+        val result = mutableMapOf<UUID, CommitInfo>()
+        for ((id, info) in infos) {
             val (_, transformer) = transformers[id] ?: error("No storage by ID: \"$id\"!")
             val inputPointer = streamerProvider.getPointer(id = id)
             val outputPointer = inputPointer + 1
@@ -137,8 +138,8 @@ class SyncStreamsStorages private constructor(
                 streamer = streamerProvider.getStreamer(id = id, inputPointer = inputPointer, outputPointer = outputPointer),
                 transformer = transformer,
             ) // todo SyncStorage only encoded
+            result[id] = storage.merge(info)
             newPointers[id] = outputPointer
-            storage.merge(info)
         }
         streamerProvider.putPointers(newPointers)
         return result

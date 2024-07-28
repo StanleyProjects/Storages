@@ -421,26 +421,28 @@ internal class SyncStreamsStoragesTest {
 
     private fun SyncStreamsStorages.assertMerge(
         storages: SyncStreamsStorages,
-        dir: File,
-        names: List<String>,
+        files: Map<File, List<String>>,
         infos: Map<UUID, CommitInfo>,
         items: Map<UUID, List<Described<out Any>>>,
     ) {
         val mergeInfo = getMergeInfo(storages.getSyncInfo(hashes()))
         val commitInfo = storages.merge(mergeInfo)
-        assertTrue(dir.exists())
-        assertTrue(dir.isDirectory())
-        val files = dir.listFiles()
-        assertNotNull(files)
-        checkNotNull(files)
-        check(names.isNotEmpty())
-        assertEquals(names.size, files.size)
-        files.forEach {
-            assertTrue(it.exists())
-            assertTrue(it.isFile())
-            assertTrue(it.length() > 0)
+        check(files.isNotEmpty())
+        files.forEach { (dir, names) ->
+            assertTrue(dir.exists())
+            assertTrue(dir.isDirectory())
+            val children = dir.listFiles()
+            assertNotNull(children)
+            checkNotNull(children)
+            check(names.isNotEmpty())
+            assertEquals(names.size, children.size)
+            children.forEach {
+                assertTrue(it.exists())
+                assertTrue(it.isFile())
+                assertTrue(it.length() > 0)
+            }
+            assertEquals(names.sorted(), children.map { it.name }.sorted())
         }
-        assertEquals(names.sorted(), files.map { it.name }.sorted())
         check(infos.keys.isNotEmpty())
         assertEquals(commitInfo.keys.sorted(), infos.keys.sorted())
         infos.forEach { (id, info) ->
@@ -490,12 +492,19 @@ internal class SyncStreamsStoragesTest {
         onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
             tStorages.assertMerge(
                 storages = rStorages,
-                dir = File("/tmp/storages/r"),
-                names = listOf(
-                    "${mockUUID(1)}-1",
-                    "${mockUUID(2)}-1",
-                    "${mockUUID(3)}-0",
-                    "${mockUUID(5)}-0",
+                files = mapOf(
+                    File("/tmp/storages/r") to listOf(
+                        "${mockUUID(1)}-1",
+                        "${mockUUID(2)}-1",
+                        "${mockUUID(3)}-0",
+                        "${mockUUID(5)}-0",
+                    ),
+                    File("/tmp/storages/t") to listOf(
+                        "${mockUUID(1)}-1",
+                        "${mockUUID(2)}-1",
+                        "${mockUUID(3)}-0",
+                        "${mockUUID(5)}-0",
+                    ),
                 ),
                 infos = mapOf(
                     mockUUID(1) to mockCommitInfo(
@@ -526,12 +535,19 @@ internal class SyncStreamsStoragesTest {
         onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
             rStorages.assertMerge(
                 storages = tStorages,
-                dir = File("/tmp/storages/t"),
-                names = listOf(
-                    "${mockUUID(1)}-1",
-                    "${mockUUID(2)}-1",
-                    "${mockUUID(3)}-0",
-                    "${mockUUID(4)}-0",
+                files = mapOf(
+                    File("/tmp/storages/r") to listOf(
+                        "${mockUUID(1)}-1",
+                        "${mockUUID(2)}-1",
+                        "${mockUUID(3)}-0",
+                        "${mockUUID(5)}-0",
+                    ),
+                    File("/tmp/storages/t") to listOf(
+                        "${mockUUID(1)}-1",
+                        "${mockUUID(2)}-1",
+                        "${mockUUID(3)}-0",
+                        "${mockUUID(5)}-0",
+                    ),
                 ),
                 infos = mapOf(
                     mockUUID(1) to mockCommitInfo(
@@ -560,12 +576,19 @@ internal class SyncStreamsStoragesTest {
             )
             tStorages.assertMerge(
                 storages = rStorages,
-                dir = File("/tmp/storages/r"),
-                names = listOf(
-                    "${mockUUID(1)}-1",
-                    "${mockUUID(2)}-1",
-                    "${mockUUID(3)}-0",
-                    "${mockUUID(5)}-0",
+                files = mapOf(
+                    File("/tmp/storages/r") to listOf(
+                        "${mockUUID(1)}-1",
+                        "${mockUUID(2)}-1",
+                        "${mockUUID(3)}-0",
+                        "${mockUUID(5)}-0",
+                    ),
+                    File("/tmp/storages/t") to listOf(
+                        "${mockUUID(1)}-1",
+                        "${mockUUID(2)}-1",
+                        "${mockUUID(3)}-0",
+                        "${mockUUID(5)}-0",
+                    ),
                 ),
                 infos = mapOf(
                     mockUUID(1) to mockCommitInfo(
@@ -738,7 +761,12 @@ internal class SyncStreamsStoragesTest {
             assertEquals(expected.size, actual.size, "SyncInfo:\n$expected\n$actual\n")
             for ((storageId, value) in expected) {
                 val syncInfo = actual[storageId] ?: error("No hash by ID: \"$storageId\"!")
-                assertEquals(value.deleted.size, syncInfo.deleted.size)
+                val message = """
+                    storageId: $storageId
+                    es: $value
+                    as: $syncInfo
+                """.trimIndent()
+                assertEquals(value.deleted.size, syncInfo.deleted.size, message)
                 assertEquals(value.deleted.sorted(), syncInfo.deleted.sorted())
                 assertEquals(value.infos.size, syncInfo.infos.size)
                 for (key in value.infos.keys) {
@@ -781,6 +809,19 @@ internal class SyncStreamsStoragesTest {
                 hash = MockHashFunction.map("$item:$pointer:hash:updated"),
                 item = item,
             )
+        }
+
+        private fun assertFiles(
+            files: Map<File, List<String>>,
+        ) {
+            check(files.isNotEmpty())
+            files.forEach { (dir, expected) ->
+                val children = dir.listFiles()
+                check(!children.isNullOrEmpty())
+                check(expected.isNotEmpty())
+                assertTrue(children.all { it.exists() && it.isFile && it.length() > 0})
+                assertEquals(expected, children.map { it.name }.sorted(), "dir: $dir")
+            }
         }
 
         private fun onSyncStreamsStorages(
@@ -977,9 +1018,53 @@ internal class SyncStreamsStoragesTest {
                 rStorages.require<Bar>().add(described.item)
             }
             //
+            assertFiles(
+                mapOf(
+                    File(dir, "t") to listOf(
+                        "${mockUUID(1)}-0",
+                        "${mockUUID(2)}-0",
+                        "${mockUUID(3)}-0",
+                        "${mockUUID(4)}-0",
+                    ),
+                ),
+            )
             if (commited) {
+                assertFiles(
+                    mapOf(
+                        File(dir, "r") to listOf(
+                            "${mockUUID(5)}-0",
+                        ),
+                    ),
+                )
                 val mergeInfo = rStorages.getMergeInfo(tStorages.getSyncInfo(rStorages.hashes()))
                 rStorages.commit(tStorages.merge(mergeInfo))
+                assertFiles(
+                    mapOf(
+                        File(dir, "t") to listOf(
+                            "${mockUUID(1)}-1",
+                            "${mockUUID(2)}-1",
+                            "${mockUUID(3)}-1",
+                            "${mockUUID(4)}-0",
+                        ),
+                        File(dir, "r") to listOf(
+                            "${mockUUID(1)}-1",
+                            "${mockUUID(2)}-1",
+                            "${mockUUID(3)}-1",
+                            "${mockUUID(5)}-0",
+                        ),
+                    ),
+                )
+            } else {
+                assertFiles(
+                    mapOf(
+                        File(dir, "r") to listOf(
+                            "${mockUUID(1)}-0",
+                            "${mockUUID(2)}-0",
+                            "${mockUUID(3)}-0",
+                            "${mockUUID(5)}-0",
+                        ),
+                    ),
+                )
             }
             //
             check(tStorages.hashes().keys.sorted() == listOf(mockUUID(1), mockUUID(2), mockUUID(3), mockUUID(4)))
