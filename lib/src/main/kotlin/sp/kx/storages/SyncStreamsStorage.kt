@@ -47,6 +47,7 @@ class SyncStreamsStorage<T : Any>(
                     stream.read(bytes, index * hf.size, hf.size)
                     stream.skip(BytesUtil.readInt(stream).toLong()) // skip encoded
                 }
+                // todo id + hash
                 hf.map(bytes)
             }
         }
@@ -129,9 +130,17 @@ class SyncStreamsStorage<T : Any>(
             if (items[index].id == id) {
                 val oldItem = items.removeAt(index)
                 check(oldItem.id == id)
+                val newDeleted = deleted.toMutableSet()
+                val newLocals = locals.toMutableSet()
+                if (newLocals.contains(id)) {
+                    newLocals -= id
+                } else {
+                    newDeleted += id
+                }
                 write(
                     items = items,
-                    deleted = deleted + id,
+                    deleted = newDeleted,
+                    locals = newLocals,
                 )
                 return true
             }
@@ -170,7 +179,10 @@ class SyncStreamsStorage<T : Any>(
             item = item,
         )
         items.add(described)
-        write(items = items.sortedBy { it.info.created })
+        write(
+            items = items.sortedBy { it.info.created },
+            locals = locals + described.id,
+        )
         return described
     }
 
@@ -191,6 +203,7 @@ class SyncStreamsStorage<T : Any>(
         write(
             items = sorted,
             deleted = deleted + info.deleted,
+            locals = emptySet(),
         )
         val bytes = ByteArray(sorted.size * hf.size)
         for (index in sorted.indices) {
@@ -228,6 +241,7 @@ class SyncStreamsStorage<T : Any>(
         write(
             items = sorted,
             deleted = oldDeleted + info.deleted,
+            locals = emptySet(),
         )
         return true
     }
