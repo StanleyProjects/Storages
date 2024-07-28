@@ -46,6 +46,30 @@ internal class SyncStreamsStoragesTest {
     }
 
     @Test
+    fun requireTest() {
+        val streamer = MockStreamer()
+        val id1 = mockUUID(1)
+        SyncStreamsStorages.Builder()
+            .add(id1, String::class.java, StringTransformer)
+            .mock(streamerProvider = mockStreamerProvider(streamers = mapOf(id1 to streamer)))
+            .require(id = id1)
+    }
+
+    @Test
+    fun requireErrorTest() {
+        val streamer = MockStreamer()
+        val id1 = mockUUID(1)
+        val storages = SyncStreamsStorages.Builder()
+            .add(id1, String::class.java, StringTransformer)
+            .mock(streamerProvider = mockStreamerProvider(streamers = mapOf(id1 to streamer)))
+        val id2 = mockUUID(2)
+        check(id1 != id2)
+        assertThrows(IllegalStateException::class.java) {
+            storages.require(id = id2)
+        }
+    }
+
+    @Test
     fun getTypeTest() {
         val id1 = mockUUID(1)
         val id2 = mockUUID(2)
