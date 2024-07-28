@@ -147,7 +147,7 @@ class SyncStreamsStorages private constructor(
     fun commit(infos: Map<UUID, CommitInfo>) {
         val newPointers = mutableMapOf<UUID, Int>()
         for ((id, info) in infos) {
-            val (_, transformer) = transformers[id] ?: TODO()
+            val (_, transformer) = transformers[id] ?: error("No storage by ID: \"$id\"!")
             val inputPointer = streamerProvider.getPointer(id = id)
             val outputPointer = inputPointer + 1
             val storage = getSyncStorage(

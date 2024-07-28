@@ -415,6 +415,130 @@ internal class SyncStreamsStoragesTest {
         }
     }
 
+    private fun assertCommit(
+        dstStorages: SyncStreamsStorages,
+        srcStorages: SyncStreamsStorages,
+        dir: File,
+        names: List<String>,
+        items: Map<UUID, List<Described<out Any>>>,
+    ) {
+        val mergeInfo = dstStorages.getMergeInfo(srcStorages.getSyncInfo(dstStorages.hashes()))
+        dstStorages.commit(srcStorages.merge(mergeInfo))
+        assertTrue(dir.exists())
+        assertTrue(dir.isDirectory())
+        val files = dir.listFiles()
+        assertNotNull(files)
+        checkNotNull(files)
+        check(names.isNotEmpty())
+        assertEquals(names.size, files.size)
+        files.forEach {
+            assertTrue(it.exists())
+            assertTrue(it.isFile())
+            assertTrue(it.length() > 0)
+        }
+        assertEquals(names.sorted(), files.map { it.name }.sorted())
+        check(items.isNotEmpty())
+        items.forEach { (id, list) ->
+            check(list.isNotEmpty())
+            dstStorages.require(id).items.forEachIndexed { index, actual ->
+                val expected = list[index]
+                SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+            }
+        }
+    }
+
+    @Test
+    fun commitTest() {
+        val stringsFinal = listOf(
+            mockDescribed(13).updated(pointer = 113),
+            mockDescribed(14).updated(pointer = 114),
+            mockDescribed(15),
+            mockDescribed(16),
+            mockDescribed(17),
+        )
+        val intsFinal = listOf(
+            mockDescribed(23, 23).updated(pointer = 123, 123),
+            mockDescribed(24, 24).updated(pointer = 124, 124),
+            mockDescribed(25, 25),
+            mockDescribed(26, 26),
+            mockDescribed(27, 27),
+        )
+        val longs = (1..5).map { number ->
+            mockDescribed(pointer = 30 + number, item = number.toLong())
+        }
+        val foos = (1..5).map { number ->
+            mockDescribed(pointer = 40 + number, item = Foo(text = "foo:${40 + number}"))
+        }
+        val bars = (1..5).map { number ->
+            mockDescribed(pointer = 50 + number, item = Bar(number = 50 + number))
+        }
+        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
+            assertCommit(
+                dstStorages = tStorages,
+                srcStorages = rStorages,
+                dir = File("/tmp/storages/t"),
+                names = listOf(
+                    "${mockUUID(1)}-1",
+                    "${mockUUID(2)}-1",
+                    "${mockUUID(3)}-0",
+                    "${mockUUID(4)}-0",
+                ),
+                items = mapOf(
+                    mockUUID(1) to stringsFinal,
+                    mockUUID(2) to intsFinal,
+                    mockUUID(3) to longs,
+                    mockUUID(4) to foos,
+                ),
+            )
+        }
+        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
+            assertCommit(
+                dstStorages = rStorages,
+                srcStorages = tStorages,
+                dir = File("/tmp/storages/r"),
+                names = listOf(
+                    "${mockUUID(1)}-1",
+                    "${mockUUID(2)}-1",
+                    "${mockUUID(3)}-0",
+                    "${mockUUID(5)}-0",
+                ),
+                items = mapOf(
+                    mockUUID(1) to stringsFinal,
+                    mockUUID(2) to intsFinal,
+                    mockUUID(3) to longs,
+                    mockUUID(5) to bars,
+                ),
+            )
+            assertCommit(
+                dstStorages = tStorages,
+                srcStorages = rStorages,
+                dir = File("/tmp/storages/t"),
+                names = listOf(
+                    "${mockUUID(1)}-1",
+                    "${mockUUID(2)}-1",
+                    "${mockUUID(3)}-0",
+                    "${mockUUID(4)}-0",
+                ),
+                items = mapOf(
+                    mockUUID(1) to stringsFinal,
+                    mockUUID(2) to intsFinal,
+                    mockUUID(3) to longs,
+                    mockUUID(4) to foos,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun commitErrorTest() {
+        val storages = SyncStreamsStorages.Builder()
+            .add(mockUUID(1), StringTransformer)
+            .mock()
+        assertThrows(IllegalStateException::class.java) {
+            storages.commit(infos = mapOf(mockUUID(2) to mockCommitInfo()))
+        }
+    }
+
     companion object {
         private fun SyncStreamsStorages.assertHashes(expected: Map<UUID, ByteArray>) {
             val actual = hashes()
