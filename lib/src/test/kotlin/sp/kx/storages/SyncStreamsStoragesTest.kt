@@ -254,6 +254,9 @@ internal class SyncStreamsStoragesTest {
         val longs = (1..5).map { number ->
             mockDescribed(pointer = 30 + number, item = number.toLong())
         }
+        val foos = (1..5).map { number ->
+            mockDescribed(pointer = 40 + number, item = Foo(text = "foo:${40 + number}"))
+        }
         onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
             val rMergeInfo = rStorages.getMergeInfo(tStorages.getSyncInfo(rStorages.hashes()))
             val tMergeInfo = tStorages.getMergeInfo(rStorages.getSyncInfo(tStorages.hashes()))
@@ -264,7 +267,7 @@ internal class SyncStreamsStoragesTest {
                 val files = root.listFiles()
                 assertNotNull(files)
                 checkNotNull(files)
-                assertEquals(3, files.size)
+                assertEquals(4, files.size)
                 files.forEach {
                     assertTrue(it.exists())
                     assertTrue(it.isFile())
@@ -274,6 +277,7 @@ internal class SyncStreamsStoragesTest {
                     "${mockUUID(1)}-1",
                     "${mockUUID(2)}-1",
                     "${mockUUID(3)}-0",
+                    "${mockUUID(4)}-0",
                 )
                 assertEquals(expected, files.map { it.name }.sorted())
             }
@@ -312,7 +316,10 @@ internal class SyncStreamsStoragesTest {
                 val expected = longs[index]
                 SyncStreamsStorageTest.assert(expected = expected, actual = actual)
             }
-            TODO("SyncStreamsStoragesTest:mergeTest:longs")
+            tStorages.require(mockUUID(4)).items.forEachIndexed { index, actual ->
+                val expected = foos[index]
+                SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+            }
             TODO("SyncStreamsStoragesTest:mergeTest")
         }
     }
@@ -375,13 +382,6 @@ internal class SyncStreamsStoragesTest {
                 hash = MockHashFunction.map("$item:$pointer:hash:updated"),
                 item = item,
             )
-        }
-
-        private fun getId(file: File, values: Map<UUID, Int>): UUID? {
-            for ((id, pointer) in values) {
-                if (file.name == "$id-$pointer") return id
-            }
-            return null
         }
 
         private fun onSyncStreamsStorages(
