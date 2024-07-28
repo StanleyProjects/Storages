@@ -22,5 +22,5 @@ interface SyncStorage<T : Any> : MutableStorage<T> {
     fun getSyncInfo(): SyncInfo
     fun getMergeInfo(info: SyncInfo): MergeInfo
     fun merge(info: MergeInfo): CommitInfo
-    fun commit(info: CommitInfo)
+    fun commit(info: CommitInfo): Boolean
 }

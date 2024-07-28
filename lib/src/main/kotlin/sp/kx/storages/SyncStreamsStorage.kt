@@ -184,7 +184,12 @@ class SyncStreamsStorage<T : Any>(
         )
     }
 
-    override fun commit(info: CommitInfo) {
+    override fun commit(info: CommitInfo): Boolean {
+        val oldDeleted = deleted
+        if (info.items.isEmpty() && info.deleted.sorted() == oldDeleted.sorted()) {
+            check(hash.contentEquals(info.hash)) { "Wrong hash!" }
+            return false
+        }
         val newItems = mutableListOf<Described<T>>()
         for (item in this.items) {
             if (info.deleted.contains(item.id)) continue
@@ -202,8 +207,9 @@ class SyncStreamsStorage<T : Any>(
         check(hf.map(bytes).contentEquals(info.hash)) { "Wrong hash!" }
         write(
             items = sorted,
-            deleted = this.deleted + info.deleted,
+            deleted = oldDeleted + info.deleted,
         )
+        return true
     }
 
     override fun getSyncInfo(): SyncInfo {

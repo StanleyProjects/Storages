@@ -4,12 +4,12 @@ import java.util.UUID
 
 class SyncStreamsStorages private constructor(
     private val hf: HashFunction,
-    private val transformers: Map<UUID, Pair<Class<*>, Transformer<*>>>,
+    private val transformers: Map<UUID, Pair<Class<out Any>, Transformer<out Any>>>,
     private val env: SyncStreamsStorage.Environment,
     private val streamerProvider: StreamerProvider,
 ) {
     class Builder {
-        private val transformers = mutableMapOf<UUID, Pair<Class<*>, Transformer<*>>>()
+        private val transformers = mutableMapOf<UUID, Pair<Class<out Any>, Transformer<out Any>>>()
 
         fun <T : Any> add(id: UUID, type: Class<T>, transformer: Transformer<T>): Builder {
             if (transformers.containsKey(id)) error("ID \"$id\" is repeated!")
@@ -135,7 +135,7 @@ class SyncStreamsStorages private constructor(
             val storage = getSyncStorage(
                 id = id,
                 streamer = streamerProvider.getStreamer(id = id, inputPointer = inputPointer, outputPointer = outputPointer),
-                transformer = transformer as Transformer<Any>,
+                transformer = transformer,
             ) // todo SyncStorage only encoded
             newPointers[id] = outputPointer
             storage.merge(info)
@@ -145,6 +145,7 @@ class SyncStreamsStorages private constructor(
     }
 
     fun commit(infos: Map<UUID, CommitInfo>) {
+        if (infos.isEmpty()) return
         val newPointers = mutableMapOf<UUID, Int>()
         for ((id, info) in infos) {
             val (_, transformer) = transformers[id] ?: error("No storage by ID: \"$id\"!")
@@ -153,10 +154,10 @@ class SyncStreamsStorages private constructor(
             val storage = getSyncStorage(
                 id = id,
                 streamer = streamerProvider.getStreamer(id = id, inputPointer = inputPointer, outputPointer = outputPointer),
-                transformer = transformer as Transformer<Any>,
+                transformer = transformer,
             )
+            if (!storage.commit(info)) continue
             newPointers[id] = outputPointer
-            storage.commit(info)
         }
         streamerProvider.putPointers(newPointers)
     }
