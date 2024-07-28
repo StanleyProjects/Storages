@@ -8,7 +8,7 @@ internal fun SyncStreamsStorages.Builder.mock(
     hashes: List<Pair<ByteArray, ByteArray>> = emptyList(),
     timeProvider: MockProvider<Duration> = MockProvider { 1.milliseconds },
     uuidProvider: MockProvider<UUID> = MockProvider { UUID.fromString("d2d7c21b-f99a-4f78-80d4-8bf05ee25f62") },
-    streamerProvider: SyncStreamsStorages.StreamerProvider = MockStreamerProvider(),
+    getStreamerProvider: (Set<UUID>) -> SyncStreamsStorages.StreamerProvider = ::MockStreamerProvider,
 ) = build(
     hf = MockHashFunction(hashes = hashes),
     env = object : SyncStreamsStorage.Environment {
@@ -20,5 +20,5 @@ internal fun SyncStreamsStorages.Builder.mock(
             return uuidProvider.provide()
         }
     },
-    streamerProvider = streamerProvider,
+    getStreamerProvider = getStreamerProvider,
 )

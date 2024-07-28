@@ -7,9 +7,9 @@ import java.util.UUID
 
 internal class FileStreamerProvider(
     private val dir: File,
-    pointers: Map<UUID, Int> = emptyMap(),
+    ids: Set<UUID>,
 ) : SyncStreamsStorages.StreamerProvider {
-    private val values = pointers.toMutableMap()
+    private val values = ids.associateWith { 0 }.toMutableMap()
 
     init {
         dir.mkdirs()

@@ -2,7 +2,7 @@ package sp.kx.storages
 
 import java.util.UUID
 
-internal class MockStreamerProvider : SyncStreamsStorages.StreamerProvider {
+internal class MockStreamerProvider(ids: Set<UUID>) : SyncStreamsStorages.StreamerProvider {
     override fun getStreamer(id: UUID, inputPointer: Int, outputPointer: Int): Streamer {
         TODO("MockStreamerProvider:getStreamer($id, $inputPointer, $outputPointer)")
     }
@@ -14,6 +14,17 @@ internal class MockStreamerProvider : SyncStreamsStorages.StreamerProvider {
     override fun putPointers(values: Map<UUID, Int>) {
         TODO("MockStreamerProvider:putPointers($values)")
     }
+}
+
+internal fun getStreamerProvider(streamers: Map<UUID, Streamer>): (Set<UUID>) -> SyncStreamsStorages.StreamerProvider {
+    return { ids ->
+        check(ids.sorted() == streamers.keys.sorted())
+        mockStreamerProvider(streamers = streamers)
+    }
+}
+
+internal fun mockStreamerProvider(id: UUID, streamer: Streamer): SyncStreamsStorages.StreamerProvider {
+    return mockStreamerProvider(streamers = mapOf(id to streamer))
 }
 
 internal fun mockStreamerProvider(

@@ -35,7 +35,10 @@ internal class SyncStreamsStoragesTest {
         val storages = SyncStreamsStorages.Builder()
             .add(id1, String::class.java, StringTransformer)
             .mock(
-                streamerProvider = mockStreamerProvider(streamers = mapOf(id1 to streamer)),
+                getStreamerProvider = { ids ->
+                    assertEquals(ids, setOf(id1))
+                    mockStreamerProvider(id1, streamer)
+                },
             )
         val storage = storages.get(id = id1)
         assertNotNull(storage)
@@ -51,7 +54,7 @@ internal class SyncStreamsStoragesTest {
         val id1 = mockUUID(1)
         SyncStreamsStorages.Builder()
             .add(id1, String::class.java, StringTransformer)
-            .mock(streamerProvider = mockStreamerProvider(streamers = mapOf(id1 to streamer)))
+            .mock(getStreamerProvider = getStreamerProvider(streamers = mapOf(id1 to streamer)))
             .require(id = id1)
     }
 
@@ -61,7 +64,7 @@ internal class SyncStreamsStoragesTest {
         val id1 = mockUUID(1)
         val storages = SyncStreamsStorages.Builder()
             .add(id1, String::class.java, StringTransformer)
-            .mock(streamerProvider = mockStreamerProvider(streamers = mapOf(id1 to streamer)))
+            .mock(getStreamerProvider = getStreamerProvider(streamers = mapOf(id1 to streamer)))
         val id2 = mockUUID(2)
         check(id1 != id2)
         assertThrows(IllegalStateException::class.java) {
@@ -81,9 +84,7 @@ internal class SyncStreamsStoragesTest {
         val storages = SyncStreamsStorages.Builder()
             .add(id1, String::class.java, StringTransformer)
             .add(id2, Int::class.java, IntTransformer)
-            .mock(
-                streamerProvider = mockStreamerProvider(streamers = streamers),
-            )
+            .mock(getStreamerProvider = getStreamerProvider(streamers = streamers))
         storages.get(type = String::class.java).also { storage ->
             assertNotNull(storage)
             checkNotNull(storage)
@@ -743,15 +744,19 @@ internal class SyncStreamsStoragesTest {
                     hashes = hashes,
                     timeProvider = timeProvider,
                     uuidProvider = uuidProvider,
-                    streamerProvider = FileStreamerProvider(
-                        dir = File("/tmp/storages/t"),
-                        pointers = mapOf(
-                            mockUUID(1) to 0,
-                            mockUUID(2) to 0,
-                            mockUUID(3) to 0,
-                            mockUUID(4) to 0,
+                    getStreamerProvider = { ids ->
+                        val expected = listOf(
+                            mockUUID(1),
+                            mockUUID(2),
+                            mockUUID(3),
+                            mockUUID(4),
                         )
-                    ),
+                        assertEquals(expected, ids.sorted())
+                        FileStreamerProvider(
+                            dir = File("/tmp/storages/t"),
+                            ids = ids,
+                        )
+                    },
                 )
             val rStorages = SyncStreamsStorages.Builder()
                 .add(mockUUID(1), StringTransformer)
@@ -762,15 +767,19 @@ internal class SyncStreamsStoragesTest {
                     hashes = hashes,
                     timeProvider = timeProvider,
                     uuidProvider = uuidProvider,
-                    streamerProvider = FileStreamerProvider(
-                        dir = File("/tmp/storages/r"),
-                        pointers = mapOf(
-                            mockUUID(1) to 0,
-                            mockUUID(2) to 0,
-                            mockUUID(3) to 0,
-                            mockUUID(5) to 0,
+                    getStreamerProvider = { ids ->
+                        val expected = listOf(
+                            mockUUID(1),
+                            mockUUID(2),
+                            mockUUID(3),
+                            mockUUID(5),
                         )
-                    ),
+                        assertEquals(expected, ids.sorted())
+                        FileStreamerProvider(
+                            dir = File("/tmp/storages/r"),
+                            ids = ids,
+                        )
+                    },
                 )
             strings.forEach { described ->
                 itemId = described.id

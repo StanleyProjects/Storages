@@ -24,13 +24,13 @@ class SyncStreamsStorages private constructor(
         fun build(
             hf: HashFunction,
             env: SyncStreamsStorage.Environment,
-            streamerProvider: StreamerProvider,
+            getStreamerProvider: (Set<UUID>) -> StreamerProvider,
         ): SyncStreamsStorages {
             if (transformers.isEmpty()) error("Empty storages!")
             return SyncStreamsStorages(
                 hf = hf,
                 env = env,
-                streamerProvider = streamerProvider,
+                streamerProvider = getStreamerProvider(transformers.keys),
                 transformers = transformers,
             )
         }
