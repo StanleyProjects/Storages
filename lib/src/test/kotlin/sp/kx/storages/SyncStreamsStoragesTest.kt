@@ -138,7 +138,7 @@ internal class SyncStreamsStoragesTest {
                 hashes = mapOf(mockUUID(11) to ByteArray(0)),
                 expected = emptyMap(),
             )
-            check(rStorages.hashes().keys.sorted() == (1..3).map { mockUUID(it) })
+            check(rStorages.hashes().keys.sorted() == (1..3).map { mockUUID(it) } + mockUUID(5))
             tStorages.assertSyncInfo(
                 hashes = rStorages.hashes(),
                 expected = mapOf(
@@ -160,7 +160,7 @@ internal class SyncStreamsStoragesTest {
                 hashes = mapOf(mockUUID(11) to ByteArray(0)),
                 expected = emptyMap(),
             )
-            check(tStorages.hashes().keys.sorted() == (1..3).map { mockUUID(it) })
+            check(tStorages.hashes().keys.sorted() == (1..3).map { mockUUID(it) } + mockUUID(4))
             rStorages.assertSyncInfo(
                 hashes = tStorages.hashes(),
                 expected = mapOf(
