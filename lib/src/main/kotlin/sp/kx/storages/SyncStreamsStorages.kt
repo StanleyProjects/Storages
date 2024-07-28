@@ -4,7 +4,6 @@ import java.util.UUID
 
 class SyncStreamsStorages private constructor(
     private val hf: HashFunction,
-    private val pointers: Pointers,
     private val transformers: Map<UUID, Pair<Class<*>, Transformer<*>>>,
     private val env: SyncStreamsStorage.Environment,
     private val streamerProvider: StreamerProvider,
@@ -24,14 +23,12 @@ class SyncStreamsStorages private constructor(
 
         fun build(
             hf: HashFunction,
-            pointers: Pointers,
             env: SyncStreamsStorage.Environment,
             streamerProvider: StreamerProvider,
         ): SyncStreamsStorages {
             if (transformers.isEmpty()) error("Empty storages!")
             return SyncStreamsStorages(
                 hf = hf,
-                pointers = pointers,
                 env = env,
                 streamerProvider = streamerProvider,
                 transformers = transformers,
@@ -40,22 +37,19 @@ class SyncStreamsStorages private constructor(
     }
 
     interface StreamerProvider {
-        fun get(
+        fun getStreamer(
             id: UUID,
             inputPointer: Int,
             outputPointer: Int,
         ): Streamer
-    }
-
-    interface Pointers {
-        fun get(id: UUID): Int
-        fun putAll(values: Map<UUID, Int>)
+        fun getPointer(id: UUID): Int
+        fun putPointers(values: Map<UUID, Int>)
     }
 
     fun get(id: UUID): MutableStorage<out Any>? {
         val (_, transformer) = transformers[id] ?: return null
-        val pointer = pointers.get(id)
-        val streamer = streamerProvider.get(id = id, inputPointer = pointer, outputPointer = pointer)
+        val pointer = streamerProvider.getPointer(id = id)
+        val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
         return getSyncStorage(
             id = id,
             streamer = streamer,
@@ -71,8 +65,8 @@ class SyncStreamsStorages private constructor(
         for ((id, value) in transformers) {
             if (type != value.first) continue
             val transformer = value.second as Transformer<T>
-            val pointer = pointers.get(id)
-            val streamer = streamerProvider.get(id = id, inputPointer = pointer, outputPointer = pointer)
+            val pointer = streamerProvider.getPointer(id = id)
+            val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
             return getSyncStorage(
                 id = id,
                 streamer = streamer,
@@ -103,8 +97,8 @@ class SyncStreamsStorages private constructor(
     fun hashes(): Map<UUID, ByteArray> {
         return transformers.mapValues { (id, value) ->
             val (_, transformer) = value
-            val pointer = pointers.get(id)
-            val streamer = streamerProvider.get(id = id, inputPointer = pointer, outputPointer = pointer)
+            val pointer = streamerProvider.getPointer(id = id)
+            val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
             getSyncStorage(id, streamer, transformer).hash
         }
     }
@@ -113,8 +107,8 @@ class SyncStreamsStorages private constructor(
         val result = mutableMapOf<UUID, SyncInfo>()
         for ((id, hash) in hashes) {
             val (_, transformer) = transformers[id] ?: continue
-            val pointer = pointers.get(id)
-            val streamer = streamerProvider.get(id = id, inputPointer = pointer, outputPointer = pointer)
+            val pointer = streamerProvider.getPointer(id = id)
+            val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
             val storage = getSyncStorage(id, streamer, transformer)
             if (storage.hash.contentEquals(hash)) continue
             result[id] = storage.getSyncInfo()
@@ -125,8 +119,8 @@ class SyncStreamsStorages private constructor(
     fun getMergeInfo(infos: Map<UUID, SyncInfo>): Map<UUID, MergeInfo> {
         return infos.mapValues { (id, info) ->
             val (_, transformer) = transformers[id] ?: error("No storage by ID: \"$id\"!")
-            val pointer = pointers.get(id)
-            val streamer = streamerProvider.get(id = id, inputPointer = pointer, outputPointer = pointer)
+            val pointer = streamerProvider.getPointer(id = id)
+            val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
             val storage = getSyncStorage(id, streamer, transformer)
             storage.getMergeInfo(info)
         }
@@ -136,17 +130,17 @@ class SyncStreamsStorages private constructor(
         val newPointers = mutableMapOf<UUID, Int>()
         val result = infos.mapValues { (id, info) ->
             val (_, transformer) = transformers[id] ?: TODO()
-            val inputPointer = pointers.get(id)
+            val inputPointer = streamerProvider.getPointer(id = id)
             val outputPointer = inputPointer + 1
             val storage = getSyncStorage(
                 id = id,
-                streamer = streamerProvider.get(id = id, inputPointer = inputPointer, outputPointer = outputPointer),
+                streamer = streamerProvider.getStreamer(id = id, inputPointer = inputPointer, outputPointer = outputPointer),
                 transformer = transformer as Transformer<Any>,
             ) // todo SyncStorage only encoded
             newPointers[id] = outputPointer
             storage.merge(info)
         }
-        pointers.putAll(newPointers)
+        streamerProvider.putPointers(newPointers)
         return result
     }
 
@@ -154,16 +148,16 @@ class SyncStreamsStorages private constructor(
         val newPointers = mutableMapOf<UUID, Int>()
         for ((id, info) in infos) {
             val (_, transformer) = transformers[id] ?: TODO()
-            val inputPointer = pointers.get(id)
+            val inputPointer = streamerProvider.getPointer(id = id)
             val outputPointer = inputPointer + 1
             val storage = getSyncStorage(
                 id = id,
-                streamer = streamerProvider.get(id = id, inputPointer = inputPointer, outputPointer = outputPointer),
+                streamer = streamerProvider.getStreamer(id = id, inputPointer = inputPointer, outputPointer = outputPointer),
                 transformer = transformer as Transformer<Any>,
             )
             newPointers[id] = outputPointer
             storage.commit(info)
         }
-        pointers.putAll(newPointers)
+        streamerProvider.putPointers(newPointers)
     }
 }

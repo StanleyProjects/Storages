@@ -504,31 +504,15 @@ internal class SyncStreamsStoragesTest {
                     hashes = hashes,
                     timeProvider = timeProvider,
                     uuidProvider = uuidProvider,
-                    streamerProvider = FileStreamerProvider(root = File("/tmp/storages/t")),
-                    pointers = object : SyncStreamsStorages.Pointers {
-                        private val values = mutableMapOf(
+                    streamerProvider = FileStreamerProvider(
+                        dir = File("/tmp/storages/t"),
+                        pointers = mapOf(
                             mockUUID(1) to 0,
                             mockUUID(2) to 0,
                             mockUUID(3) to 0,
                             mockUUID(4) to 0,
                         )
-
-                        override fun get(id: UUID): Int {
-                            return values[id] ?: error("No pointer by ID: \"$id\"!")
-                        }
-
-                        override fun putAll(values: Map<UUID, Int>) {
-                            this.values.putAll(values)
-                            val dir = File("/tmp/storages/t")
-                            check(dir.exists())
-                            check(dir.isDirectory)
-                            val files = dir.listFiles()!!
-                            for (file in files) {
-                                if (file.isDirectory) continue
-                                if (getId(file, this.values) == null) file.delete()
-                            }
-                        }
-                    },
+                    ),
                 )
             val rStorages = SyncStreamsStorages.Builder()
                 .add(mockUUID(1), StringTransformer)
@@ -539,31 +523,15 @@ internal class SyncStreamsStoragesTest {
                     hashes = hashes,
                     timeProvider = timeProvider,
                     uuidProvider = uuidProvider,
-                    streamerProvider = FileStreamerProvider(root = File("/tmp/storages/r")),
-                    pointers = object : SyncStreamsStorages.Pointers {
-                        private val values = mutableMapOf(
+                    streamerProvider = FileStreamerProvider(
+                        dir = File("/tmp/storages/r"),
+                        pointers = mapOf(
                             mockUUID(1) to 0,
                             mockUUID(2) to 0,
                             mockUUID(3) to 0,
                             mockUUID(5) to 0,
                         )
-
-                        override fun get(id: UUID): Int {
-                            return values[id] ?: error("No pointer by ID: \"$id\"!")
-                        }
-
-                        override fun putAll(values: Map<UUID, Int>) {
-                            this.values.putAll(values)
-                            val dir = File("/tmp/storages/r")
-                            check(dir.exists())
-                            check(dir.isDirectory)
-                            val files = dir.listFiles()!!
-                            for (file in files) {
-                                if (file.isDirectory) continue
-                                if (getId(file, this.values) == null) file.delete()
-                            }
-                        }
-                    },
+                    ),
                 )
             strings.forEach { described ->
                 itemId = described.id
