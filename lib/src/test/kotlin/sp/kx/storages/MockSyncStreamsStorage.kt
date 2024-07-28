@@ -9,10 +9,11 @@ import kotlin.time.Duration.Companion.milliseconds
 
 internal fun <T : Any> mockSyncStreamsStorage(
     timeProvider: MockProvider<Duration> = MockProvider { 1.milliseconds },
-    uuidProvider: MockProvider<UUID> = MockProvider { UUID.fromString("d2d7c21b-f99a-4f78-80d4-8bf05ee25f62") },
+    uuidProvider: MockProvider<UUID> = MockProvider { mockUUID(1) },
     transformer: List<Pair<ByteArray, T>> = emptyList(),
     id: UUID = mockUUID(),
     defaultDeleted: Set<UUID> = emptySet(),
+    defaultLocals: Set<UUID> = emptySet(),
     hashes: List<Pair<ByteArray, ByteArray>> = emptyList(),
 ) = SyncStreamsStorage(
     id = id,
@@ -21,6 +22,10 @@ internal fun <T : Any> mockSyncStreamsStorage(
         private val stream = ByteArrayOutputStream().also { stream ->
             BytesUtil.writeBytes(stream, defaultDeleted.size)
             defaultDeleted.forEach {
+                BytesUtil.writeBytes(stream, it)
+            }
+            BytesUtil.writeBytes(stream, defaultLocals.size)
+            defaultLocals.forEach {
                 BytesUtil.writeBytes(stream, it)
             }
             val itemsSize: Int = 0

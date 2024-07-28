@@ -577,19 +577,26 @@ internal class SyncStreamsStoragesTest {
         private fun SyncStreamsStorages.assertSyncInfo(hashes: Map<UUID, ByteArray>, expected: Map<UUID, SyncInfo>) {
             val actual = getSyncInfo(hashes)
             assertEquals(expected.size, actual.size, "SyncInfo:\n$expected\n$actual\n")
-            for ((id, value) in expected) {
-                val syncInfo = actual[id] ?: error("No hash by ID: \"$id\"!")
+            for ((storageId, value) in expected) {
+                val syncInfo = actual[storageId] ?: error("No hash by ID: \"$storageId\"!")
                 assertEquals(value.deleted.size, syncInfo.deleted.size)
                 assertEquals(value.deleted.sorted(), syncInfo.deleted.sorted())
-                assertEquals(value.infos.size, syncInfo.infos.size)
+                val message = """
+                    storage: $storageId
+                    src: ${hashes.map { (id, bytes) -> "$id: ${bytes.toHEX()}" }}
+                    dst: ${hashes().map { (id, bytes) -> "$id: ${bytes.toHEX()}" }}
+                    expected: ${value.infos.map { it.key }}
+                    actual: ${syncInfo.infos.map { it.key }}
+                """.trimIndent()
+                assertEquals(value.infos.size, syncInfo.infos.size, message)
                 for (key in value.infos.keys) {
                     val ei = value.infos[key]
                     checkNotNull(ei)
                     val ai = syncInfo.infos[key]
                     checkNotNull(ai)
-                    assertEquals(ei, ai, "id: $id")
+                    assertEquals(ei, ai, "storage: $storageId")
                 }
-                assertEquals(value, syncInfo, "id: $id")
+                assertEquals(value, syncInfo, "storage: $storageId")
             }
         }
 

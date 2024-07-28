@@ -39,6 +39,7 @@ class SyncStreamsStorage<T : Any>(
         get() {
             return streamer.inputStream().use { stream ->
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
+                stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip locals
                 val itemsSize = BytesUtil.readInt(stream)
                 val bytes = ByteArray(itemsSize * hf.size)
                 for (index in 0 until itemsSize) {
@@ -53,6 +54,7 @@ class SyncStreamsStorage<T : Any>(
         get() {
             return streamer.inputStream().use { stream ->
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
+                stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip locals
                 List(BytesUtil.readInt(stream)) { _ ->
                     val id = BytesUtil.readUUID(stream)
                     val info = ItemInfo(
@@ -80,13 +82,31 @@ class SyncStreamsStorage<T : Any>(
             return set
         }
 
+    private val locals: Set<UUID>
+        get() {
+            val set = HashSet<UUID>()
+            streamer.inputStream().use { stream ->
+                stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
+                val localsSize = BytesUtil.readInt(stream)
+                for (index in 0 until localsSize) {
+                    set.add(BytesUtil.readUUID(stream))
+                }
+            }
+            return set
+        }
+
     private fun write(
-        items: List<Described<T>>,
         deleted: Set<UUID> = this.deleted,
+        locals: Set<UUID> = this.locals,
+        items: List<Described<T>>,
     ) {
         streamer.outputStream().use { stream ->
             BytesUtil.writeBytes(stream, deleted.size)
             for (it in deleted) {
+                BytesUtil.writeBytes(stream, it)
+            }
+            BytesUtil.writeBytes(stream, locals.size)
+            for (it in locals) {
                 BytesUtil.writeBytes(stream, it)
             }
             BytesUtil.writeBytes(stream, items.size)
@@ -219,6 +239,7 @@ class SyncStreamsStorage<T : Any>(
             for (index in 0 until deletedSize) {
                 deleted.add(BytesUtil.readUUID(stream))
             }
+            stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip locals
             val itemsSize = BytesUtil.readInt(stream)
             val infos = HashMap<UUID, ItemInfo>(itemsSize)
             for (ignored in 0 until itemsSize) {

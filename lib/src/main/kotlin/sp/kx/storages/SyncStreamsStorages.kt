@@ -144,8 +144,8 @@ class SyncStreamsStorages private constructor(
         return result
     }
 
-    fun commit(infos: Map<UUID, CommitInfo>) {
-        if (infos.isEmpty()) return
+    fun commit(infos: Map<UUID, CommitInfo>): Set<UUID> {
+        if (infos.isEmpty()) return emptySet()
         val newPointers = mutableMapOf<UUID, Int>()
         for ((id, info) in infos) {
             val (_, transformer) = transformers[id] ?: error("No storage by ID: \"$id\"!")
@@ -159,6 +159,9 @@ class SyncStreamsStorages private constructor(
             if (!storage.commit(info)) continue
             newPointers[id] = outputPointer
         }
-        streamerProvider.putPointers(newPointers)
+        if (newPointers.isNotEmpty()) {
+            streamerProvider.putPointers(newPointers)
+        }
+        return newPointers.keys
     }
 }

@@ -221,6 +221,10 @@ fun main() {
             },
         )
     tStorages.println()
+    // todo
+    // todo tStorages.require<Foo>().add(Foo(text = "foo:1"))
+    // todo rStorages.require<Foo>().add(Foo(text = "foo:1"))
+    // todo commit(srcStorages = tStorages, dstStorages = rStorages)
     Foo(text = "foo:${nextInt()}").also { item ->
         println("add: $item")
         tStorages.require<Foo>().add(item)

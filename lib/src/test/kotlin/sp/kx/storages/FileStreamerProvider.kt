@@ -20,7 +20,7 @@ internal class FileStreamerProvider(
             override fun inputStream(): InputStream {
                 val file = File(dir, "$id-$inputPointer")
                 if (!file.exists() || file.length() == 0L) {
-                    file.writeBytes(ByteArray(8))
+                    file.writeBytes(ByteArray(4 + 4 + 4))
                 }
                 return file.inputStream()
             }
