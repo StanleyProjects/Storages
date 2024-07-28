@@ -83,6 +83,7 @@ internal class SyncStreamsStoragesTest {
                     mockUUID(1) to MockHashFunction.map("strings:hash:t:updated"),
                     mockUUID(2) to MockHashFunction.map("ints:hash:t:updated"),
                     mockUUID(3) to MockHashFunction.map("longs:hash"),
+                    mockUUID(4) to MockHashFunction.map("foos:hash"),
                 ),
             )
             rStorages.assertHashes(
@@ -90,6 +91,7 @@ internal class SyncStreamsStoragesTest {
                     mockUUID(1) to MockHashFunction.map("strings:hash:r:updated"),
                     mockUUID(2) to MockHashFunction.map("ints:hash:r:updated"),
                     mockUUID(3) to MockHashFunction.map("longs:hash"),
+                    mockUUID(5) to MockHashFunction.map("bars:hash"),
                 ),
             )
         }
@@ -383,7 +385,6 @@ internal class SyncStreamsStoragesTest {
         }
 
         private fun onSyncStreamsStorages(
-            rPointers: SyncStreamsStorages.Pointers = MockPointers(),
             block: (t: SyncStreamsStorages, r: SyncStreamsStorages) -> Unit,
         ) {
             val strings = (1..5).map { number ->
@@ -449,10 +450,18 @@ internal class SyncStreamsStoragesTest {
             val longs = (1..5).map { number ->
                 mockDescribed(pointer = 30 + number, item = number.toLong())
             }
+            val foos = (1..5).map { number ->
+                mockDescribed(pointer = 40 + number, item = Foo(text = "foo:${40 + number}"))
+            }
+            val bars = (1..5).map { number ->
+                mockDescribed(pointer = 50 + number, item = Bar(number = 50 + number))
+            }
             val hashes = MockHashFunction.hashes(
                 strings to "strings:hash",
                 ints to "ints:hash",
                 longs to "longs:hash",
+                foos to "foos:hash",
+                bars to "bars:hash",
                 stringsTUpdated to "strings:hash:t:updated",
                 stringsRUpdated to "strings:hash:r:updated",
                 stringsFinal to "strings:hash:final",
@@ -465,6 +474,10 @@ internal class SyncStreamsStoragesTest {
                 IntTransformer.hashPair(it)
             } + longs.map {
                 LongTransformer.hashPair(it)
+            } + foos.map {
+                FooTransformer.hashPair(it)
+            } + bars.map {
+                BarTransformer.hashPair(it)
             } + listOf(
                 StringTransformer.hashPair(mockDescribed(pointer = 16)),
                 StringTransformer.hashPair(mockDescribed(pointer = 17)),
@@ -486,6 +499,7 @@ internal class SyncStreamsStoragesTest {
                 .add(mockUUID(1), StringTransformer)
                 .add(mockUUID(2), IntTransformer)
                 .add(mockUUID(3), LongTransformer)
+                .add(mockUUID(4), FooTransformer)
                 .mock(
                     hashes = hashes,
                     timeProvider = timeProvider,
@@ -496,6 +510,7 @@ internal class SyncStreamsStoragesTest {
                             mockUUID(1) to 0,
                             mockUUID(2) to 0,
                             mockUUID(3) to 0,
+                            mockUUID(4) to 0,
                         )
 
                         override fun get(id: UUID): Int {
@@ -519,12 +534,36 @@ internal class SyncStreamsStoragesTest {
                 .add(mockUUID(1), StringTransformer)
                 .add(mockUUID(2), IntTransformer)
                 .add(mockUUID(3), LongTransformer)
+                .add(mockUUID(5), BarTransformer)
                 .mock(
                     hashes = hashes,
                     timeProvider = timeProvider,
                     uuidProvider = uuidProvider,
                     streamerProvider = FileStreamerProvider(root = File("/tmp/storages/r")),
-                    pointers = rPointers,
+                    pointers = object : SyncStreamsStorages.Pointers {
+                        private val values = mutableMapOf(
+                            mockUUID(1) to 0,
+                            mockUUID(2) to 0,
+                            mockUUID(3) to 0,
+                            mockUUID(5) to 0,
+                        )
+
+                        override fun get(id: UUID): Int {
+                            return values[id] ?: error("No pointer by ID: \"$id\"!")
+                        }
+
+                        override fun putAll(values: Map<UUID, Int>) {
+                            this.values.putAll(values)
+                            val dir = File("/tmp/storages/r")
+                            check(dir.exists())
+                            check(dir.isDirectory)
+                            val files = dir.listFiles()!!
+                            for (file in files) {
+                                if (file.isDirectory) continue
+                                if (getId(file, this.values) == null) file.delete()
+                            }
+                        }
+                    },
                 )
             strings.forEach { described ->
                 itemId = described.id
@@ -544,7 +583,18 @@ internal class SyncStreamsStoragesTest {
                 tStorages.require<Long>().add(described.item)
                 rStorages.require<Long>().add(described.item)
             }
-            check(tStorages.hashes() == rStorages.hashes())
+            foos.forEach { described ->
+                itemId = described.id
+                time = described.info.created
+                tStorages.require<Foo>().add(described.item)
+            }
+            bars.forEach { described ->
+                itemId = described.id
+                time = described.info.created
+                rStorages.require<Bar>().add(described.item)
+            }
+            check(tStorages.hashes().keys.sorted() == listOf(mockUUID(1), mockUUID(2), mockUUID(3), mockUUID(4)))
+            check(rStorages.hashes().keys.sorted() == listOf(mockUUID(1), mockUUID(2), mockUUID(3), mockUUID(5)))
             //
             mockDescribed(pointer = 16).also { described ->
                 itemId = described.id
