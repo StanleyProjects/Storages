@@ -9,9 +9,10 @@ internal fun SyncStreamsStorages.Builder.mock(
     timeProvider: MockProvider<Duration> = MockProvider { 1.milliseconds },
     uuidProvider: MockProvider<UUID> = MockProvider { UUID.fromString("d2d7c21b-f99a-4f78-80d4-8bf05ee25f62") },
     streamerProvider: SyncStreamsStorages.StreamerProvider = MockStreamerProvider(),
+    pointers: SyncStreamsStorages.Pointers = MockPointers(),
 ) = build(
     hf = MockHashFunction(hashes = hashes),
-    pointers = MockPointers(),
+    pointers = pointers,
     env = object : SyncStreamsStorage.Environment {
         override fun now(): Duration {
             return timeProvider.provide()

@@ -63,6 +63,10 @@ class SyncStreamsStorages private constructor(
         )
     }
 
+    fun require(id: UUID): MutableStorage<out Any> {
+        return get(id = id) ?: error("No storage by ID: \"$id\"!")
+    }
+
     fun <T : Any> get(type: Class<T>): MutableStorage<T>? {
         for ((id, value) in transformers) {
             if (type != value.first) continue
@@ -138,7 +142,7 @@ class SyncStreamsStorages private constructor(
                 id = id,
                 streamer = streamerProvider.get(id = id, inputPointer = inputPointer, outputPointer = outputPointer),
                 transformer = transformer as Transformer<Any>,
-            )
+            ) // todo SyncStorage only encoded
             newPointers[id] = outputPointer
             storage.merge(info)
         }

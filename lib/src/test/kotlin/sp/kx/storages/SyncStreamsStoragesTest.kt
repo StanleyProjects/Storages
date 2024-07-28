@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.util.UUID
@@ -232,193 +233,87 @@ internal class SyncStreamsStoragesTest {
         }
     }
 
-    /*
     @Test
     fun mergeTest() {
-        val strings = (1..5).map { number ->
-            mockDescribed(pointer = 10 + number)
-        }
-        val stringTUpdated = strings[2].copy(
-            updated = (1_000 + 113).milliseconds,
-            hash = MockHashFunction.map("item:hash:13:t:updated"),
-            item = "item:13:t:updated",
+        val stringsFinal = listOf(
+            mockDescribed(13).updated(pointer = 113),
+            mockDescribed(14).updated(pointer = 114),
+            mockDescribed(15),
+            mockDescribed(16),
+            mockDescribed(17),
         )
-        val stringRUpdated = strings[3].copy(
-            updated = (1_000 + 114).milliseconds,
-            hash = MockHashFunction.map("item:hash:14:r:updated"),
-            item = "item:14:r:updated",
+        val intsFinal = listOf(
+            mockDescribed(23, 23).updated(pointer = 123, 123),
+            mockDescribed(24, 24).updated(pointer = 124, 124),
+            mockDescribed(25, 25),
+            mockDescribed(26, 26),
+            mockDescribed(27, 27),
         )
-        val stringsTUpdated = strings.toMutableList().also {
-            it.removeAt(0)
-            it.removeAt(1)
-            it.add(1, stringTUpdated)
-            it.add(mockDescribed(pointer = 16))
-        }.toList()
-        val stringsRUpdated = strings.toMutableList().also {
-            it.removeAt(1)
-            it.removeAt(2)
-            it.add(2, stringRUpdated)
-            it.add(mockDescribed(pointer = 17))
-        }.toList()
-        val ints = (1..5).map { number ->
-            mockDescribed(pointer = 20 + number, item = 20 + number)
-        }
-        val intTUpdated = ints[2].copy(
-            updated = (1_000 + 123).milliseconds,
-            hash = MockHashFunction.map("item:hash:23:t:updated"),
-            item = 123,
-        )
-        val intRUpdated = ints[3].copy(
-            updated = (1_000 + 124).milliseconds,
-            hash = MockHashFunction.map("item:hash:24:r:updated"),
-            item = 124,
-        )
-        val intsTUpdated = ints.toMutableList().also {
-            it.removeAt(0)
-            it.removeAt(1)
-            it.add(1, intTUpdated)
-            it.add(mockDescribed(pointer = 26, item = 26))
-        }.toList()
-        val intsRUpdated = ints.toMutableList().also {
-            it.removeAt(1)
-            it.removeAt(2)
-            it.add(2, intRUpdated)
-            it.add(mockDescribed(pointer = 27, item = 27))
-        }.toList()
         val longs = (1..5).map { number ->
             mockDescribed(pointer = 30 + number, item = number.toLong())
         }
-        val hashes = MockHashFunction.hashes(
-            strings to "strings:hash",
-            ints to "ints:hash",
-            longs to "ints:longs",
-            stringsTUpdated to "strings:hash:t:updated",
-            stringsRUpdated to "strings:hash:R:updated",
-            intsTUpdated to "ints:hash:t:updated",
-            intsRUpdated to "ints:hash:r:updated",
-        ) + strings.map {
-            StringTransformer.hashPair(it)
-        } + ints.map {
-            IntTransformer.hashPair(it)
-        } + longs.map {
-            LongTransformer.hashPair(it)
-        } + listOf(
-            StringTransformer.hashPair(mockDescribed(pointer = 16)),
-            StringTransformer.hashPair(mockDescribed(pointer = 17)),
-            StringTransformer.hashPair(stringTUpdated),
-            StringTransformer.hashPair(stringRUpdated),
-            IntTransformer.hashPair(mockDescribed(pointer = 26, item = 26)),
-            IntTransformer.hashPair(mockDescribed(pointer = 27, item = 27)),
-            IntTransformer.hashPair(intTUpdated),
-            IntTransformer.hashPair(intRUpdated),
-        )
-        var time = 1.milliseconds
-        val timeProvider = MockProvider { time }
-        var itemId = mockUUID()
-        val uuidProvider = MockProvider { itemId }
-        val tStreamers = mapOf(
-            mockUUID(1) to FileStreamer(File.createTempFile("storage", "1")),
-            mockUUID(2) to FileStreamer(File.createTempFile("storage", "2")),
-            mockUUID(3) to FileStreamer(File.createTempFile("storage", "3")),
-        )
-        val tStorages = SyncStreamsStorages.Builder()
-            .add(mockUUID(1), StringTransformer)
-            .add(mockUUID(2), IntTransformer)
-            .add(mockUUID(3), LongTransformer)
-            .mock(
-                hashes = hashes,
-                timeProvider = timeProvider,
-                uuidProvider = uuidProvider,
-                streamerProvider = mockStreamerProvider(streamers = tStreamers),
+        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
+            val rMergeInfo = rStorages.getMergeInfo(tStorages.getSyncInfo(rStorages.hashes()))
+            val tMergeInfo = tStorages.getMergeInfo(rStorages.getSyncInfo(tStorages.hashes()))
+            val tCommitInfo = tStorages.merge(rMergeInfo)
+            File("/tmp/storages/t").also { root ->
+                assertTrue(root.exists())
+                assertTrue(root.isDirectory())
+                val files = root.listFiles()
+                assertNotNull(files)
+                checkNotNull(files)
+                assertEquals(3, files.size)
+                files.forEach {
+                    assertTrue(it.exists())
+                    assertTrue(it.isFile())
+                    assertTrue(it.length() > 0)
+                }
+                val expected = listOf(
+                    "${mockUUID(1)}-1",
+                    "${mockUUID(2)}-1",
+                    "${mockUUID(3)}-0",
+                )
+                assertEquals(expected, files.map { it.name }.sorted())
+            }
+            check(tCommitInfo.keys.sorted() == listOf(mockUUID(1), mockUUID(2)))
+            SyncStreamsStorageTest.assert(
+                expected = mockCommitInfo(
+                    hash = MockHashFunction.map("strings:hash:final"),
+                    items = listOf(
+                        mockDescribed(13).updated(pointer = 113).map(StringTransformer::encode),
+                        mockDescribed(16).map(StringTransformer::encode),
+                    ),
+                    deleted = setOf(mockUUID(11)),
+                ),
+                actual = tCommitInfo[mockUUID(1)] ?: TODO(),
             )
-        val rStreamers = mapOf(
-            mockUUID(1) to FileStreamer(File.createTempFile("storage", "1")),
-            mockUUID(2) to FileStreamer(File.createTempFile("storage", "2")),
-            mockUUID(3) to FileStreamer(File.createTempFile("storage", "3")),
-        )
-        val rStorages = SyncStreamsStorages.Builder()
-            .add(mockUUID(1), StringTransformer)
-            .add(mockUUID(2), IntTransformer)
-            .add(mockUUID(3), LongTransformer)
-            .mock(
-                hashes = hashes,
-                timeProvider = timeProvider,
-                uuidProvider = uuidProvider,
-                streamerProvider = mockStreamerProvider(streamers = rStreamers),
+            SyncStreamsStorageTest.assert(
+                expected = mockCommitInfo(
+                    hash = MockHashFunction.map("ints:hash:final"),
+                    items = listOf(
+                        mockDescribed(23, 23).updated(pointer = 123, 123).map(IntTransformer::encode),
+                        mockDescribed(26, 26).map(IntTransformer::encode),
+                    ),
+                    deleted = setOf(mockUUID(21)),
+                ),
+                actual = tCommitInfo[mockUUID(2)] ?: TODO(),
             )
-        strings.forEach { described ->
-            itemId = described.id
-            time = described.info.created
-            tStorages.require<String>().add(described.item)
-            rStorages.require<String>().add(described.item)
+            tStorages.require(mockUUID(1)).items.forEachIndexed { index, actual ->
+                val expected = stringsFinal[index]
+                SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+            }
+            tStorages.require(mockUUID(2)).items.forEachIndexed { index, actual ->
+                val expected = intsFinal[index]
+                SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+            }
+            tStorages.require(mockUUID(3)).items.forEachIndexed { index, actual ->
+                val expected = longs[index]
+                SyncStreamsStorageTest.assert(expected = expected, actual = actual)
+            }
+            TODO("SyncStreamsStoragesTest:mergeTest:longs")
+            TODO("SyncStreamsStoragesTest:mergeTest")
         }
-        ints.forEach { described ->
-            itemId = described.id
-            time = described.info.created
-            tStorages.require<Int>().add(described.item)
-            rStorages.require<Int>().add(described.item)
-        }
-        longs.forEach { described ->
-            itemId = described.id
-            time = described.info.created
-            tStorages.require<Long>().add(described.item)
-            rStorages.require<Long>().add(described.item)
-        }
-        check(tStorages.hashes() == rStorages.hashes())
-        //
-        mockDescribed(pointer = 16).also { described ->
-            itemId = described.id
-            time = described.info.created
-            tStorages.require<String>().add(described.item)
-        }
-        mockDescribed(pointer = 17).also { described ->
-            itemId = described.id
-            time = described.info.created
-            rStorages.require<String>().add(described.item)
-        }
-        check(tStorages.require<String>().delete(strings[0].id))
-        check(rStorages.require<String>().delete(strings[1].id))
-        stringTUpdated.also { described ->
-            itemId = described.id
-            time = described.info.updated
-            val info = tStorages.require<String>().update(described.id, described.item)
-            checkNotNull(info)
-        }
-        stringRUpdated.also { described ->
-            itemId = described.id
-            time = described.info.updated
-            val info = rStorages.require<String>().update(described.id, described.item)
-            checkNotNull(info)
-        }
-        //
-        mockDescribed(pointer = 26, item = 26).also { described ->
-            itemId = described.id
-            time = described.info.created
-            tStorages.require<Int>().add(described.item)
-        }
-        mockDescribed(pointer = 27, item = 27).also { described ->
-            itemId = described.id
-            time = described.info.created
-            rStorages.require<Int>().add(described.item)
-        }
-        check(tStorages.require<Int>().delete(ints[0].id))
-        check(rStorages.require<Int>().delete(ints[1].id))
-        intTUpdated.also { described ->
-            itemId = described.id
-            time = described.info.updated
-            val info = tStorages.require<Int>().update(described.id, described.item)
-            checkNotNull(info)
-        }
-        intRUpdated.also { described ->
-            itemId = described.id
-            time = described.info.updated
-            val info = rStorages.require<Int>().update(described.id, described.item)
-            checkNotNull(info)
-        }
-        //
-        TODO("SyncStreamsStoragesTest:mergeTest")
     }
-    */
 
     companion object {
         private fun SyncStreamsStorages.assertHashes(expected: Map<UUID, ByteArray>) {
@@ -480,7 +375,17 @@ internal class SyncStreamsStoragesTest {
             )
         }
 
-        private fun onSyncStreamsStorages(block: (t: SyncStreamsStorages, r: SyncStreamsStorages) -> Unit) {
+        private fun getId(file: File, values: Map<UUID, Int>): UUID? {
+            for ((id, pointer) in values) {
+                if (file.name == "$id-$pointer") return id
+            }
+            return null
+        }
+
+        private fun onSyncStreamsStorages(
+            rPointers: SyncStreamsStorages.Pointers = MockPointers(),
+            block: (t: SyncStreamsStorages, r: SyncStreamsStorages) -> Unit,
+        ) {
             val strings = (1..5).map { number ->
                 mockDescribed(pointer = 10 + number)
             }
@@ -502,6 +407,13 @@ internal class SyncStreamsStoragesTest {
                 mockDescribed(13),
                 stringRUpdated,
                 mockDescribed(15),
+                mockDescribed(17),
+            )
+            val stringsFinal = listOf(
+                stringTUpdated,
+                stringRUpdated,
+                mockDescribed(15),
+                mockDescribed(16),
                 mockDescribed(17),
             )
             val ints = (1..5).map { number ->
@@ -527,6 +439,13 @@ internal class SyncStreamsStoragesTest {
                 mockDescribed(pointer = 25, item = 25),
                 mockDescribed(pointer = 27, item = 27),
             )
+            val intsFinal = listOf(
+                intTUpdated,
+                intRUpdated,
+                mockDescribed(25, 25),
+                mockDescribed(26, 26),
+                mockDescribed(27, 27),
+            )
             val longs = (1..5).map { number ->
                 mockDescribed(pointer = 30 + number, item = number.toLong())
             }
@@ -536,8 +455,10 @@ internal class SyncStreamsStoragesTest {
                 longs to "longs:hash",
                 stringsTUpdated to "strings:hash:t:updated",
                 stringsRUpdated to "strings:hash:r:updated",
+                stringsFinal to "strings:hash:final",
                 intsTUpdated to "ints:hash:t:updated",
                 intsRUpdated to "ints:hash:r:updated",
+                intsFinal to "ints:hash:final",
             ) + strings.map {
                 StringTransformer.hashPair(it)
             } + ints.map {
@@ -558,11 +479,9 @@ internal class SyncStreamsStoragesTest {
             val timeProvider = MockProvider { time }
             var itemId = mockUUID()
             val uuidProvider = MockProvider { itemId }
-            val tStreamers = mapOf(
-                mockUUID(1) to FileStreamer(File.createTempFile("storage", "1")),
-                mockUUID(2) to FileStreamer(File.createTempFile("storage", "2")),
-                mockUUID(3) to FileStreamer(File.createTempFile("storage", "3")),
-            )
+            val root = File("/tmp/storages")
+            root.deleteRecursively()
+            root.mkdirs()
             val tStorages = SyncStreamsStorages.Builder()
                 .add(mockUUID(1), StringTransformer)
                 .add(mockUUID(2), IntTransformer)
@@ -571,13 +490,31 @@ internal class SyncStreamsStoragesTest {
                     hashes = hashes,
                     timeProvider = timeProvider,
                     uuidProvider = uuidProvider,
-                    streamerProvider = mockStreamerProvider(streamers = tStreamers),
+                    streamerProvider = FileStreamerProvider(root = File("/tmp/storages/t")),
+                    pointers = object : SyncStreamsStorages.Pointers {
+                        private val values = mutableMapOf(
+                            mockUUID(1) to 0,
+                            mockUUID(2) to 0,
+                            mockUUID(3) to 0,
+                        )
+
+                        override fun get(id: UUID): Int {
+                            return values[id] ?: error("No pointer by ID: \"$id\"!")
+                        }
+
+                        override fun putAll(values: Map<UUID, Int>) {
+                            this.values.putAll(values)
+                            val dir = File("/tmp/storages/t")
+                            check(dir.exists())
+                            check(dir.isDirectory)
+                            val files = dir.listFiles()!!
+                            for (file in files) {
+                                if (file.isDirectory) continue
+                                if (getId(file, this.values) == null) file.delete()
+                            }
+                        }
+                    },
                 )
-            val rStreamers = mapOf(
-                mockUUID(1) to FileStreamer(File.createTempFile("storage", "1")),
-                mockUUID(2) to FileStreamer(File.createTempFile("storage", "2")),
-                mockUUID(3) to FileStreamer(File.createTempFile("storage", "3")),
-            )
             val rStorages = SyncStreamsStorages.Builder()
                 .add(mockUUID(1), StringTransformer)
                 .add(mockUUID(2), IntTransformer)
@@ -586,7 +523,8 @@ internal class SyncStreamsStoragesTest {
                     hashes = hashes,
                     timeProvider = timeProvider,
                     uuidProvider = uuidProvider,
-                    streamerProvider = mockStreamerProvider(streamers = rStreamers),
+                    streamerProvider = FileStreamerProvider(root = File("/tmp/storages/r")),
+                    pointers = rPointers,
                 )
             strings.forEach { described ->
                 itemId = described.id

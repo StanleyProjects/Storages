@@ -167,12 +167,18 @@ class SyncStreamsStorage<T : Any>(
             newItems += item.map(transformer::decode)
         }
         val deleted = this.deleted
+        val sorted = newItems.sortedBy { it.info.created }
         write(
-            items = newItems.sortedBy { it.info.created },
+            items = sorted,
             deleted = deleted + info.deleted,
         )
+        val bytes = ByteArray(sorted.size * hf.size)
+        for (index in sorted.indices) {
+            val item = sorted[index]
+            System.arraycopy(item.info.hash, 0, bytes, index * hf.size, hf.size)
+        }
         return CommitInfo(
-            hash = hash,
+            hash = hf.map(bytes),
             items = download,
             deleted = deleted,
         )

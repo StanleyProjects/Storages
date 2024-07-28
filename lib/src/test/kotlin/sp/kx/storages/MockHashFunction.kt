@@ -1,5 +1,7 @@
 package sp.kx.storages
 
+import kotlin.math.absoluteValue
+
 internal class MockHashFunction(
     private val hashes: List<Pair<ByteArray, ByteArray>>,
 ) : HashFunction {
@@ -27,7 +29,7 @@ internal class MockHashFunction(
         private const val _size = 16
 
         fun map(value: String): ByteArray {
-            return String.format("%0${_size}d", value.hashCode()).toByteArray()
+            return String.format("%0${_size}d", value.hashCode().absoluteValue).toByteArray()
         }
 
         fun hash(list: List<Described<out Any>>): ByteArray {
