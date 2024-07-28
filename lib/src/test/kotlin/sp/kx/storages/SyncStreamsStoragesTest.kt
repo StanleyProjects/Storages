@@ -405,6 +405,16 @@ internal class SyncStreamsStoragesTest {
         }
     }
 
+    @Test
+    fun mergeErrorTest() {
+        val storages = SyncStreamsStorages.Builder()
+            .add(mockUUID(1), StringTransformer)
+            .mock()
+        assertThrows(IllegalStateException::class.java) {
+            storages.merge(infos = mapOf(mockUUID(2) to mockMergeInfo()))
+        }
+    }
+
     companion object {
         private fun SyncStreamsStorages.assertHashes(expected: Map<UUID, ByteArray>) {
             val actual = hashes()
