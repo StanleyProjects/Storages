@@ -1107,10 +1107,6 @@ internal class SyncStreamsStoragesTest {
             }
         }
 
-        private fun <T : Any> Transformer<T>.hashPair(described: Described<T>): Pair<ByteArray, ByteArray> {
-            return MockHashFunction.bytesOf(id = described.id, item = described.item, encode = ::encode) to described.info.hash
-        }
-
         private fun Described<String>.updated(pointer: Int): Described<String> {
             return copy(
                 updated = (1_000 + pointer).milliseconds,

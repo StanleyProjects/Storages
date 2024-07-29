@@ -197,9 +197,9 @@ internal class SyncStreamsStorageTest {
         val storageHash = MockHashFunction.map("storageHash")
         val storageHashUpdated = MockHashFunction.map("storageHashUpdated")
         val hashes = defaultItems.map {
-            it.item.toByteArray() to it.info.hash
+            StringTransformer.hashPair(it)
         } + updatedItems.map {
-            it.item.toByteArray() to it.info.hash
+            StringTransformer.hashPair(it)
         } + listOf(
             MockHashFunction.hash(defaultItems) to storageHash,
             MockHashFunction.hash(updatedItems) to storageHashUpdated,
@@ -277,8 +277,8 @@ internal class SyncStreamsStorageTest {
         val storage: SyncStorage<String> = mockSyncStreamsStorage(
             id = storageId,
             hashes = listOf(
-                "".toByteArray() to storageEmptyHash,
-                expected.item.toByteArray() to itemHash,
+                ByteArray(0) to storageEmptyHash,
+                MockHashFunction.bytesOf(id = expected.id, item = expected.item, encode = StringTransformer::encode) to itemHash,
                 itemHash to storageHash,
             ),
             uuidProvider = uuidProvider,
@@ -334,8 +334,8 @@ internal class SyncStreamsStorageTest {
         val storage: SyncStorage<String> = mockSyncStreamsStorage(
             id = id,
             hashes = listOf(
-                "".toByteArray() to storageEmptyHash,
-                expected.item.toByteArray() to itemHash,
+                ByteArray(0) to storageEmptyHash,
+                MockHashFunction.bytesOf(id = expected.id, item = expected.item, encode = StringTransformer::encode) to itemHash,
                 itemHash to storageHash,
             ),
             uuidProvider = uuidProvider,
@@ -381,9 +381,9 @@ internal class SyncStreamsStorageTest {
         val storage: SyncStorage<String> = mockSyncStreamsStorage(
             id = id,
             hashes = listOf(
-                "".toByteArray() to storageEmptyHash,
-                expected.item.toByteArray() to itemHash,
-                itemUpdated.toByteArray() to itemUpdatedHash,
+                ByteArray(0) to storageEmptyHash,
+                MockHashFunction.bytesOf(id = expected.id, item = expected.item, encode = StringTransformer::encode) to itemHash,
+                MockHashFunction.bytesOf(id = expected.id, item = itemUpdated, encode = StringTransformer::encode) to itemUpdatedHash,
                 itemHash to storageHash,
                 itemUpdatedHash to storageUpdatedHash,
             ),
@@ -458,9 +458,9 @@ internal class SyncStreamsStorageTest {
         val storage: SyncStorage<String> = mockSyncStreamsStorage(
             id = id,
             hashes = listOf(
-                "".toByteArray() to storageEmptyHash,
-                expected.item.toByteArray() to itemHash,
-                itemUpdated.toByteArray() to itemUpdatedHash,
+                ByteArray(0) to storageEmptyHash,
+                MockHashFunction.bytesOf(id = expected.id, item = expected.item, encode = StringTransformer::encode) to itemHash,
+                MockHashFunction.bytesOf(id = expected.id, item = itemUpdated, encode = StringTransformer::encode) to itemUpdatedHash,
                 itemHash to storageHash,
                 itemUpdatedHash to storageUpdatedHash,
             ),
@@ -566,11 +566,11 @@ internal class SyncStreamsStorageTest {
         val storageTHash = MockHashFunction.map("storageTHash")
         val storageHashMerged = MockHashFunction.map("storageHashMerged")
         val hashes = defaultItems.map {
-            it.item.toByteArray() to it.info.hash
+            StringTransformer.hashPair(it)
         } + rItems.map {
-            it.item.toByteArray() to it.info.hash
+            StringTransformer.hashPair(it)
         } + tItems.map {
-            it.item.toByteArray() to it.info.hash
+            StringTransformer.hashPair(it)
         } + listOf(
             MockHashFunction.hash(defaultItems + rItems.last()) to storageRDefaultHash,
             MockHashFunction.hash(defaultItems + tItems.last()) to storageTDefaultHash,
@@ -734,9 +734,9 @@ internal class SyncStreamsStorageTest {
                 mockDescribed(pointer = 31),
             ) to "t:wrong",
         ) + rItems.map {
-            it.item.toByteArray() to it.info.hash
+            StringTransformer.hashPair(it)
         } + tItems.map {
-            it.item.toByteArray() to it.info.hash
+            StringTransformer.hashPair(it)
         }
         val transformer = rItems.map {
             it.item.toByteArray() to it.item
