@@ -33,8 +33,11 @@ internal class MockHashFunction(
             return String.format("%0${_size}d", value.hashCode().absoluteValue).toByteArray()
         }
 
-        fun <T : Any> hash(id: UUID, item: T, encode: (T) -> ByteArray): ByteArray {
-            val encoded = encode(item)
+        fun <T : Any> bytesOf(id: UUID, item: T, encode: (T) -> ByteArray): ByteArray {
+            return bytesOf(id = id, encoded = encode(item))
+        }
+
+        fun bytesOf(id: UUID, encoded: ByteArray): ByteArray {
             val bytes = ByteArray(16 + encoded.size)
             BytesUtil.writeBytes(bytes = bytes, index = 0, value = id)
             System.arraycopy(encoded, 0, bytes, 16, encoded.size)

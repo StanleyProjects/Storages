@@ -148,6 +148,13 @@ class SyncStreamsStorage<T : Any>(
         return false
     }
 
+    private fun bytesOf(id: UUID, encoded: ByteArray): ByteArray {
+        val bytes = ByteArray(16 + encoded.size)
+        BytesUtil.writeBytes(bytes = bytes, index = 0, value = id)
+        System.arraycopy(encoded, 0, bytes, 16, encoded.size)
+        return bytes
+    }
+
     override fun update(id: UUID, item: T): ItemInfo? {
         val items = items.toMutableList()
         for (index in items.indices) {
@@ -155,7 +162,7 @@ class SyncStreamsStorage<T : Any>(
             if (oldItem.id == id) {
                 val newItem = oldItem.copy(
                     updated = env.now(),
-                    hash = hf.map(transformer.encode(item)),
+                    hash = hf.map(bytesOf(id = id, encoded = transformer.encode(item))),
                     item = item,
                 )
                 items[index] = newItem
@@ -171,15 +178,12 @@ class SyncStreamsStorage<T : Any>(
         val created = env.now()
         val encoded = transformer.encode(item)
         val id = env.randomUUID()
-        val bytes = ByteArray(16 + encoded.size)
-        BytesUtil.writeBytes(bytes = bytes, index = 0, value = id)
-        System.arraycopy(encoded, 0, bytes, 16, encoded.size)
         val described = Described(
             id = id,
             info = ItemInfo(
                 created = created,
                 updated = created,
-                hash = hf.map(bytes),
+                hash = hf.map(bytesOf(id = id, encoded = encoded)),
             ),
             item = item,
         )

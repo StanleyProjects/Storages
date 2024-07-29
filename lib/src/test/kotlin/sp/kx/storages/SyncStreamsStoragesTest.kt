@@ -137,9 +137,9 @@ internal class SyncStreamsStoragesTest {
         val hashes = MockHashFunction.hashes(
             emptyList<Described<String>>() to "strings:empty",
         ) + listOf(
-            MockHashFunction.hash(mockUUID(11), item, StringTransformer::encode) to item1Hash,
+            MockHashFunction.bytesOf(mockUUID(11), item, StringTransformer::encode) to item1Hash,
             item1Hash to item1ListHash,
-            MockHashFunction.hash(mockUUID(12), item, StringTransformer::encode) to item2Hash,
+            MockHashFunction.bytesOf(mockUUID(12), item, StringTransformer::encode) to item2Hash,
             item2Hash to item2ListHash,
             item1Hash + item2Hash to itemFinalListHash,
         )
@@ -1108,7 +1108,7 @@ internal class SyncStreamsStoragesTest {
         }
 
         private fun <T : Any> Transformer<T>.hashPair(described: Described<T>): Pair<ByteArray, ByteArray> {
-            return encode(described.item) to described.info.hash
+            return MockHashFunction.bytesOf(id = described.id, item = described.item, encode = ::encode) to described.info.hash
         }
 
         private fun Described<String>.updated(pointer: Int): Described<String> {
