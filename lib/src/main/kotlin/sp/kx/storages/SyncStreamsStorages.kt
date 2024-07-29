@@ -2,14 +2,12 @@ package sp.kx.storages
 
 import java.util.UUID
 
-// todo Storages
-// todo MutableStorages
 class SyncStreamsStorages private constructor(
     private val hf: HashFunction,
     private val transformers: Map<UUID, Pair<Class<out Any>, Transformer<out Any>>>,
     private val env: SyncStreamsStorage.Environment,
     private val streamerProvider: StreamerProvider,
-) {
+) : MutableStorages {
     class Builder {
         private val transformers = mutableMapOf<UUID, Pair<Class<out Any>, Transformer<out Any>>>()
 
@@ -48,7 +46,7 @@ class SyncStreamsStorages private constructor(
         fun putPointers(values: Map<UUID, Int>)
     }
 
-    fun get(id: UUID): MutableStorage<out Any>? {
+    override fun get(id: UUID): MutableStorage<out Any>? {
         val (_, transformer) = transformers[id] ?: return null
         val pointer = streamerProvider.getPointer(id = id)
         val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
@@ -59,11 +57,7 @@ class SyncStreamsStorages private constructor(
         )
     }
 
-    fun require(id: UUID): MutableStorage<out Any> {
-        return get(id = id) ?: error("No storage by ID: \"$id\"!")
-    }
-
-    fun <T : Any> get(type: Class<T>): MutableStorage<T>? {
+    override fun <T : Any> get(type: Class<T>): MutableStorage<T>? {
         for ((id, value) in transformers) {
             if (type != value.first) continue
             val transformer = value.second as Transformer<T>
@@ -76,14 +70,6 @@ class SyncStreamsStorages private constructor(
             )
         }
         return null
-    }
-
-    inline fun <reified T : Any> get(): MutableStorage<T>? {
-        return get(T::class.java)
-    }
-
-    inline fun <reified T : Any> require(): MutableStorage<T> {
-        return get(T::class.java) ?: error("No storage by type: \"${T::class.java.name}\"!")
     }
 
     private fun <T : Any> getSyncStorage(id: UUID, streamer: Streamer, transformer: Transformer<T>): SyncStorage<T> {
