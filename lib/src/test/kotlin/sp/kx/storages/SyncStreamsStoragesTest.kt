@@ -1169,7 +1169,7 @@ internal class SyncStreamsStoragesTest {
                 val children = dir.listFiles()
                 check(!children.isNullOrEmpty()) { "dir: $dir" }
                 check(expected.isNotEmpty())
-                assertTrue(children.all { it.exists() && it.isFile && it.length() > 0})
+                assertTrue(children.all { it.exists() && it.isFile && it.length() > 0 })
                 assertEquals(expected, children.map { it.name }.sorted(), "dir: $dir")
             }
         }

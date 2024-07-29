@@ -40,7 +40,7 @@ internal class FileStreamerProvider(
         val files = dir.listFiles()!!
         for (file in files) {
             if (file.isDirectory) continue
-            val exists = this.values.any { (id, pointer) -> file.name == "$id-$pointer"}
+            val exists = this.values.any { (id, pointer) -> file.name == "$id-$pointer" }
             if (!exists) file.delete()
         }
     }

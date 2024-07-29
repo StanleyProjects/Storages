@@ -30,7 +30,7 @@ internal fun mockStreamerProvider(id: UUID, streamer: Streamer): SyncStreamsStor
 internal fun mockStreamerProvider(
     streamers: Map<UUID, Streamer> = emptyMap(),
     values: Map<UUID, Int> = streamers.mapValues { 0 },
-) : SyncStreamsStorages.StreamerProvider {
+): SyncStreamsStorages.StreamerProvider {
     return object : SyncStreamsStorages.StreamerProvider {
         private val values = values.toMutableMap()
 
