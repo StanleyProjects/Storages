@@ -1,4 +1,4 @@
-# 2024/07/18
+# 2024/07/29
 
 style:
   active: true
@@ -86,7 +86,7 @@ style:
     active: false
   MagicNumber:
     active: true
-    ignoreNumbers: ['0xff']
+    ignoreNumbers: ['0xff', '1']
     ignoreHashCodeFunction: false
     ignorePropertyDeclaration: false
     ignoreLocalVariableDeclaration: false

@@ -1,19 +1,47 @@
 package sp.kx.storages
 
+import java.util.UUID
+import kotlin.math.absoluteValue
+
 internal class MockHashFunction(
     private val hashes: List<Pair<ByteArray, ByteArray>>,
 ) : HashFunction {
     override val size = _size
 
     override fun map(bytes: ByteArray): ByteArray {
-        return hashes.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second ?: error("No hash!\n---\n${String(bytes)}\n---")
+        val hash = hashes.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second
+        if (hash == null) {
+            val message = """
+                No hash!
+                ---
+                hashes: ${hashes.map { (key, _) -> String(key)}}
+                -
+                ${bytes.size}
+                -
+                ${String(bytes)}
+                ---
+            """.trimIndent()
+            error(message)
+        }
+        return hash
     }
 
     companion object {
         private const val _size = 16
 
         fun map(value: String): ByteArray {
-            return String.format("%0${_size}d", value.hashCode()).toByteArray()
+            return String.format("%0${_size}d", value.hashCode().absoluteValue).toByteArray()
+        }
+
+        fun <T : Any> bytesOf(id: UUID, item: T, encode: (T) -> ByteArray): ByteArray {
+            return bytesOf(id = id, encoded = encode(item))
+        }
+
+        fun bytesOf(id: UUID, encoded: ByteArray): ByteArray {
+            val bytes = ByteArray(16 + encoded.size)
+            BytesUtil.writeBytes(bytes = bytes, index = 0, value = id)
+            System.arraycopy(encoded, 0, bytes, 16, encoded.size)
+            return bytes
         }
 
         fun hash(list: List<Described<out Any>>): ByteArray {

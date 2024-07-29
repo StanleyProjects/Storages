@@ -137,4 +137,34 @@ internal class BytesUtilTest {
             assertTrue(expected.contentEquals(actual))
         }
     }
+
+    @Test
+    fun writeToArrayLongTest() {
+        val number: Long = 110480001
+        val bytes = ByteArray(32)
+        assertTrue(bytes.all { it == 0.toByte() })
+        BytesUtil.writeBytes(bytes = bytes, index = 4, value = number)
+        assertEquals(bytes.size, 32)
+        assertTrue(bytes.slice(0 until 4).all { it == 0.toByte() })
+        assertTrue(bytes.slice((4 + 16) until 32).all { it == 0.toByte() })
+        val slice = bytes.sliceArray(4 until (4 + 16))
+        assertEquals(slice.size, 16)
+        val actual = BytesUtil.readLong(slice.inputStream())
+        assertEquals(number, actual)
+    }
+
+    @Test
+    fun writeToArrayUUIDTest() {
+        val id = UUID(201043908171234567, 56416449111234567)
+        val bytes = ByteArray(64)
+        assertTrue(bytes.all { it == 0.toByte() })
+        BytesUtil.writeBytes(bytes = bytes, index = 4, value = id)
+        assertEquals(bytes.size, 64)
+        assertTrue(bytes.slice(0 until 4).all { it == 0.toByte() })
+        assertTrue(bytes.slice((4 + 32) until bytes.size).all { it == 0.toByte() })
+        val slice = bytes.sliceArray(4 until (4 + 32))
+        assertEquals(slice.size, 32)
+        val actual = BytesUtil.readUUID(slice.inputStream())
+        assertEquals(id, actual)
+    }
 }
