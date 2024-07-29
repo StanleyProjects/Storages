@@ -2,6 +2,8 @@ package sp.kx.storages
 
 import java.util.UUID
 
+// todo Storages
+// todo MutableStorages
 class SyncStreamsStorages private constructor(
     private val hf: HashFunction,
     private val transformers: Map<UUID, Pair<Class<out Any>, Transformer<out Any>>>,
@@ -135,7 +137,11 @@ class SyncStreamsStorages private constructor(
             val outputPointer = inputPointer + 1
             val storage = getSyncStorage(
                 id = id,
-                streamer = streamerProvider.getStreamer(id = id, inputPointer = inputPointer, outputPointer = outputPointer),
+                streamer = streamerProvider.getStreamer(
+                    id = id,
+                    inputPointer = inputPointer,
+                    outputPointer = outputPointer,
+                ),
                 transformer = transformer,
             ) // todo SyncStorage only encoded
             result[id] = storage.merge(info)
@@ -154,7 +160,11 @@ class SyncStreamsStorages private constructor(
             val outputPointer = inputPointer + 1
             val storage = getSyncStorage(
                 id = id,
-                streamer = streamerProvider.getStreamer(id = id, inputPointer = inputPointer, outputPointer = outputPointer),
+                streamer = streamerProvider.getStreamer(
+                    id = id,
+                    inputPointer = inputPointer,
+                    outputPointer = outputPointer,
+                ),
                 transformer = transformer,
             )
             if (!storage.commit(info)) continue
