@@ -169,12 +169,17 @@ class SyncStreamsStorage<T : Any>(
     override fun add(item: T): Described<T> {
         val items = items.toMutableList()
         val created = env.now()
+        val encoded = transformer.encode(item)
+        val id = env.randomUUID()
+        val bytes = ByteArray(16 + encoded.size)
+        BytesUtil.writeBytes(bytes = bytes, index = 0, value = id)
+        System.arraycopy(encoded, 0, bytes, 16, encoded.size)
         val described = Described(
-            id = env.randomUUID(),
+            id = id,
             info = ItemInfo(
                 created = created,
                 updated = created,
-                hash = hf.map(transformer.encode(item)),
+                hash = hf.map(bytes),
             ),
             item = item,
         )

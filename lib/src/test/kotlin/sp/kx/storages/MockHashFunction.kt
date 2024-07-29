@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import java.util.UUID
 import kotlin.math.absoluteValue
 
 internal class MockHashFunction(
@@ -30,6 +31,14 @@ internal class MockHashFunction(
 
         fun map(value: String): ByteArray {
             return String.format("%0${_size}d", value.hashCode().absoluteValue).toByteArray()
+        }
+
+        fun <T : Any> hash(id: UUID, item: T, encode: (T) -> ByteArray): ByteArray {
+            val encoded = encode(item)
+            val bytes = ByteArray(16 + encoded.size)
+            BytesUtil.writeBytes(bytes = bytes, index = 0, value = id)
+            System.arraycopy(encoded, 0, bytes, 16, encoded.size)
+            return bytes
         }
 
         fun hash(list: List<Described<out Any>>): ByteArray {
