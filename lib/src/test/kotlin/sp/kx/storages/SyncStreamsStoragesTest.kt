@@ -1062,6 +1062,44 @@ internal class SyncStreamsStoragesTest {
         }
     }
 
+    @Test
+    fun commitHashErrorTest() {
+        var time = 1.milliseconds
+        val timeProvider = MockProvider { time }
+        var itemId = mockUUID()
+        val uuidProvider = MockProvider { itemId }
+        val hashes = MockHashFunction.hashes(
+            emptyList<Described<String>>() to "items:empty",
+        )
+        val dir = File("/tmp/storages")
+        dir.deleteRecursively()
+        dir.mkdirs()
+        val storages = SyncStreamsStorages.Builder()
+            .add(mockUUID(1), StringTransformer)
+            .mock(
+                hashes = hashes,
+                timeProvider = timeProvider,
+                uuidProvider = uuidProvider,
+                getStreamerProvider = { ids ->
+                    assertEquals(listOf(mockUUID(1)), ids.sorted())
+                    FileStreamerProvider(
+                        dir = File(dir, "foo"),
+                        ids = ids,
+                    )
+                },
+            )
+        val throwable = assertThrows(IllegalStateException::class.java) {
+            val commitInfo = mockCommitInfo()
+            check(commitInfo.items.isEmpty())
+            check(commitInfo.deleted.isEmpty())
+            check(!commitInfo.hash.contentEquals(storages.require<String>().hash))
+            val cis = mapOf(mockUUID(1) to commitInfo)
+            check(cis.keys.single() == mockUUID(1))
+            storages.commit(infos = cis)
+        }
+        assertEquals("Wrong hash!", throwable.message)
+    }
+
     companion object {
         private fun SyncStreamsStorages.assertHashes(expected: Map<UUID, ByteArray>) {
             val actual = hashes()
