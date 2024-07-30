@@ -278,8 +278,8 @@ internal class SyncStreamsStorageTest {
             id = storageId,
             hashes = listOf(
                 ByteArray(0) to storageEmptyHash,
-                MockHashFunction.bytesOf(id = expected.id, item = expected.item, encode = StringTransformer::encode) to itemHash,
-                itemHash to storageHash,
+                StringTransformer.encode(expected.item) to itemHash,
+                MockHashFunction.hash(listOf(expected)) to storageHash,
             ),
             uuidProvider = uuidProvider,
             timeProvider = timeProvider,
@@ -335,8 +335,8 @@ internal class SyncStreamsStorageTest {
             id = id,
             hashes = listOf(
                 ByteArray(0) to storageEmptyHash,
-                MockHashFunction.bytesOf(id = expected.id, item = expected.item, encode = StringTransformer::encode) to itemHash,
-                itemHash to storageHash,
+                StringTransformer.hashPair(expected),
+                MockHashFunction.hash(listOf(expected)) to storageHash,
             ),
             uuidProvider = uuidProvider,
             timeProvider = timeProvider,
@@ -382,10 +382,12 @@ internal class SyncStreamsStorageTest {
             id = id,
             hashes = listOf(
                 ByteArray(0) to storageEmptyHash,
-                MockHashFunction.bytesOf(id = expected.id, item = expected.item, encode = StringTransformer::encode) to itemHash,
-                MockHashFunction.bytesOf(id = expected.id, item = itemUpdated, encode = StringTransformer::encode) to itemUpdatedHash,
-                itemHash to storageHash,
-                itemUpdatedHash to storageUpdatedHash,
+                StringTransformer.encode(expected.item) to itemHash,
+                StringTransformer.encode(itemUpdated) to itemUpdatedHash,
+                MockHashFunction.hash(listOf(expected)) to storageHash,
+                listOf(itemUpdatedHash).flatMap {
+                    MockHashFunction.bytesOf(id = itemId, updated = 2.milliseconds, encoded = itemUpdatedHash).toList()
+                }.toByteArray() to storageUpdatedHash,
             ),
             uuidProvider = uuidProvider,
             timeProvider = timeProvider,
@@ -459,10 +461,12 @@ internal class SyncStreamsStorageTest {
             id = id,
             hashes = listOf(
                 ByteArray(0) to storageEmptyHash,
-                MockHashFunction.bytesOf(id = expected.id, item = expected.item, encode = StringTransformer::encode) to itemHash,
-                MockHashFunction.bytesOf(id = expected.id, item = itemUpdated, encode = StringTransformer::encode) to itemUpdatedHash,
-                itemHash to storageHash,
-                itemUpdatedHash to storageUpdatedHash,
+                StringTransformer.encode(expected.item) to itemHash,
+                StringTransformer.encode(itemUpdated) to itemUpdatedHash,
+                MockHashFunction.hash(listOf(expected)) to storageHash,
+                listOf(itemUpdatedHash).flatMap {
+                    MockHashFunction.bytesOf(id = itemId, updated = 2.milliseconds, encoded = itemUpdatedHash).toList()
+                }.toByteArray() to storageUpdatedHash,
             ),
             uuidProvider = uuidProvider,
             timeProvider = timeProvider,
