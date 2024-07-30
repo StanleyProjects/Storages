@@ -2,6 +2,7 @@ package sp.kx.storages
 
 import java.util.UUID
 import kotlin.math.absoluteValue
+import kotlin.time.Duration
 
 internal class MockHashFunction(
     private val hashes: List<Pair<ByteArray, ByteArray>> = emptyList(),
@@ -33,19 +34,23 @@ internal class MockHashFunction(
             return String.format("%0${_size}d", value.hashCode().absoluteValue).toByteArray()
         }
 
+        @Deprecated(message = "only encoded")
         fun <T : Any> bytesOf(id: UUID, item: T, encode: (T) -> ByteArray): ByteArray {
-            return bytesOf(id = id, encoded = encode(item))
+            return encode(item)
         }
 
-        fun bytesOf(id: UUID, encoded: ByteArray): ByteArray {
-            val bytes = ByteArray(16 + encoded.size)
-            BytesUtil.writeBytes(bytes = bytes, index = 0, value = id)
-            System.arraycopy(encoded, 0, bytes, 16, encoded.size)
-            return bytes
+        fun bytesOf(id: UUID, updated: Duration, encoded: ByteArray): ByteArray {
+            val idBytes = ByteArray(16)
+            BytesUtil.writeBytes(idBytes, index = 0, id)
+            val updatedBytes = ByteArray(8)
+            BytesUtil.writeBytes(updatedBytes, index = 0, updated.inWholeMilliseconds)
+            return idBytes + updatedBytes + encoded
         }
 
         fun hash(list: List<Described<out Any>>): ByteArray {
-            return list.flatMap { it.info.hash.toList() }.toByteArray()
+            return list.flatMap {
+                bytesOf(id = it.id, updated = it.info.updated, encoded = it.info.hash).toList()
+            }.toByteArray()
         }
 
         fun hashes(

@@ -41,13 +41,13 @@ class SyncStreamsStorage<T : Any>(
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip locals
                 val itemsSize = BytesUtil.readInt(stream)
-                val bytes = ByteArray(itemsSize * hf.size)
                 val size = 16 + 8 + hf.size
+                val bytes = ByteArray(itemsSize * size)
                 for (index in 0 until itemsSize) {
                     stream.read(bytes, index * size, 16)
                     stream.skip(8) // skip created
-                    stream.read(bytes, index * size + 16 + 8, 8)
-                    stream.read(bytes, index * size + 16 + 8 + 8, hf.size)
+                    stream.read(bytes, index * size + 16, 8)
+                    stream.read(bytes, index * size + 16 + 8, hf.size)
                     stream.skip(BytesUtil.readInt(stream).toLong()) // skip encoded
                 }
                 hf.map(bytes)
@@ -188,6 +188,18 @@ class SyncStreamsStorage<T : Any>(
         return described
     }
 
+    private fun bytesOf(items: List<Described<out Any>>): ByteArray {
+        val size = 16 + 8 + hf.size
+        val bytes = ByteArray(items.size * size)
+        for (index in items.indices) {
+            val item = items[index]
+            BytesUtil.writeBytes(bytes, index = index * size, value = item.id)
+            BytesUtil.writeBytes(bytes, index = index * size + 16, value = item.info.updated.inWholeMilliseconds)
+            System.arraycopy(item.info.hash, 0, bytes, index * size + 16 + 8, hf.size)
+        }
+        return bytes
+    }
+
     override fun merge(info: MergeInfo): CommitInfo {
         val download = mutableListOf<Described<ByteArray>>()
         val newItems = mutableListOf<Described<T>>()
@@ -207,13 +219,8 @@ class SyncStreamsStorage<T : Any>(
             deleted = deleted + info.deleted,
             locals = emptySet(),
         )
-        val bytes = ByteArray(sorted.size * hf.size)
-        for (index in sorted.indices) {
-            val item = sorted[index]
-            System.arraycopy(item.info.hash, 0, bytes, index * hf.size, hf.size)
-        }
         return CommitInfo(
-            hash = hf.map(bytes),
+            hash = hf.map(bytesOf(items = sorted)),
             items = download,
             deleted = deleted,
         )
@@ -235,11 +242,7 @@ class SyncStreamsStorage<T : Any>(
             newItems += item.map(transformer::decode)
         }
         val sorted = newItems.sortedBy { it.info.created }
-        val bytes = ByteArray(sorted.size * hf.size)
-        for (index in sorted.indices) {
-            System.arraycopy(sorted[index].info.hash, 0, bytes, index * hf.size, hf.size)
-        }
-        check(hf.map(bytes).contentEquals(info.hash)) { "Wrong hash!" }
+        check(hf.map(bytesOf(items = sorted)).contentEquals(info.hash)) { "Wrong hash!" }
         write(
             items = sorted,
             deleted = oldDeleted + info.deleted,
@@ -274,7 +277,9 @@ class SyncStreamsStorage<T : Any>(
     }
 
     override fun getMergeInfo(info: SyncInfo): MergeInfo {
+        // todo rename downloaded
         val download = mutableSetOf<UUID>()
+        // todo rename uploaded
         val upload = mutableListOf<Described<ByteArray>>()
         val items = items
         for (described in items) {
@@ -288,12 +293,10 @@ class SyncStreamsStorage<T : Any>(
             if (described == null) {
                 if (deleted.contains(itemId)) continue
                 download.add(itemId)
+            } else if (itemInfo.updated > described.info.updated) {
+                download.add(itemId)
             } else if (!itemInfo.hash.contentEquals(described.info.hash)) {
-                if (itemInfo.updated > described.info.updated) {
-                    download.add(itemId)
-                } else {
-                    upload.add(described.map(transformer::encode))
-                }
+                upload.add(described.map(transformer::encode))
             }
         }
         return MergeInfo(

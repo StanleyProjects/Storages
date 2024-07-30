@@ -131,19 +131,25 @@ internal class SyncStreamsStoragesTest {
         var itemId = mockUUID()
         val uuidProvider = MockProvider { itemId }
         val item = "foo:1"
-        val item1Hash = MockHashFunction.map("$item:${mockUUID(11)}:hash")
+        val itemHash = MockHashFunction.map("$item:hash")
         val item1ListHash = MockHashFunction.map("$item:${mockUUID(11)}:hash:list")
-        val item2Hash = MockHashFunction.map("$item:${mockUUID(12)}:hash")
         val item2ListHash = MockHashFunction.map("$item:${mockUUID(12)}:hash:list")
         val itemFinalListHash = MockHashFunction.map("$item:final:hash:list")
         val hashes = MockHashFunction.hashes(
             emptyList<Described<String>>() to "strings:empty",
         ) + listOf(
-            MockHashFunction.bytesOf(mockUUID(11), item, StringTransformer::encode) to item1Hash,
-            item1Hash to item1ListHash,
-            MockHashFunction.bytesOf(mockUUID(12), item, StringTransformer::encode) to item2Hash,
-            item2Hash to item2ListHash,
-            item1Hash + item2Hash to itemFinalListHash,
+            MockHashFunction.bytesOf(mockUUID(11), item, StringTransformer::encode) to itemHash,
+            listOf(
+                MockHashFunction.bytesOf(id = mockUUID(11), updated = 11.milliseconds, encoded = itemHash),
+            ).flatMap { it.toList() }.toByteArray() to item1ListHash,
+            MockHashFunction.bytesOf(mockUUID(12), item, StringTransformer::encode) to itemHash,
+            listOf(
+                MockHashFunction.bytesOf(id = mockUUID(12), updated = 12.milliseconds, encoded = itemHash),
+            ).flatMap { it.toList() }.toByteArray() to item2ListHash,
+            listOf(
+                MockHashFunction.bytesOf(id = mockUUID(11), updated = 11.milliseconds, encoded = itemHash),
+                MockHashFunction.bytesOf(id = mockUUID(12), updated = 12.milliseconds, encoded = itemHash),
+            ).flatMap { it.toList() }.toByteArray() to itemFinalListHash,
         )
         val dir = File("/tmp/storages")
         dir.deleteRecursively()
@@ -187,10 +193,12 @@ internal class SyncStreamsStoragesTest {
             check(tItem.id != rItem.id)
             check(tItem.info.created != rItem.info.created)
             check(tItem.info.updated != rItem.info.updated)
-            check(!tItem.info.hash.contentEquals(rItem.info.hash))
+            check(tItem.info.hash.contentEquals(rItem.info.hash))
             check(tItem.item == item)
             check(tItem.item == rItem.item)
-            check(!tStorages.require<String>().hash.contentEquals(rStorages.require<String>().hash))
+            val tHash = tStorages.require<String>().hash
+            val rHash = rStorages.require<String>().hash
+            check(!tHash.contentEquals(rHash))
         }
         val sis = rStorages.hashes().let {
             assertEquals(it.keys.single(), mockUUID(1))
@@ -200,19 +208,19 @@ internal class SyncStreamsStoragesTest {
         assertEquals(sis.keys.single(), mockUUID(1))
         val syncInfo = sis.values.single()
         assertEquals(syncInfo.infos.keys.single(), mockUUID(11))
-        assertEquals(syncInfo.infos.values.single(), mockItemInfo(created = 11.milliseconds, updated = 11.milliseconds, hash = item1Hash))
+        assertEquals(syncInfo.infos.values.single(), mockItemInfo(created = 11.milliseconds, updated = 11.milliseconds, hash = itemHash))
         assertTrue(syncInfo.deleted.isEmpty())
         val mis = rStorages.getMergeInfo(sis)
         assertEquals(mis.keys.single(), mockUUID(1))
         val mergeInfo = mis.values.single()
         assertTrue(mergeInfo.deleted.isEmpty())
         assertEquals(mergeInfo.download.single(), mockUUID(11))
-        assertEquals(mergeInfo.items.single(), mockDescribed(id = mockUUID(12), item = StringTransformer.encode(item), info = mockItemInfo(created = 12.milliseconds, updated = 12.milliseconds, hash = item2Hash)))
+        assertEquals(mergeInfo.items.single(), mockDescribed(id = mockUUID(12), item = StringTransformer.encode(item), info = mockItemInfo(created = 12.milliseconds, updated = 12.milliseconds, hash = itemHash)))
         val cis = tStorages.merge(mis)
         assertEquals(cis.keys.single(), mockUUID(1))
         val commitInfo = cis.values.single()
         assertTrue(commitInfo.deleted.isEmpty())
-        assertEquals(commitInfo.items.single(), mockDescribed(id = mockUUID(11), item = StringTransformer.encode(item), info = mockItemInfo(created = 11.milliseconds, updated = 11.milliseconds, hash = item1Hash)))
+        assertEquals(commitInfo.items.single(), mockDescribed(id = mockUUID(11), item = StringTransformer.encode(item), info = mockItemInfo(created = 11.milliseconds, updated = 11.milliseconds, hash = itemHash)))
         assertTrue(commitInfo.hash.contentEquals(itemFinalListHash))
         val ids = rStorages.commit(cis)
         assertEquals(ids.single(), mockUUID(1))

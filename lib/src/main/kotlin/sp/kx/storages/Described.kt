@@ -13,6 +13,7 @@ import kotlin.time.Duration
 class Described<T : Any>(
     val id: UUID,
     val info: ItemInfo,
+    @Deprecated(message = "rename to payload")
     val item: T,
 ) {
     fun copy(

@@ -16,6 +16,7 @@ import java.util.UUID
  * @since 0.4.1
  */
 data class MergeInfo(
+    @Deprecated(message = "rename downloaded")
     val download: Set<UUID>,
     val items: List<Described<ByteArray>>,
     val deleted: Set<UUID>,
