@@ -130,19 +130,18 @@ internal class SyncStreamsStoragesTest {
         val timeProvider = MockProvider { time }
         var itemId = mockUUID()
         val uuidProvider = MockProvider { itemId }
-        val item = "foo:1"
-        val itemHash = MockHashFunction.map("$item:hash")
-        val item1ListHash = MockHashFunction.map("$item:${mockUUID(11)}:hash:list")
-        val item2ListHash = MockHashFunction.map("$item:${mockUUID(12)}:hash:list")
-        val itemFinalListHash = MockHashFunction.map("$item:final:hash:list")
+        val payload = "foo:1"
+        val itemHash = MockHashFunction.map("$payload:hash")
+        val item1ListHash = MockHashFunction.map("$payload:${mockUUID(11)}:hash:list")
+        val item2ListHash = MockHashFunction.map("$payload:${mockUUID(12)}:hash:list")
+        val itemFinalListHash = MockHashFunction.map("$payload:final:hash:list")
         val hashes = MockHashFunction.hashes(
             emptyList<Described<String>>() to "strings:empty",
         ) + listOf(
-            MockHashFunction.bytesOf(mockUUID(11), item, StringTransformer::encode) to itemHash,
+            StringTransformer.encode(payload) to itemHash,
             listOf(
                 MockHashFunction.bytesOf(id = mockUUID(11), updated = 11.milliseconds, encoded = itemHash),
             ).flatMap { it.toList() }.toByteArray() to item1ListHash,
-            MockHashFunction.bytesOf(mockUUID(12), item, StringTransformer::encode) to itemHash,
             listOf(
                 MockHashFunction.bytesOf(id = mockUUID(12), updated = 12.milliseconds, encoded = itemHash),
             ).flatMap { it.toList() }.toByteArray() to item2ListHash,
@@ -184,18 +183,18 @@ internal class SyncStreamsStoragesTest {
             )
         time = 11.milliseconds
         itemId = mockUUID(11)
-        tStorages.require<String>().add(item)
+        tStorages.require<String>().add(payload)
         time = 12.milliseconds
         itemId = mockUUID(12)
-        rStorages.require<String>().add(item)
+        rStorages.require<String>().add(payload)
         tStorages.require<String>().items.single().also { tItem ->
             val rItem = rStorages.require<String>().items.single()
             check(tItem.id != rItem.id)
             check(tItem.info.created != rItem.info.created)
             check(tItem.info.updated != rItem.info.updated)
             check(tItem.info.hash.contentEquals(rItem.info.hash))
-            check(tItem.item == item)
-            check(tItem.item == rItem.item)
+            check(tItem.payload == payload)
+            check(tItem.payload == rItem.payload)
             val tHash = tStorages.require<String>().hash
             val rHash = rStorages.require<String>().hash
             check(!tHash.contentEquals(rHash))
@@ -214,13 +213,13 @@ internal class SyncStreamsStoragesTest {
         assertEquals(mis.keys.single(), mockUUID(1))
         val mergeInfo = mis.values.single()
         assertTrue(mergeInfo.deleted.isEmpty())
-        assertEquals(mergeInfo.download.single(), mockUUID(11))
-        assertEquals(mergeInfo.items.single(), mockDescribed(id = mockUUID(12), item = StringTransformer.encode(item), info = mockItemInfo(created = 12.milliseconds, updated = 12.milliseconds, hash = itemHash)))
+        assertEquals(mergeInfo.downloaded.single(), mockUUID(11))
+        assertEquals(mergeInfo.items.single(), mockDescribed(id = mockUUID(12), payload = StringTransformer.encode(payload), info = mockItemInfo(created = 12.milliseconds, updated = 12.milliseconds, hash = itemHash)))
         val cis = tStorages.merge(mis)
         assertEquals(cis.keys.single(), mockUUID(1))
         val commitInfo = cis.values.single()
         assertTrue(commitInfo.deleted.isEmpty())
-        assertEquals(commitInfo.items.single(), mockDescribed(id = mockUUID(11), item = StringTransformer.encode(item), info = mockItemInfo(created = 11.milliseconds, updated = 11.milliseconds, hash = itemHash)))
+        assertEquals(commitInfo.items.single(), mockDescribed(id = mockUUID(11), payload = StringTransformer.encode(payload), info = mockItemInfo(created = 11.milliseconds, updated = 11.milliseconds, hash = itemHash)))
         assertTrue(commitInfo.hash.contentEquals(itemFinalListHash))
         val ids = rStorages.commit(cis)
         assertEquals(ids.single(), mockUUID(1))
@@ -287,7 +286,7 @@ internal class SyncStreamsStoragesTest {
         strings.forEach { described ->
             itemId = described.id
             time = described.info.created
-            tStorages.require<String>().add(described.item)
+            tStorages.require<String>().add(described.payload)
         }
         rStorages.commit(tStorages.merge(rStorages.getMergeInfo(tStorages.getSyncInfo(rStorages.hashes()))))
         check(tStorages.hashes().keys.sorted() == rStorages.hashes().keys.sorted())
@@ -339,18 +338,18 @@ internal class SyncStreamsStoragesTest {
             mockDescribed(17),
         )
         val intsTUpdated = listOf(
-            mockDescribed(pointer = 22, item = 22),
-            mockDescribed(pointer = 23, item = 23).updated(123, 123),
-            mockDescribed(pointer = 24, item = 24),
-            mockDescribed(pointer = 25, item = 25),
-            mockDescribed(pointer = 26, item = 26),
+            mockDescribed(pointer = 22, payload = 22),
+            mockDescribed(pointer = 23, payload = 23).updated(123, 123),
+            mockDescribed(pointer = 24, payload = 24),
+            mockDescribed(pointer = 25, payload = 25),
+            mockDescribed(pointer = 26, payload = 26),
         )
         val intsRUpdated = listOf(
-            mockDescribed(pointer = 21, item = 21),
-            mockDescribed(pointer = 23, item = 23),
-            mockDescribed(pointer = 24, item = 24).updated(124, 124),
-            mockDescribed(pointer = 25, item = 25),
-            mockDescribed(pointer = 27, item = 27),
+            mockDescribed(pointer = 21, payload = 21),
+            mockDescribed(pointer = 23, payload = 23),
+            mockDescribed(pointer = 24, payload = 24).updated(124, 124),
+            mockDescribed(pointer = 25, payload = 25),
+            mockDescribed(pointer = 27, payload = 27),
         )
         onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, _ ->
             tStorages.assertSyncInfo(
@@ -417,18 +416,18 @@ internal class SyncStreamsStoragesTest {
             mockDescribed(17),
         )
         val intsTUpdated = listOf(
-            mockDescribed(pointer = 22, item = 22),
-            mockDescribed(pointer = 23, item = 23).updated(123, 123),
-            mockDescribed(pointer = 24, item = 24),
-            mockDescribed(pointer = 25, item = 25),
-            mockDescribed(pointer = 26, item = 26),
+            mockDescribed(pointer = 22, payload = 22),
+            mockDescribed(pointer = 23, payload = 23).updated(123, 123),
+            mockDescribed(pointer = 24, payload = 24),
+            mockDescribed(pointer = 25, payload = 25),
+            mockDescribed(pointer = 26, payload = 26),
         )
         val intsRUpdated = listOf(
-            mockDescribed(pointer = 21, item = 21),
-            mockDescribed(pointer = 23, item = 23),
-            mockDescribed(pointer = 24, item = 24).updated(124, 124),
-            mockDescribed(pointer = 25, item = 25),
-            mockDescribed(pointer = 27, item = 27),
+            mockDescribed(pointer = 21, payload = 21),
+            mockDescribed(pointer = 23, payload = 23),
+            mockDescribed(pointer = 24, payload = 24).updated(124, 124),
+            mockDescribed(pointer = 25, payload = 25),
+            mockDescribed(pointer = 27, payload = 27),
         )
         onSyncStreamsStorages(commited = false) { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, _ ->
             tStorages.assertSyncInfo(
@@ -491,7 +490,7 @@ internal class SyncStreamsStoragesTest {
                 storage = rStorages,
                 expected = mapOf(
                     mockUUID(1) to mockMergeInfo(
-                        download = setOf(mockUUID(14), mockUUID(pointer = 17)),
+                        downloaded = setOf(mockUUID(14), mockUUID(pointer = 17)),
                         items = listOf(
                             mockDescribed(13).updated(113).map(StringTransformer::encode),
                             mockDescribed(pointer = 16).map(StringTransformer::encode),
@@ -499,10 +498,10 @@ internal class SyncStreamsStoragesTest {
                         deleted = setOf(mockUUID(11)),
                     ),
                     mockUUID(2) to mockMergeInfo(
-                        download = setOf(mockUUID(pointer = 24), mockUUID(pointer = 27)),
+                        downloaded = setOf(mockUUID(pointer = 24), mockUUID(pointer = 27)),
                         items = listOf(
-                            mockDescribed(pointer = 23, item = 23).updated(123, 123).map(IntTransformer::encode),
-                            mockDescribed(pointer = 26, item = 26).map(IntTransformer::encode),
+                            mockDescribed(pointer = 23, payload = 23).updated(123, 123).map(IntTransformer::encode),
+                            mockDescribed(pointer = 26, payload = 26).map(IntTransformer::encode),
                         ),
                         deleted = setOf(mockUUID(21)),
                     ),
@@ -512,7 +511,7 @@ internal class SyncStreamsStoragesTest {
                 storage = tStorages,
                 expected = mapOf(
                     mockUUID(1) to mockMergeInfo(
-                        download = setOf(mockUUID(13), mockUUID(pointer = 16)),
+                        downloaded = setOf(mockUUID(13), mockUUID(pointer = 16)),
                         items = listOf(
                             mockDescribed(14).updated(114).map(StringTransformer::encode),
                             mockDescribed(pointer = 17).map(StringTransformer::encode),
@@ -520,10 +519,10 @@ internal class SyncStreamsStoragesTest {
                         deleted = setOf(mockUUID(12)),
                     ),
                     mockUUID(2) to mockMergeInfo(
-                        download = setOf(mockUUID(23), mockUUID(26)),
+                        downloaded = setOf(mockUUID(23), mockUUID(26)),
                         items = listOf(
-                            mockDescribed(pointer = 24, item = 24).updated(124, 124).map(IntTransformer::encode),
-                            mockDescribed(pointer = 27, item = 27).map(IntTransformer::encode),
+                            mockDescribed(pointer = 24, payload = 24).updated(124, 124).map(IntTransformer::encode),
+                            mockDescribed(pointer = 27, payload = 27).map(IntTransformer::encode),
                         ),
                         deleted = setOf(mockUUID(22)),
                     ),
@@ -579,13 +578,13 @@ internal class SyncStreamsStoragesTest {
             mockDescribed(27, 27),
         )
         val longs = (1..5).map { number ->
-            mockDescribed(pointer = 30 + number, item = number.toLong())
+            mockDescribed(pointer = 30 + number, payload = number.toLong())
         }
         val foos = (1..5).map { number ->
-            mockDescribed(pointer = 40 + number, item = Foo(text = "foo:${40 + number}"))
+            mockDescribed(pointer = 40 + number, payload = Foo(text = "foo:${40 + number}"))
         }
         val bars = (1..5).map { number ->
-            mockDescribed(pointer = 50 + number, item = Bar(number = 50 + number))
+            mockDescribed(pointer = 50 + number, payload = Bar(number = 50 + number))
         }
         onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, dir: File ->
             tStorages.assertMerge(
@@ -816,7 +815,7 @@ internal class SyncStreamsStoragesTest {
         strings.forEach { described ->
             itemId = described.id
             time = described.info.created
-            tStorages.require<String>().add(described.item)
+            tStorages.require<String>().add(described.payload)
         }
         assertFiles(
             files = mapOf(
@@ -977,13 +976,13 @@ internal class SyncStreamsStoragesTest {
             mockDescribed(27, 27),
         )
         val longs = (1..5).map { number ->
-            mockDescribed(pointer = 30 + number, item = number.toLong())
+            mockDescribed(pointer = 30 + number, payload = number.toLong())
         }
         val foos = (1..5).map { number ->
-            mockDescribed(pointer = 40 + number, item = Foo(text = "foo:${40 + number}"))
+            mockDescribed(pointer = 40 + number, payload = Foo(text = "foo:${40 + number}"))
         }
         val bars = (1..5).map { number ->
-            mockDescribed(pointer = 50 + number, item = Bar(number = 50 + number))
+            mockDescribed(pointer = 50 + number, payload = Bar(number = 50 + number))
         }
         onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, dir: File ->
             assertCommit(
@@ -1159,16 +1158,16 @@ internal class SyncStreamsStoragesTest {
         private fun Described<String>.updated(pointer: Int): Described<String> {
             return copy(
                 updated = (1_000 + pointer).milliseconds,
-                hash = MockHashFunction.map("$item:$pointer:hash:updated"),
-                item = "$item:$pointer:updated",
+                hash = MockHashFunction.map("$payload:$pointer:hash:updated"),
+                payload = "$payload:$pointer:updated",
             )
         }
 
-        private fun Described<Int>.updated(pointer: Int, item: Int): Described<Int> {
+        private fun Described<Int>.updated(pointer: Int, payload: Int): Described<Int> {
             return copy(
                 updated = (1_000 + pointer).milliseconds,
-                hash = MockHashFunction.map("$item:$pointer:hash:updated"),
-                item = item,
+                hash = MockHashFunction.map("$payload:$pointer:hash:updated"),
+                payload = payload,
             )
         }
 
@@ -1225,27 +1224,27 @@ internal class SyncStreamsStoragesTest {
                 mockDescribed(17),
             )
             val ints = (1..5).map { number ->
-                mockDescribed(pointer = 20 + number, item = 20 + number)
+                mockDescribed(pointer = 20 + number, payload = 20 + number)
             }
-            val intTUpdated = ints[2].updated(pointer = 123, item = 123)
-            val intRUpdated = ints[3].updated(pointer = 124, item = 124)
+            val intTUpdated = ints[2].updated(pointer = 123, payload = 123)
+            val intRUpdated = ints[3].updated(pointer = 124, payload = 124)
             // 00 01 02 03 04 05 06 07 08 09
             // __ 22 uu 24 25 26
             val intsTUpdated = listOf(
-                mockDescribed(pointer = 22, item = 22),
+                mockDescribed(pointer = 22, payload = 22),
                 intTUpdated,
-                mockDescribed(pointer = 24, item = 24),
-                mockDescribed(pointer = 25, item = 25),
-                mockDescribed(pointer = 26, item = 26),
+                mockDescribed(pointer = 24, payload = 24),
+                mockDescribed(pointer = 25, payload = 25),
+                mockDescribed(pointer = 26, payload = 26),
             )
             // 00 01 02 03 04 05 06 07 08 09
             // 21 __ 23 uu 25 27
             val intsRUpdated = listOf(
-                mockDescribed(pointer = 21, item = 21),
-                mockDescribed(pointer = 23, item = 23),
+                mockDescribed(pointer = 21, payload = 21),
+                mockDescribed(pointer = 23, payload = 23),
                 intRUpdated,
-                mockDescribed(pointer = 25, item = 25),
-                mockDescribed(pointer = 27, item = 27),
+                mockDescribed(pointer = 25, payload = 25),
+                mockDescribed(pointer = 27, payload = 27),
             )
             val intsFinal = listOf(
                 intTUpdated,
@@ -1255,13 +1254,13 @@ internal class SyncStreamsStoragesTest {
                 mockDescribed(27, 27),
             )
             val longs = (1..5).map { number ->
-                mockDescribed(pointer = 30 + number, item = number.toLong())
+                mockDescribed(pointer = 30 + number, payload = number.toLong())
             }
             val foos = (1..5).map { number ->
-                mockDescribed(pointer = 40 + number, item = Foo(text = "foo:${40 + number}"))
+                mockDescribed(pointer = 40 + number, payload = Foo(text = "foo:${40 + number}"))
             }
             val bars = (1..5).map { number ->
-                mockDescribed(pointer = 50 + number, item = Bar(number = 50 + number))
+                mockDescribed(pointer = 50 + number, payload = Bar(number = 50 + number))
             }
             val hashes = MockHashFunction.hashes(
                 strings to "strings:hash",
@@ -1291,8 +1290,8 @@ internal class SyncStreamsStoragesTest {
                 StringTransformer.hashPair(mockDescribed(pointer = 17)),
                 StringTransformer.hashPair(stringTUpdated),
                 StringTransformer.hashPair(stringRUpdated),
-                IntTransformer.hashPair(mockDescribed(pointer = 26, item = 26)),
-                IntTransformer.hashPair(mockDescribed(pointer = 27, item = 27)),
+                IntTransformer.hashPair(mockDescribed(pointer = 26, payload = 26)),
+                IntTransformer.hashPair(mockDescribed(pointer = 27, payload = 27)),
                 IntTransformer.hashPair(intTUpdated),
                 IntTransformer.hashPair(intRUpdated),
             )
@@ -1353,36 +1352,32 @@ internal class SyncStreamsStoragesTest {
             strings.forEach { described ->
                 itemId = described.id
                 time = described.info.created
-                tStorages.require<String>().add(described.item)
+                tStorages.require<String>().add(described.payload)
                 if (!commited) {
-                    rStorages.require<String>().add(described.item)
+                    rStorages.require<String>().add(described.payload)
                 }
             }
             ints.forEach { described ->
                 itemId = described.id
                 time = described.info.created
-                tStorages.require<Int>().add(described.item)
-                if (!commited) {
-                    rStorages.require<Int>().add(described.item)
-                }
+                tStorages.require<Int>().add(described.payload)
+                if (!commited) rStorages.require<Int>().add(described.payload)
             }
             longs.forEach { described ->
                 itemId = described.id
                 time = described.info.created
-                tStorages.require<Long>().add(described.item)
-                if (!commited) {
-                    rStorages.require<Long>().add(described.item)
-                }
+                tStorages.require<Long>().add(described.payload)
+                if (!commited) rStorages.require<Long>().add(described.payload)
             }
             foos.forEach { described ->
                 itemId = described.id
                 time = described.info.created
-                tStorages.require<Foo>().add(described.item)
+                tStorages.require<Foo>().add(described.payload)
             }
             bars.forEach { described ->
                 itemId = described.id
                 time = described.info.created
-                rStorages.require<Bar>().add(described.item)
+                rStorages.require<Bar>().add(described.payload)
             }
             //
             assertFiles(
@@ -1440,50 +1435,50 @@ internal class SyncStreamsStoragesTest {
             mockDescribed(pointer = 16).also { described ->
                 itemId = described.id
                 time = described.info.created
-                tStorages.require<String>().add(described.item)
+                tStorages.require<String>().add(described.payload)
             }
             mockDescribed(pointer = 17).also { described ->
                 itemId = described.id
                 time = described.info.created
-                rStorages.require<String>().add(described.item)
+                rStorages.require<String>().add(described.payload)
             }
             check(tStorages.require<String>().delete(strings[0].id))
             check(rStorages.require<String>().delete(strings[1].id))
             stringTUpdated.also { described ->
                 itemId = described.id
                 time = described.info.updated
-                val info = tStorages.require<String>().update(described.id, described.item)
+                val info = tStorages.require<String>().update(described.id, described.payload)
                 checkNotNull(info)
             }
             stringRUpdated.also { described ->
                 itemId = described.id
                 time = described.info.updated
-                val info = rStorages.require<String>().update(described.id, described.item)
+                val info = rStorages.require<String>().update(described.id, described.payload)
                 checkNotNull(info)
             }
             //
-            mockDescribed(pointer = 26, item = 26).also { described ->
+            mockDescribed(pointer = 26, payload = 26).also { described ->
                 itemId = described.id
                 time = described.info.created
-                tStorages.require<Int>().add(described.item)
+                tStorages.require<Int>().add(described.payload)
             }
-            mockDescribed(pointer = 27, item = 27).also { described ->
+            mockDescribed(pointer = 27, payload = 27).also { described ->
                 itemId = described.id
                 time = described.info.created
-                rStorages.require<Int>().add(described.item)
+                rStorages.require<Int>().add(described.payload)
             }
             check(tStorages.require<Int>().delete(ints[0].id))
             check(rStorages.require<Int>().delete(ints[1].id))
             intTUpdated.also { described ->
                 itemId = described.id
                 time = described.info.updated
-                val info = tStorages.require<Int>().update(described.id, described.item)
+                val info = tStorages.require<Int>().update(described.id, described.payload)
                 checkNotNull(info)
             }
             intRUpdated.also { described ->
                 itemId = described.id
                 time = described.info.updated
-                val info = rStorages.require<Int>().update(described.id, described.item)
+                val info = rStorages.require<Int>().update(described.id, described.payload)
                 checkNotNull(info)
             }
             //

@@ -68,7 +68,7 @@ class SyncStreamsStorage<T : Any>(
                     Described(
                         id = id,
                         info = info,
-                        item = transformer.decode(BytesUtil.readBytes(stream, BytesUtil.readInt(stream))),
+                        payload = transformer.decode(BytesUtil.readBytes(stream, BytesUtil.readInt(stream))),
                     )
                 }
             }
@@ -118,9 +118,9 @@ class SyncStreamsStorage<T : Any>(
                 BytesUtil.writeBytes(stream, it.info.created.inWholeMilliseconds)
                 BytesUtil.writeBytes(stream, it.info.updated.inWholeMilliseconds)
                 stream.write(it.info.hash)
-                val bytes = transformer.encode(it.item)
-                BytesUtil.writeBytes(stream, bytes.size)
-                stream.write(bytes)
+                val encoded = transformer.encode(it.payload)
+                BytesUtil.writeBytes(stream, encoded.size)
+                stream.write(encoded)
             }
             stream.flush()
         }
@@ -150,15 +150,15 @@ class SyncStreamsStorage<T : Any>(
         return false
     }
 
-    override fun update(id: UUID, item: T): ItemInfo? {
+    override fun update(id: UUID, payload: T): ItemInfo? {
         val items = items.toMutableList()
         for (index in items.indices) {
             val oldItem = items[index]
             if (oldItem.id == id) {
                 val newItem = oldItem.copy(
                     updated = env.now(),
-                    hash = hf.map(transformer.encode(item)),
-                    item = item,
+                    hash = hf.map(transformer.encode(payload)),
+                    payload = payload,
                 )
                 items[index] = newItem
                 write(items = items)
@@ -168,7 +168,7 @@ class SyncStreamsStorage<T : Any>(
         return null
     }
 
-    override fun add(item: T): Described<T> {
+    override fun add(payload: T): Described<T> {
         val items = items.toMutableList()
         val created = env.now()
         val described = Described(
@@ -176,9 +176,9 @@ class SyncStreamsStorage<T : Any>(
             info = ItemInfo(
                 created = created,
                 updated = created,
-                hash = hf.map(transformer.encode(item)),
+                hash = hf.map(transformer.encode(payload)),
             ),
-            item = item,
+            payload = payload,
         )
         items.add(described)
         write(
@@ -201,12 +201,12 @@ class SyncStreamsStorage<T : Any>(
     }
 
     override fun merge(info: MergeInfo): CommitInfo {
-        val download = mutableListOf<Described<ByteArray>>()
+        val downloaded = mutableListOf<Described<ByteArray>>()
         val newItems = mutableListOf<Described<T>>()
         for (item in this.items) {
             if (info.deleted.contains(item.id)) continue
             if (info.items.any { it.id == item.id }) continue
-            if (info.download.contains(item.id)) download.add(item.map(transformer::encode))
+            if (info.downloaded.contains(item.id)) downloaded.add(item.map(transformer::encode))
             newItems += item
         }
         for (item in info.items) {
@@ -221,7 +221,7 @@ class SyncStreamsStorage<T : Any>(
         )
         return CommitInfo(
             hash = hf.map(bytesOf(items = sorted)),
-            items = download,
+            items = downloaded,
             deleted = deleted,
         )
     }
@@ -277,31 +277,29 @@ class SyncStreamsStorage<T : Any>(
     }
 
     override fun getMergeInfo(info: SyncInfo): MergeInfo {
-        // todo rename downloaded
-        val download = mutableSetOf<UUID>()
-        // todo rename uploaded
-        val upload = mutableListOf<Described<ByteArray>>()
+        val downloaded = mutableSetOf<UUID>()
+        val uploaded = mutableListOf<Described<ByteArray>>()
         val items = items
         for (described in items) {
             if (info.infos.containsKey(described.id)) continue
             if (info.deleted.contains(described.id)) continue
-            upload.add(described.map(transformer::encode))
+            uploaded.add(described.map(transformer::encode))
         }
         val deleted = deleted
         for ((itemId, itemInfo) in info.infos) {
             val described = items.firstOrNull { it.id == itemId }
             if (described == null) {
                 if (deleted.contains(itemId)) continue
-                download.add(itemId)
+                downloaded.add(itemId)
             } else if (itemInfo.updated > described.info.updated) {
-                download.add(itemId)
+                downloaded.add(itemId)
             } else if (!itemInfo.hash.contentEquals(described.info.hash)) {
-                upload.add(described.map(transformer::encode))
+                uploaded.add(described.map(transformer::encode))
             }
         }
         return MergeInfo(
-            download = download,
-            items = upload,
+            downloaded = downloaded,
+            items = uploaded,
             deleted = deleted,
         )
     }

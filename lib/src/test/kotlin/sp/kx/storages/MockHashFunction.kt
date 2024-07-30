@@ -34,11 +34,6 @@ internal class MockHashFunction(
             return String.format("%0${_size}d", value.hashCode().absoluteValue).toByteArray()
         }
 
-        @Deprecated(message = "only encoded")
-        fun <T : Any> bytesOf(id: UUID, item: T, encode: (T) -> ByteArray): ByteArray {
-            return encode(item)
-        }
-
         fun bytesOf(id: UUID, updated: Duration, encoded: ByteArray): ByteArray {
             val idBytes = ByteArray(16)
             BytesUtil.writeBytes(idBytes, index = 0, id)

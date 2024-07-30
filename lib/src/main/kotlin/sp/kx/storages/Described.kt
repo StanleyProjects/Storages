@@ -13,18 +13,17 @@ import kotlin.time.Duration
 class Described<T : Any>(
     val id: UUID,
     val info: ItemInfo,
-    @Deprecated(message = "rename to payload")
-    val item: T,
+    val payload: T,
 ) {
     fun copy(
         updated: Duration,
         hash: ByteArray,
-        item: T,
+        payload: T,
     ): Described<T> {
         return Described(
             id = id,
             info = info.copy(updated = updated, hash = hash),
-            item = item,
+            payload = payload,
         )
     }
 
@@ -32,29 +31,29 @@ class Described<T : Any>(
         return Described(
             id = id,
             info = info,
-            item = transform(item),
+            payload = transform(payload),
         )
     }
 
     override fun toString(): String {
-        return "{id: $id, info: $info, item: ${item::class.java.name}}"
+        return "{id: $id, info: $info, payload: ${payload::class.java.name}}"
     }
 
     @Suppress("ReturnCount")
     override fun equals(other: Any?): Boolean {
         if (other !is Described<*>) return false
         if (other.id != id || other.info != info) return false
-        if (item is ByteArray) {
-            return other.item is ByteArray && item.contentEquals(other.item)
+        if (payload is ByteArray) {
+            return other.payload is ByteArray && payload.contentEquals(other.payload)
         }
-        return other.item == item
+        return other.payload == payload
     }
 
     override fun hashCode(): Int {
         return Objects.hash(
             id,
             info,
-            if (item is ByteArray) item.contentHashCode() else item,
+            if (payload is ByteArray) payload.contentHashCode() else payload,
         )
     }
 }

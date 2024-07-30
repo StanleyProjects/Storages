@@ -17,15 +17,15 @@ internal class DescribedTest {
             updated = 2.milliseconds,
             hash = "hash".toByteArray(),
         )
-        val item = "DescribedTest:createTest"
+        val payload = "DescribedTest:createTest"
         val value = Described(
             id = id,
             info = info,
-            item = item,
+            payload = payload,
         )
         assertEquals(id, value.id)
         assertEquals(info, value.info)
-        assertEquals(item, value.item)
+        assertEquals(payload, value.payload)
     }
 
     @Test
@@ -36,13 +36,13 @@ internal class DescribedTest {
             updated = 2.milliseconds,
             hash = "hash".toByteArray(),
         )
-        val item = "DescribedTest:toStringTest"
+        val payload = "DescribedTest:toStringTest"
         val value = Described(
             id = id,
             info = info,
-            item = item,
+            payload = payload,
         )
-        assertEquals("{id: $id, info: $info, item: ${item::class.java.name}}", value.toString())
+        assertEquals("{id: $id, info: $info, payload: ${payload::class.java.name}}", value.toString())
     }
 
     @Test
@@ -53,16 +53,16 @@ internal class DescribedTest {
             updated = 2.milliseconds,
             hash = "hash".toByteArray(),
         )
-        val item = "DescribedTest:equalsTest"
+        val payload = "DescribedTest:equalsTest"
         val expected = Described(
             id = id,
             info = info,
-            item = item,
+            payload = payload,
         )
         val actual = Described(
             id = id,
             info = info,
-            item = item,
+            payload = payload,
         )
         assertEquals(expected, actual)
     }
@@ -75,22 +75,22 @@ internal class DescribedTest {
             updated = 2.milliseconds,
             hash = "hash".toByteArray(),
         )
-        val item = "DescribedTest:equalsBytesTest".toByteArray()
+        val payload = "DescribedTest:equalsBytesTest".toByteArray()
         val value = Described(
             id = id,
             info = info,
-            item = item,
+            payload = payload,
         )
         val equals = Described(
             id = id,
             info = info,
-            item = item,
+            payload = payload,
         )
         assertEquals(value, equals)
         val notEquals = Described(
             id = id,
             info = info,
-            item = "notEquals".toByteArray(),
+            payload = "notEquals".toByteArray(),
         )
         assertNotEquals(value, notEquals)
     }
@@ -103,17 +103,17 @@ internal class DescribedTest {
             updated = 2.milliseconds,
             hash = "hash".toByteArray(),
         )
-        val item = "DescribedTest:notEqualsTest"
+        val payload = "DescribedTest:notEqualsTest"
         val value = Described(
             id = id,
             info = info,
-            item = item,
+            payload = payload,
         )
         listOf(
             Described(
                 id = UUID.fromString("57374f5c-2b76-4239-bed5-87ba25597fcf"),
                 info = value.info,
-                item = item,
+                payload = payload,
             ),
             Described(
                 id = id,
@@ -122,12 +122,12 @@ internal class DescribedTest {
                     updated = 2.milliseconds,
                     hash = "hash:notEquals".toByteArray(),
                 ),
-                item = item,
+                payload = payload,
             ),
             Described(
                 id = id,
                 info = value.info,
-                item = "notEquals",
+                payload = "notEquals",
             ),
         ).forEach { notEquals ->
             assertNotEquals(value, notEquals)
@@ -142,16 +142,16 @@ internal class DescribedTest {
             updated = 2.milliseconds,
             hash = "hash".toByteArray(),
         )
-        val item = "DescribedTest:hashCodeTest"
+        val payload = "DescribedTest:hashCodeTest"
         val value = Described(
             id = id,
             info = info,
-            item = item,
+            payload = payload,
         )
         val expected = Objects.hash(
             id,
             info,
-            item,
+            payload,
         )
         assertEquals(expected, value.hashCode())
     }
@@ -164,16 +164,16 @@ internal class DescribedTest {
             updated = 2.milliseconds,
             hash = "hash".toByteArray(),
         )
-        val item = "DescribedTest:hashCodeTest".toByteArray()
+        val payload = "DescribedTest:hashCodeTest".toByteArray()
         val value = Described(
             id = id,
             info = info,
-            item = item,
+            payload = payload,
         )
         val expected = Objects.hash(
             id,
             info,
-            item.contentHashCode(),
+            payload.contentHashCode(),
         )
         assertEquals(expected, value.hashCode())
     }
@@ -186,26 +186,26 @@ internal class DescribedTest {
             updated = 2.milliseconds,
             hash = "hash".toByteArray(),
         )
-        val item = "DescribedTest:copyTest"
+        val payload = "DescribedTest:copyTest"
         val value = Described(
             id = id,
             info = info,
-            item = item,
+            payload = payload,
         )
         val updated = 3.milliseconds
         val copiedHash = "hash:copied".toByteArray()
-        val copiedItem = "copied"
+        val copiedPayload = "copied"
         val copied = value.copy(
             updated = updated,
             hash = copiedHash,
-            item = copiedItem,
+            payload = copiedPayload,
         )
         assertNotEquals(value, copied)
         assertEquals(id, copied.id)
         assertEquals(value.info.created, copied.info.created)
         assertEquals(updated, copied.info.updated)
         assertEquals(copiedHash, copied.info.hash)
-        assertEquals(copiedItem, copied.item)
+        assertEquals(copiedPayload, copied.payload)
     }
 
     @Test
@@ -215,28 +215,28 @@ internal class DescribedTest {
             updated = 2.milliseconds,
             hash = "hash".toByteArray(),
         )
-        val itemMapped = 42
+        val payloadMapped = 42
         val value = Described(
             id = mockUUID(1),
             info = info,
-            item = "DescribedTest:mapTest",
+            payload = "DescribedTest:mapTest",
         )
-        val mapped = value.map { itemMapped }
+        val mapped = value.map { payloadMapped }
         assertEquals(value.id, mapped.id)
         assertEquals(value.info, mapped.info)
-        assertEquals(mapped.item, itemMapped)
+        assertEquals(mapped.payload, payloadMapped)
     }
 
     @Test
     fun bytesTest() {
-        val expected = mockDescribed(item = "f1".toByteArray())
-        val actual = mockDescribed(item = "f2")
+        val expected = mockDescribed(payload = "f1".toByteArray())
+        val actual = mockDescribed(payload = "f2")
         assertFalse(expected == actual)
     }
 
     @Test
     fun equalsNotTest() {
-        val expected: Any = mockDescribed(item = "f1".toByteArray())
+        val expected: Any = mockDescribed(payload = "f1".toByteArray())
         val actual: Any = "f2"
         assertFalse(expected == actual)
     }

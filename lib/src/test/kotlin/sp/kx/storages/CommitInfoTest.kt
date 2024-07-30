@@ -13,7 +13,7 @@ internal class CommitInfoTest {
         val item = Described(
             id = mockUUID(pointer = 1),
             info = mockItemInfo(),
-            item = byteArrayOf(
+            payload = byteArrayOf(
                 0x05.toByte(),
                 0x18.toByte(),
                 0x9e.toByte(),
