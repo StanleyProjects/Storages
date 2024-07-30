@@ -104,7 +104,7 @@ task<JacocoCoverageVerification>("checkCoverage") {
     violationRules {
         rule {
             limit {
-                minimum = BigDecimal(0.95)
+                minimum = BigDecimal(0.96)
             }
         }
     }
