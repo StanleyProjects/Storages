@@ -7,15 +7,11 @@ internal class FileStreamerProvider(
     private val dir: File,
     ids: Set<UUID>,
 ) : SyncStreamsStorages.StreamerProvider {
-
     init {
         File(dir, "storages").mkdirs()
         val pointers = File(dir, "pointers")
         if (!pointers.exists() || pointers.length() == 0L) {
-            val text = ids.joinToString(separator = ",") { id ->
-                "$id:0"
-            }
-            File(dir, "pointers").writeText(text)
+            pointers.writeBytes(toBytes(ids.associateWith { 0 }))
         }
     }
 
@@ -29,12 +25,7 @@ internal class FileStreamerProvider(
     }
 
     private fun getValues(): Map<UUID, Int> {
-        val text = File(dir, "pointers").readText()
-        check(text.isNotEmpty())
-        return text.split(",").associate {
-            val (_id, _pointer) = it.split(":")
-            UUID.fromString(_id) to _pointer.toInt()
-        }
+        return fromBytes(File(dir, "pointers").readBytes())
     }
 
     override fun getPointer(id: UUID): Int {
@@ -43,14 +34,41 @@ internal class FileStreamerProvider(
 
     override fun putPointers(values: Map<UUID, Int>) {
         val newValues = getValues() + values
-        val text = newValues.entries.joinToString(separator = ",") { (id, pointer) ->
-            "$id:$pointer"
-        }
-        File(dir, "pointers").writeText(text)
+        File(dir, "pointers").writeBytes(toBytes(newValues))
         for (file in File(dir, "storages").listFiles()!!) {
             if (file.isDirectory) continue
-            val exists = newValues.any { (id, pointer) -> file.name == "$id-$pointer"}
-            if (!exists) file.delete()
+            if (!file.isFile) continue
+            for ((id, pointer) in newValues) {
+                if (file.name.startsWith(id.toString()) && file.name != "$id-$pointer") {
+                    file.delete()
+                    break
+                }
+            }
+        }
+    }
+
+    companion object {
+        private fun toBytes(values: Map<UUID, Int>): ByteArray {
+            val entries = values.entries
+            val size = entries.size
+            val bytes = ByteArray(4 + size * 20)
+            BytesUtil.writeBytes(bytes = bytes, index = 0, value = size)
+            entries.forEachIndexed { index, (id, pointer) ->
+                BytesUtil.writeBytes(bytes = bytes, index = 4 + index * 20, value = id)
+                BytesUtil.writeBytes(bytes = bytes, index = 4 + index * 20 + 16, value = pointer)
+            }
+            return bytes
+        }
+
+        private fun fromBytes(bytes: ByteArray): Map<UUID, Int> {
+            val values = mutableMapOf<UUID, Int>()
+            val size = BytesUtil.readInt(bytes = bytes, index = 0)
+            for (index in 0 until size) {
+                val id = BytesUtil.readUUID(bytes = bytes, index = 4 + index * 20)
+                val pointer = BytesUtil.readInt(bytes = bytes, index = 4 + index * 20 + 16)
+                values[id] = pointer
+            }
+            return values
         }
     }
 }
