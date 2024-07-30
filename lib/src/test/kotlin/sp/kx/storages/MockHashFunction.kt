@@ -4,7 +4,7 @@ import java.util.UUID
 import kotlin.math.absoluteValue
 
 internal class MockHashFunction(
-    private val hashes: List<Pair<ByteArray, ByteArray>>,
+    private val hashes: List<Pair<ByteArray, ByteArray>> = emptyList(),
 ) : HashFunction {
     override val size = _size
 
