@@ -2,6 +2,7 @@ package sp.kx.storages
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -58,5 +59,37 @@ internal class FileStreamerProviderTest {
         streamerProvider.putPointers(values = mapOf(id to expected))
         val actual = streamerProvider.getPointer(id = id)
         assertEquals(expected, actual)
+    }
+
+    @Test
+    fun getErrorTest() {
+        val dateFormat = SimpleDateFormat("yyyyMMdd")
+        val dir = File("/tmp/${dateFormat.format(Date())}")
+        dir.deleteRecursively()
+        dir.mkdirs()
+        val id1 = mockUUID(1)
+        val id2 = mockUUID(2)
+        check(id1 != id2)
+        val streamerProvider = FileStreamerProvider(dir = dir, ids = setOf(id1))
+        assertThrows(IllegalStateException::class.java) {
+            streamerProvider.getPointer(id = id2)
+        }
+    }
+
+    @Test
+    fun putPointersDirectoryTest() {
+        val dateFormat = SimpleDateFormat("yyyyMMdd")
+        val dir = File("/tmp/${dateFormat.format(Date())}")
+        dir.deleteRecursively()
+        dir.mkdirs()
+        val file = File(File(dir, "storages"), "foo")
+        file.mkdirs()
+        check(file.exists())
+        check(file.isDirectory)
+        val id = mockUUID(1)
+        val streamerProvider = FileStreamerProvider(dir = dir, ids = setOf(id))
+        streamerProvider.putPointers(values = mapOf(id to 2))
+        assertTrue(file.exists())
+        assertTrue(file.isDirectory)
     }
 }
