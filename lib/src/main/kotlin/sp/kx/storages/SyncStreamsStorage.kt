@@ -42,12 +42,14 @@ class SyncStreamsStorage<T : Any>(
                 stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip locals
                 val itemsSize = BytesUtil.readInt(stream)
                 val bytes = ByteArray(itemsSize * hf.size)
+                val size = 16 + 8 + hf.size
                 for (index in 0 until itemsSize) {
-                    stream.skip(16 + 8 + 8)
-                    stream.read(bytes, index * hf.size, hf.size)
+                    stream.read(bytes, index * size, 16)
+                    stream.skip(8) // skip created
+                    stream.read(bytes, index * size + 16 + 8, 8)
+                    stream.read(bytes, index * size + 16 + 8 + 8, hf.size)
                     stream.skip(BytesUtil.readInt(stream).toLong()) // skip encoded
                 }
-                // todo id + hash
                 hf.map(bytes)
             }
         }
@@ -148,13 +150,6 @@ class SyncStreamsStorage<T : Any>(
         return false
     }
 
-    private fun bytesOf(id: UUID, encoded: ByteArray): ByteArray {
-        val bytes = ByteArray(16 + encoded.size)
-        BytesUtil.writeBytes(bytes = bytes, index = 0, value = id)
-        System.arraycopy(encoded, 0, bytes, 16, encoded.size)
-        return bytes
-    }
-
     override fun update(id: UUID, item: T): ItemInfo? {
         val items = items.toMutableList()
         for (index in items.indices) {
@@ -162,7 +157,7 @@ class SyncStreamsStorage<T : Any>(
             if (oldItem.id == id) {
                 val newItem = oldItem.copy(
                     updated = env.now(),
-                    hash = hf.map(bytesOf(id = id, encoded = transformer.encode(item))),
+                    hash = hf.map(transformer.encode(item)),
                     item = item,
                 )
                 items[index] = newItem
@@ -176,14 +171,12 @@ class SyncStreamsStorage<T : Any>(
     override fun add(item: T): Described<T> {
         val items = items.toMutableList()
         val created = env.now()
-        val encoded = transformer.encode(item)
-        val id = env.randomUUID()
         val described = Described(
-            id = id,
+            id = env.randomUUID(),
             info = ItemInfo(
                 created = created,
                 updated = created,
-                hash = hf.map(bytesOf(id = id, encoded = encoded)),
+                hash = hf.map(transformer.encode(item)),
             ),
             item = item,
         )
