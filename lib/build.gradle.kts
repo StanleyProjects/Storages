@@ -19,7 +19,7 @@ import sp.gx.core.getByName
 import sp.gx.core.resolve
 import sp.gx.core.task
 
-version = "0.6.0"
+version = "0.6.1"
 
 val maven = Maven.Artifact(
     group = "com.github.kepocnhh",
@@ -104,7 +104,7 @@ task<JacocoCoverageVerification>("checkCoverage") {
     violationRules {
         rule {
             limit {
-                minimum = BigDecimal(0.95)
+                minimum = BigDecimal(0.96)
             }
         }
     }

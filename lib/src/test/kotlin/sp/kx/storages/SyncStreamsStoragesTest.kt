@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -102,7 +104,7 @@ internal class SyncStreamsStoragesTest {
 
     @Test
     fun hashesTest() {
-        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
+        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, _ ->
             tStorages.assertHashes(
                 expected = mapOf(
                     mockUUID(1) to MockHashFunction.map("strings:hash:t:updated"),
@@ -342,7 +344,7 @@ internal class SyncStreamsStoragesTest {
             mockDescribed(pointer = 25, item = 25),
             mockDescribed(pointer = 27, item = 27),
         )
-        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
+        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, _ ->
             tStorages.assertSyncInfo(
                 hashes = mapOf(),
                 expected = emptyMap(),
@@ -420,7 +422,7 @@ internal class SyncStreamsStoragesTest {
             mockDescribed(pointer = 25, item = 25),
             mockDescribed(pointer = 27, item = 27),
         )
-        onSyncStreamsStorages(commited = false) { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
+        onSyncStreamsStorages(commited = false) { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, _ ->
             tStorages.assertSyncInfo(
                 hashes = mapOf(),
                 expected = emptyMap(),
@@ -476,7 +478,7 @@ internal class SyncStreamsStoragesTest {
 
     @Test
     fun getMergeInfoTest() {
-        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
+        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, _ ->
             tStorages.assertMergeInfo(
                 storage = rStorages,
                 expected = mapOf(
@@ -577,17 +579,17 @@ internal class SyncStreamsStoragesTest {
         val bars = (1..5).map { number ->
             mockDescribed(pointer = 50 + number, item = Bar(number = 50 + number))
         }
-        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
+        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, dir: File ->
             tStorages.assertMerge(
                 storages = rStorages,
                 files = mapOf(
-                    File("/tmp/storages/r") to listOf(
+                    File(dir, "r/storages") to listOf(
                         "${mockUUID(1)}-2",
                         "${mockUUID(2)}-2",
                         "${mockUUID(3)}-1",
                         "${mockUUID(5)}-0",
                     ),
-                    File("/tmp/storages/t") to listOf(
+                    File(dir, "t/storages") to listOf(
                         "${mockUUID(1)}-1",
                         "${mockUUID(2)}-1",
                         "${mockUUID(3)}-1",
@@ -620,17 +622,17 @@ internal class SyncStreamsStoragesTest {
                 ),
             )
         }
-        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
+        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, dir: File ->
             rStorages.assertMerge(
                 storages = tStorages,
                 files = mapOf(
-                    File("/tmp/storages/r") to listOf(
+                    File(dir, "r/storages") to listOf(
                         "${mockUUID(1)}-1",
                         "${mockUUID(2)}-1",
                         "${mockUUID(3)}-1",
                         "${mockUUID(5)}-0",
                     ),
-                    File("/tmp/storages/t") to listOf(
+                    File(dir, "t/storages") to listOf(
                         "${mockUUID(1)}-2",
                         "${mockUUID(2)}-2",
                         "${mockUUID(3)}-1",
@@ -665,13 +667,13 @@ internal class SyncStreamsStoragesTest {
             tStorages.assertMerge(
                 storages = rStorages,
                 files = mapOf(
-                    File("/tmp/storages/r") to listOf(
+                    File(dir, "r/storages") to listOf(
                         "${mockUUID(1)}-2",
                         "${mockUUID(2)}-2",
                         "${mockUUID(3)}-1",
                         "${mockUUID(5)}-0",
                     ),
-                    File("/tmp/storages/t") to listOf(
+                    File(dir, "t/storages") to listOf(
                         "${mockUUID(1)}-2",
                         "${mockUUID(2)}-2",
                         "${mockUUID(3)}-1",
@@ -771,7 +773,8 @@ internal class SyncStreamsStoragesTest {
         ) + strings.map {
             StringTransformer.hashPair(it)
         }
-        val dir = File("/tmp/storages")
+        val dateFormat = SimpleDateFormat("yyyyMMdd")
+        val dir = File("/tmp/${dateFormat.format(Date())}")
         dir.deleteRecursively()
         dir.mkdirs()
         val tStorages = SyncStreamsStorages.Builder()
@@ -809,7 +812,7 @@ internal class SyncStreamsStoragesTest {
         }
         assertFiles(
             files = mapOf(
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-0",
                 ),
             ),
@@ -818,23 +821,23 @@ internal class SyncStreamsStoragesTest {
             dstStorages = tStorages,
             srcStorages = rStorages,
             beforeMerge = mapOf(
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-0",
                 ),
             ),
             afterMerge = mapOf(
-                File("/tmp/storages/r") to listOf(
+                File(dir, "r/storages") to listOf(
                     "${mockUUID(1)}-0",
                 ),
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-1",
                 ),
             ),
             afterCommit = mapOf(
-                File("/tmp/storages/r") to listOf(
+                File(dir, "r/storages") to listOf(
                     "${mockUUID(1)}-1",
                 ),
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-1",
                 ),
             ),
@@ -861,26 +864,26 @@ internal class SyncStreamsStoragesTest {
             dstStorages = tStorages,
             srcStorages = rStorages,
             beforeMerge = mapOf(
-                File("/tmp/storages/r") to listOf(
+                File(dir, "r/storages") to listOf(
                     "${mockUUID(1)}-1",
                 ),
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-1",
                 ),
             ),
             afterMerge = mapOf(
-                File("/tmp/storages/r") to listOf(
+                File(dir, "r/storages") to listOf(
                     "${mockUUID(1)}-1",
                 ),
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-2",
                 ),
             ),
             afterCommit = mapOf(
-                File("/tmp/storages/r") to listOf(
+                File(dir, "r/storages") to listOf(
                     "${mockUUID(1)}-2",
                 ),
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-2",
                 ),
             ),
@@ -892,26 +895,26 @@ internal class SyncStreamsStoragesTest {
             dstStorages = tStorages,
             srcStorages = rStorages,
             beforeMerge = mapOf(
-                File("/tmp/storages/r") to listOf(
+                File(dir, "r/storages") to listOf(
                     "${mockUUID(1)}-2",
                 ),
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-2",
                 ),
             ),
             afterMerge = mapOf(
-                File("/tmp/storages/r") to listOf(
+                File(dir, "r/storages") to listOf(
                     "${mockUUID(1)}-2",
                 ),
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-3",
                 ),
             ),
             afterCommit = mapOf(
-                File("/tmp/storages/r") to listOf(
+                File(dir, "r/storages") to listOf(
                     "${mockUUID(1)}-2",
                 ),
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-3",
                 ),
             ),
@@ -923,26 +926,26 @@ internal class SyncStreamsStoragesTest {
             dstStorages = tStorages,
             srcStorages = rStorages,
             beforeMerge = mapOf(
-                File("/tmp/storages/r") to listOf(
+                File(dir, "r/storages") to listOf(
                     "${mockUUID(1)}-2",
                 ),
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-3",
                 ),
             ),
             afterMerge = mapOf(
-                File("/tmp/storages/r") to listOf(
+                File(dir, "r/storages") to listOf(
                     "${mockUUID(1)}-2",
                 ),
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-4",
                 ),
             ),
             afterCommit = mapOf(
-                File("/tmp/storages/r") to listOf(
+                File(dir, "r/storages") to listOf(
                     "${mockUUID(1)}-3",
                 ),
-                File("/tmp/storages/t") to listOf(
+                File(dir, "t/storages") to listOf(
                     "${mockUUID(1)}-4",
                 ),
             ),
@@ -974,18 +977,18 @@ internal class SyncStreamsStoragesTest {
         val bars = (1..5).map { number ->
             mockDescribed(pointer = 50 + number, item = Bar(number = 50 + number))
         }
-        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
+        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, dir: File ->
             assertCommit(
                 dstStorages = tStorages,
                 srcStorages = rStorages,
                 files = mapOf(
-                    File("/tmp/storages/r") to listOf(
+                    File(dir, "r/storages") to listOf(
                         "${mockUUID(1)}-2",
                         "${mockUUID(2)}-2",
                         "${mockUUID(3)}-1",
                         "${mockUUID(5)}-0",
                     ),
-                    File("/tmp/storages/t") to listOf(
+                    File(dir, "t/storages") to listOf(
                         "${mockUUID(1)}-2",
                         "${mockUUID(2)}-2",
                         "${mockUUID(3)}-1",
@@ -1000,18 +1003,18 @@ internal class SyncStreamsStoragesTest {
                 ),
             )
         }
-        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages ->
+        onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, dir: File ->
             assertCommit(
                 dstStorages = rStorages,
                 srcStorages = tStorages,
                 files = mapOf(
-                    File("/tmp/storages/r") to listOf(
+                    File(dir, "r/storages") to listOf(
                         "${mockUUID(1)}-2",
                         "${mockUUID(2)}-2",
                         "${mockUUID(3)}-1",
                         "${mockUUID(5)}-0",
                     ),
-                    File("/tmp/storages/t") to listOf(
+                    File(dir, "t/storages") to listOf(
                         "${mockUUID(1)}-2",
                         "${mockUUID(2)}-2",
                         "${mockUUID(3)}-1",
@@ -1029,13 +1032,13 @@ internal class SyncStreamsStoragesTest {
                 dstStorages = tStorages,
                 srcStorages = rStorages,
                 files = mapOf(
-                    File("/tmp/storages/r") to listOf(
+                    File(dir, "r/storages") to listOf(
                         "${mockUUID(1)}-2",
                         "${mockUUID(2)}-2",
                         "${mockUUID(3)}-1",
                         "${mockUUID(5)}-0",
                     ),
-                    File("/tmp/storages/t") to listOf(
+                    File(dir, "t/storages") to listOf(
                         "${mockUUID(1)}-2",
                         "${mockUUID(2)}-2",
                         "${mockUUID(3)}-1",
@@ -1169,14 +1172,19 @@ internal class SyncStreamsStoragesTest {
                 val children = dir.listFiles()
                 check(!children.isNullOrEmpty()) { "dir: $dir" }
                 check(expected.isNotEmpty())
-                assertTrue(children.all { it.exists() && it.isFile && it.length() > 0 })
+                val message = """
+                    dir: ${dir.absolutePath}
+                    actual: ${children.map { it.name }}
+                    expected: $expected
+                """.trimIndent()
+                assertTrue(children.all { it.exists() && it.isFile && it.length() > 0 }, message)
                 assertEquals(expected, children.map { it.name }.sorted(), "dir: $dir")
             }
         }
 
         private fun onSyncStreamsStorages(
             commited: Boolean = true,
-            block: (t: SyncStreamsStorages, r: SyncStreamsStorages) -> Unit,
+            block: (t: SyncStreamsStorages, r: SyncStreamsStorages, dir: File) -> Unit,
         ) {
             val strings = (1..5).map { number ->
                 mockDescribed(pointer = 10 + number)
@@ -1284,7 +1292,8 @@ internal class SyncStreamsStoragesTest {
             val timeProvider = MockProvider { time }
             var itemId = mockUUID()
             val uuidProvider = MockProvider { itemId }
-            val dir = File("/tmp/storages")
+            val dateFormat = SimpleDateFormat("yyyyMMdd")
+            val dir = File("/tmp/${dateFormat.format(Date())}")
             dir.deleteRecursively()
             dir.mkdirs()
             val tStorages = SyncStreamsStorages.Builder()
@@ -1370,7 +1379,7 @@ internal class SyncStreamsStoragesTest {
             //
             assertFiles(
                 mapOf(
-                    File(dir, "t") to listOf(
+                    File(dir, "t/storages") to listOf(
                         "${mockUUID(1)}-0",
                         "${mockUUID(2)}-0",
                         "${mockUUID(3)}-0",
@@ -1381,7 +1390,7 @@ internal class SyncStreamsStoragesTest {
             if (commited) {
                 assertFiles(
                     mapOf(
-                        File(dir, "r") to listOf(
+                        File(dir, "r/storages") to listOf(
                             "${mockUUID(5)}-0",
                         ),
                     ),
@@ -1390,13 +1399,13 @@ internal class SyncStreamsStoragesTest {
                 rStorages.commit(tStorages.merge(mergeInfo))
                 assertFiles(
                     mapOf(
-                        File(dir, "t") to listOf(
+                        File(dir, "t/storages") to listOf(
                             "${mockUUID(1)}-1",
                             "${mockUUID(2)}-1",
                             "${mockUUID(3)}-1",
                             "${mockUUID(4)}-0",
                         ),
-                        File(dir, "r") to listOf(
+                        File(dir, "r/storages") to listOf(
                             "${mockUUID(1)}-1",
                             "${mockUUID(2)}-1",
                             "${mockUUID(3)}-1",
@@ -1407,7 +1416,7 @@ internal class SyncStreamsStoragesTest {
             } else {
                 assertFiles(
                     mapOf(
-                        File(dir, "r") to listOf(
+                        File(dir, "r/storages") to listOf(
                             "${mockUUID(1)}-0",
                             "${mockUUID(2)}-0",
                             "${mockUUID(3)}-0",
@@ -1470,7 +1479,7 @@ internal class SyncStreamsStoragesTest {
                 checkNotNull(info)
             }
             //
-            block(tStorages, rStorages)
+            block(tStorages, rStorages, dir)
         }
     }
 }

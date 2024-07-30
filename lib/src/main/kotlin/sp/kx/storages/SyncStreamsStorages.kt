@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import java.io.File
 import java.util.UUID
 
 class SyncStreamsStorages private constructor(
@@ -31,6 +32,20 @@ class SyncStreamsStorages private constructor(
                 hf = hf,
                 env = env,
                 streamerProvider = getStreamerProvider(transformers.keys),
+                transformers = transformers,
+            )
+        }
+
+        fun build(
+            hf: HashFunction,
+            env: SyncStreamsStorage.Environment,
+            dir: File,
+        ): SyncStreamsStorages {
+            if (transformers.isEmpty()) error("Empty storages!")
+            return SyncStreamsStorages(
+                hf = hf,
+                env = env,
+                streamerProvider = FileStreamerProvider(dir = dir, ids = transformers.keys),
                 transformers = transformers,
             )
         }
