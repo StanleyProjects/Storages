@@ -55,7 +55,7 @@ internal class BytesUtilTest {
             0x18.toByte(),
             0x9e.toByte(),
             0xe5.toByte(),
-            0
+            0,
         )
         check(bytes.size == 4 + 2)
         val actual: Int = BytesUtil.readInt(bytes = bytes, index = 1)
@@ -106,7 +106,7 @@ internal class BytesUtilTest {
             0xe4.toByte(),
             0xc2.toByte(),
             0x7b.toByte(),
-            0
+            0,
         )
         check(bytes.size == 8 + 2)
         val actual: Long = BytesUtil.readLong(bytes = bytes, index = 1)
