@@ -5,6 +5,7 @@ import sp.kx.storages.Streamer
 import sp.kx.storages.SyncStreamsStorage
 import sp.kx.storages.SyncStreamsStorages
 import sp.kx.storages.Transformer
+import sp.kx.storages.require
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -102,7 +103,7 @@ private class FileStreamer(
         check(dir.isDirectory)
         val file = File(dir, "$id-$inputPointer")
         if (!file.exists() || file.length() == 0L) {
-            file.writeBytes(ByteArray(8))
+            file.writeBytes(ByteArray(12))
         }
         return file.inputStream()
     }
@@ -221,10 +222,6 @@ fun main() {
             },
         )
     tStorages.println()
-    // todo
-    // todo tStorages.require<Foo>().add(Foo(text = "foo:1"))
-    // todo rStorages.require<Foo>().add(Foo(text = "foo:1"))
-    // todo commit(srcStorages = tStorages, dstStorages = rStorages)
     Foo(text = "foo:${nextInt()}").also { item ->
         println("add: $item")
         tStorages.require<Foo>().add(item)
