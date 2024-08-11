@@ -10,6 +10,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.UUID
 
+@Deprecated(message = "BytesUtil is deprecated")
 internal class BytesUtilTest {
     @Test
     fun writeBytesIntTest() {
@@ -95,25 +96,6 @@ internal class BytesUtilTest {
             0x7b.toByte(),
         )
         assertEquals(65148423206388347, BytesUtil.readLong(ByteArrayInputStream(bytes)))
-    }
-
-    @Test
-    fun readLongFromArrayTest() {
-        val bytes = byteArrayOf(
-            0,
-            0x00.toByte(),
-            0xe7.toByte(),
-            0x74.toByte(),
-            0x25.toByte(),
-            0x4e.toByte(),
-            0xe4.toByte(),
-            0xc2.toByte(),
-            0x7b.toByte(),
-            0,
-        )
-        check(bytes.size == 8 + 2)
-        val actual: Long = BytesUtil.readLong(bytes = bytes, index = 1)
-        assertEquals(65148423206388347, actual)
     }
 
     @Test

@@ -5,6 +5,7 @@ import java.io.OutputStream
 import java.util.UUID
 
 @Suppress("MagicNumber")
+@Deprecated(message = "replace with sp.kx.bytes")
 internal object BytesUtil {
     fun writeBytes(stream: OutputStream, value: Int) {
         stream.write(value.shr(8 * 3).toByte().toInt())
@@ -29,17 +30,6 @@ internal object BytesUtil {
         stream.write(value.shr(8 * 2).toByte().toInt())
         stream.write(value.shr(8 * 1).toByte().toInt())
         stream.write(value.toByte().toInt())
-    }
-
-    fun readLong(bytes: ByteArray, index: Int): Long {
-        return bytes[index].toLong().and(0xff).shl(8 * 7)
-            .or(bytes[index + 1].toLong().and(0xff).shl(8 * 6))
-            .or(bytes[index + 2].toLong().and(0xff).shl(8 * 5))
-            .or(bytes[index + 3].toLong().and(0xff).shl(8 * 4))
-            .or(bytes[index + 4].toLong().and(0xff).shl(8 * 3))
-            .or(bytes[index + 5].toLong().and(0xff).shl(8 * 2))
-            .or(bytes[index + 6].toLong().and(0xff).shl(8 * 1))
-            .or(bytes[index + 7].toLong().and(0xff))
     }
 
     fun readLong(stream: InputStream): Long {
