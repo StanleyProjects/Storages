@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import sp.kx.bytes.write
 import java.util.UUID
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
@@ -36,9 +37,9 @@ internal class MockHashFunction(
 
         fun bytesOf(id: UUID, updated: Duration, encoded: ByteArray): ByteArray {
             val idBytes = ByteArray(16)
-            BytesUtil.writeBytes(idBytes, index = 0, id)
+            idBytes.write(value = id)
             val updatedBytes = ByteArray(8)
-            BytesUtil.writeBytes(updatedBytes, index = 0, updated.inWholeMilliseconds)
+            updatedBytes.write(value = updated.inWholeMilliseconds)
             return idBytes + updatedBytes + encoded
         }
 

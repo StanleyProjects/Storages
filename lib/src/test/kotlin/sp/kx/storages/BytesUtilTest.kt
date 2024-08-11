@@ -3,6 +3,9 @@ package sp.kx.storages
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import sp.kx.bytes.readInt
+import sp.kx.bytes.readUUID
+import sp.kx.bytes.write
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.UUID
@@ -26,7 +29,7 @@ internal class BytesUtilTest {
         val number: Int = 123456789
         val bytes = ByteArray(32)
         assertTrue(bytes.all { it == 0.toByte() })
-        BytesUtil.writeBytes(bytes = bytes, index = 4, value = number)
+        bytes.write(index = 4, value = number)
         assertEquals(bytes.size, 32)
         assertTrue(bytes.slice(0 until 4).all { it == 0.toByte() })
         assertTrue(bytes.slice((4 + 16) until 32).all { it == 0.toByte() })
@@ -58,7 +61,7 @@ internal class BytesUtilTest {
             0,
         )
         check(bytes.size == 4 + 2)
-        val actual: Int = BytesUtil.readInt(bytes = bytes, index = 1)
+        val actual: Int = bytes.readInt(index = 1)
         assertEquals(85499621, actual)
     }
 
@@ -186,7 +189,7 @@ internal class BytesUtilTest {
             0,
         )
         check(bytes.size == 8 + 8 + 2)
-        val actual: UUID = BytesUtil.readUUID(bytes = bytes, index = 1)
+        val actual: UUID = bytes.readUUID(index = 1)
         assertEquals(expected, actual)
     }
 
@@ -220,7 +223,7 @@ internal class BytesUtilTest {
         val number: Long = 110480001
         val bytes = ByteArray(32)
         assertTrue(bytes.all { it == 0.toByte() })
-        BytesUtil.writeBytes(bytes = bytes, index = 4, value = number)
+        bytes.write(index = 4, value = number)
         assertEquals(bytes.size, 32)
         assertTrue(bytes.slice(0 until 4).all { it == 0.toByte() })
         assertTrue(bytes.slice((4 + 16) until 32).all { it == 0.toByte() })
@@ -235,7 +238,7 @@ internal class BytesUtilTest {
         val id = UUID(201043908171234567, 56416449111234567)
         val bytes = ByteArray(64)
         assertTrue(bytes.all { it == 0.toByte() })
-        BytesUtil.writeBytes(bytes = bytes, index = 4, value = id)
+        bytes.write(index = 4, value = id)
         assertEquals(bytes.size, 64)
         assertTrue(bytes.slice(0 until 4).all { it == 0.toByte() })
         assertTrue(bytes.slice((4 + 32) until bytes.size).all { it == 0.toByte() })
