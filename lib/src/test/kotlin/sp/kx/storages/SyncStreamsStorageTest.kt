@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrowsExactly
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import sp.kx.bytes.toHEX
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds

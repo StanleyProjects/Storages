@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import sp.kx.bytes.toHEX
 import sp.kx.bytes.writeBytes
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
