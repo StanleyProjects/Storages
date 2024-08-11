@@ -41,24 +41,7 @@ class SyncStreamsStorage<T : Any>(
         fun randomUUID(): UUID
     }
 
-    override val hash: ByteArray
-        get() {
-            return streamer.inputStream().use { stream ->
-                stream.skip(stream.readInt().toLong() * 16) // skip deleted
-                stream.skip(stream.readInt().toLong() * 16) // skip locals
-                val itemsSize = stream.readInt()
-                val size = 16 + 8 + hf.size
-                val bytes = ByteArray(itemsSize * size)
-                for (index in 0 until itemsSize) {
-                    stream.read(bytes, index * size, 16)
-                    stream.skip(8) // skip created
-                    stream.read(bytes, index * size + 16, 8)
-                    stream.read(bytes, index * size + 16 + 8, hf.size)
-                    stream.skip(stream.readInt().toLong()) // skip encoded
-                }
-                hf.map(bytes)
-            }
-        }
+    override val hash: ByteArray get() = getHash(streamer = streamer, hf = hf)
     override val items: List<Described<T>>
         get() {
             return streamer.inputStream().use { stream ->
@@ -79,17 +62,7 @@ class SyncStreamsStorage<T : Any>(
                 }
             }
         }
-    private val deleted: Set<UUID>
-        get() {
-            val set = HashSet<UUID>()
-            streamer.inputStream().use { stream ->
-                val deletedSize = stream.readInt()
-                for (index in 0 until deletedSize) {
-                    set.add(stream.readUUID())
-                }
-            }
-            return set
-        }
+    private val deleted: Set<UUID> get() = getDeleted(streamer = streamer)
 
     private val locals: Set<UUID>
         get() {
@@ -257,56 +230,123 @@ class SyncStreamsStorage<T : Any>(
         return true
     }
 
-    override fun getSyncInfo(): SyncInfo {
-        return streamer.inputStream().use { stream ->
-            val deletedSize = stream.readInt()
-            val deleted = HashSet<UUID>(deletedSize)
-            for (index in 0 until deletedSize) {
-                deleted.add(stream.readUUID())
+    override fun getSyncInfo(): SyncInfo = getSyncInfo(streamer = streamer, hf = hf)
+
+    override fun getMergeInfo(info: SyncInfo): MergeInfo = getMergeInfo(streamer = streamer, hf = hf, info = info)
+
+    companion object {
+        internal fun getHash(
+            streamer: Streamer,
+            hf: HashFunction,
+        ): ByteArray {
+            return streamer.inputStream().use { stream ->
+                stream.skip(stream.readInt().toLong() * 16) // skip deleted
+                stream.skip(stream.readInt().toLong() * 16) // skip locals
+                val itemsSize = stream.readInt()
+                val size = 16 + 8 + hf.size
+                val bytes = ByteArray(itemsSize * size)
+                for (index in 0 until itemsSize) {
+                    stream.read(bytes, index * size, 16)
+                    stream.skip(8) // skip created
+                    stream.read(bytes, index * size + 16, 8)
+                    stream.read(bytes, index * size + 16 + 8, hf.size)
+                    stream.skip(stream.readInt().toLong()) // skip encoded
+                }
+                hf.map(bytes)
             }
-            stream.skip(stream.readInt().toLong() * 16) // skip locals
-            val itemsSize = stream.readInt()
-            val infos = HashMap<UUID, ItemInfo>(itemsSize)
-            for (ignored in 0 until itemsSize) {
-                infos[stream.readUUID()] = ItemInfo(
-                    created = stream.readLong().milliseconds,
-                    updated = stream.readLong().milliseconds,
-                    hash = stream.readBytes(size = hf.size),
+        }
+
+        internal fun getSyncInfo(
+            streamer: Streamer,
+            hf: HashFunction,
+        ): SyncInfo {
+            return streamer.inputStream().use { stream ->
+                val deletedSize = stream.readInt()
+                val deleted = HashSet<UUID>(deletedSize)
+                for (index in 0 until deletedSize) {
+                    deleted.add(stream.readUUID())
+                }
+                stream.skip(stream.readInt().toLong() * 16) // skip locals
+                val itemsSize = stream.readInt()
+                val infos = HashMap<UUID, ItemInfo>(itemsSize)
+                for (ignored in 0 until itemsSize) {
+                    infos[stream.readUUID()] = ItemInfo(
+                        created = stream.readLong().milliseconds,
+                        updated = stream.readLong().milliseconds,
+                        hash = stream.readBytes(size = hf.size),
+                    )
+                    stream.skip(stream.readInt().toLong()) // skip encoded
+                }
+                SyncInfo(
+                    infos = infos,
+                    deleted = deleted,
                 )
-                stream.skip(stream.readInt().toLong()) // skip encoded
             }
-            SyncInfo(
-                infos = infos,
+        }
+
+        private fun getEncoded(
+            streamer: Streamer,
+            hf: HashFunction,
+        ): List<Described<ByteArray>> {
+            return streamer.inputStream().use { stream ->
+                stream.skip(stream.readInt().toLong() * 16) // skip deleted
+                stream.skip(stream.readInt().toLong() * 16) // skip locals
+                List(stream.readInt()) { _ ->
+                    val id = stream.readUUID()
+                    val info = ItemInfo(
+                        created = stream.readLong().milliseconds,
+                        updated = stream.readLong().milliseconds,
+                        hash = stream.readBytes(size = hf.size),
+                    )
+                    Described(
+                        id = id,
+                        info = info,
+                        payload = stream.readBytes(size = stream.readInt()),
+                    )
+                }
+            }
+        }
+
+        private fun getDeleted(streamer: Streamer): Set<UUID> {
+            val set = HashSet<UUID>()
+            streamer.inputStream().use { stream ->
+                for (index in 0 until stream.readInt()) {
+                    set.add(stream.readUUID())
+                }
+            }
+            return set
+        }
+
+        internal fun getMergeInfo(
+            streamer: Streamer,
+            hf: HashFunction,
+            info: SyncInfo,
+        ): MergeInfo {
+            val downloaded = mutableSetOf<UUID>()
+            val uploaded = mutableListOf<Described<ByteArray>>()
+            val items = getEncoded(streamer = streamer, hf = hf)
+            for (described in items) {
+                if (info.infos.containsKey(described.id)) continue
+                if (info.deleted.contains(described.id)) continue
+                uploaded.add(described)
+            }
+            val deleted = getDeleted(streamer = streamer)
+            for ((itemId, itemInfo) in info.infos) {
+                val described = items.firstOrNull { it.id == itemId }
+                if (described == null) {
+                    if (deleted.contains(itemId)) continue
+                    downloaded.add(itemId)
+                } else if (itemInfo.updated > described.info.updated) {
+                    downloaded.add(itemId)
+                } else if (!itemInfo.hash.contentEquals(described.info.hash)) {
+                    uploaded.add(described)
+                }
+            }
+            return MergeInfo(
+                downloaded = downloaded,
+                items = uploaded,
                 deleted = deleted,
             )
         }
-    }
-
-    override fun getMergeInfo(info: SyncInfo): MergeInfo {
-        val downloaded = mutableSetOf<UUID>()
-        val uploaded = mutableListOf<Described<ByteArray>>()
-        val items = items
-        for (described in items) {
-            if (info.infos.containsKey(described.id)) continue
-            if (info.deleted.contains(described.id)) continue
-            uploaded.add(described.map(transformer::encode))
-        }
-        val deleted = deleted
-        for ((itemId, itemInfo) in info.infos) {
-            val described = items.firstOrNull { it.id == itemId }
-            if (described == null) {
-                if (deleted.contains(itemId)) continue
-                downloaded.add(itemId)
-            } else if (itemInfo.updated > described.info.updated) {
-                downloaded.add(itemId)
-            } else if (!itemInfo.hash.contentEquals(described.info.hash)) {
-                uploaded.add(described.map(transformer::encode))
-            }
-        }
-        return MergeInfo(
-            downloaded = downloaded,
-            items = uploaded,
-            deleted = deleted,
-        )
     }
 }

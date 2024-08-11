@@ -98,34 +98,31 @@ class SyncStreamsStorages private constructor(
     }
 
     fun hashes(): Map<UUID, ByteArray> {
-        return transformers.mapValues { (id, value) ->
-            val (_, transformer) = value
+        return transformers.mapValues { (id, _) ->
             val pointer = streamerProvider.getPointer(id = id)
             val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
-            getSyncStorage(id, streamer, transformer).hash
+            SyncStreamsStorage.getHash(streamer = streamer, hf = hf)
         }
     }
 
     fun getSyncInfo(hashes: Map<UUID, ByteArray>): Map<UUID, SyncInfo> {
         val result = mutableMapOf<UUID, SyncInfo>()
         for ((id, hash) in hashes) {
-            val (_, transformer) = transformers[id] ?: continue
+            if (!transformers.containsKey(id)) continue
             val pointer = streamerProvider.getPointer(id = id)
             val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
-            val storage = getSyncStorage(id, streamer, transformer)
-            if (storage.hash.contentEquals(hash)) continue
-            result[id] = storage.getSyncInfo()
+            if (SyncStreamsStorage.getHash(streamer = streamer, hf = hf).contentEquals(hash)) continue
+            result[id] = SyncStreamsStorage.getSyncInfo(streamer = streamer, hf = hf)
         }
         return result
     }
 
     fun getMergeInfo(infos: Map<UUID, SyncInfo>): Map<UUID, MergeInfo> {
         return infos.mapValues { (id, info) ->
-            val (_, transformer) = transformers[id] ?: error("No storage by ID: \"$id\"!")
+            if (!transformers.containsKey(id)) error("No storage by ID: \"$id\"!")
             val pointer = streamerProvider.getPointer(id = id)
             val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
-            val storage = getSyncStorage(id, streamer, transformer)
-            storage.getMergeInfo(info)
+            SyncStreamsStorage.getMergeInfo(streamer = streamer, hf = hf, info = info)
         }
     }
 
