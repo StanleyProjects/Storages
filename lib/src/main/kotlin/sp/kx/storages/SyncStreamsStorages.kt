@@ -141,7 +141,7 @@ class SyncStreamsStorages private constructor(
                     outputPointer = outputPointer,
                 ),
                 transformer = transformer,
-            ) // todo SyncStorage only encoded
+            )
             result[id] = storage.merge(info)
             newPointers[id] = outputPointer
         }

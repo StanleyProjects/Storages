@@ -64,18 +64,7 @@ class SyncStreamsStorage<T : Any>(
         }
     private val deleted: Set<UUID> get() = getDeleted(streamer = streamer)
 
-    private val locals: Set<UUID>
-        get() {
-            val set = HashSet<UUID>()
-            streamer.inputStream().use { stream ->
-                stream.skip(stream.readInt().toLong() * 16) // skip deleted
-                val localsSize = stream.readInt()
-                for (index in 0 until localsSize) {
-                    set.add(stream.readUUID())
-                }
-            }
-            return set
-        }
+    private val locals: Set<UUID> get() = getLocals(streamer = streamer)
 
     private fun write(
         deleted: Set<UUID> = this.deleted,
@@ -182,11 +171,11 @@ class SyncStreamsStorage<T : Any>(
     override fun merge(info: MergeInfo): CommitInfo {
         val downloaded = mutableListOf<Described<ByteArray>>()
         val newItems = mutableListOf<Described<T>>()
-        for (item in this.items) {
+        for (item in getEncoded(streamer = streamer, hf = hf)) {
             if (info.deleted.contains(item.id)) continue
             if (info.items.any { it.id == item.id }) continue
-            if (info.downloaded.contains(item.id)) downloaded.add(item.map(transformer::encode))
-            newItems += item
+            if (info.downloaded.contains(item.id)) downloaded.add(item)
+            newItems += item.map(transformer::decode)
         }
         for (item in info.items) {
             newItems += item.map(transformer::decode)
@@ -310,6 +299,17 @@ class SyncStreamsStorage<T : Any>(
         private fun getDeleted(streamer: Streamer): Set<UUID> {
             val set = HashSet<UUID>()
             streamer.inputStream().use { stream ->
+                for (index in 0 until stream.readInt()) {
+                    set.add(stream.readUUID())
+                }
+            }
+            return set
+        }
+
+        private fun getLocals(streamer: Streamer): Set<UUID> {
+            val set = HashSet<UUID>()
+            streamer.inputStream().use { stream ->
+                stream.skip(stream.readInt().toLong() * 16) // skip deleted
                 for (index in 0 until stream.readInt()) {
                     set.add(stream.readUUID())
                 }
