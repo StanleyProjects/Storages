@@ -61,7 +61,7 @@ tasks.getByName<KotlinCompile>("compileTestKotlin") {
 dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:${Version.jupiter}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${Version.jupiter}")
-    implementation("com.github.kepocnhh:Bytes:0.1.0-SNAPSHOT")
+    implementation("com.github.kepocnhh:Bytes:0.2.1-SNAPSHOT")
 }
 
 fun Test.getExecutionData(): File {

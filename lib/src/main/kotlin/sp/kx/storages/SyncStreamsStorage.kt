@@ -1,6 +1,11 @@
 package sp.kx.storages
 
+import sp.kx.bytes.readBytes
+import sp.kx.bytes.readInt
+import sp.kx.bytes.readLong
+import sp.kx.bytes.readUUID
 import sp.kx.bytes.write
+import sp.kx.bytes.writeBytes
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -39,9 +44,9 @@ class SyncStreamsStorage<T : Any>(
     override val hash: ByteArray
         get() {
             return streamer.inputStream().use { stream ->
-                stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
-                stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip locals
-                val itemsSize = BytesUtil.readInt(stream)
+                stream.skip(stream.readInt().toLong() * 16) // skip deleted
+                stream.skip(stream.readInt().toLong() * 16) // skip locals
+                val itemsSize = stream.readInt()
                 val size = 16 + 8 + hf.size
                 val bytes = ByteArray(itemsSize * size)
                 for (index in 0 until itemsSize) {
@@ -49,7 +54,7 @@ class SyncStreamsStorage<T : Any>(
                     stream.skip(8) // skip created
                     stream.read(bytes, index * size + 16, 8)
                     stream.read(bytes, index * size + 16 + 8, hf.size)
-                    stream.skip(BytesUtil.readInt(stream).toLong()) // skip encoded
+                    stream.skip(stream.readInt().toLong()) // skip encoded
                 }
                 hf.map(bytes)
             }
@@ -57,19 +62,19 @@ class SyncStreamsStorage<T : Any>(
     override val items: List<Described<T>>
         get() {
             return streamer.inputStream().use { stream ->
-                stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
-                stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip locals
-                List(BytesUtil.readInt(stream)) { _ ->
-                    val id = BytesUtil.readUUID(stream)
+                stream.skip(stream.readInt().toLong() * 16) // skip deleted
+                stream.skip(stream.readInt().toLong() * 16) // skip locals
+                List(stream.readInt()) { _ ->
+                    val id = stream.readUUID()
                     val info = ItemInfo(
-                        created = BytesUtil.readLong(stream).milliseconds,
-                        updated = BytesUtil.readLong(stream).milliseconds,
-                        hash = BytesUtil.readBytes(stream, hf.size),
+                        created = stream.readLong().milliseconds,
+                        updated = stream.readLong().milliseconds,
+                        hash = stream.readBytes(size = hf.size),
                     )
                     Described(
                         id = id,
                         info = info,
-                        payload = transformer.decode(BytesUtil.readBytes(stream, BytesUtil.readInt(stream))),
+                        payload = transformer.decode(stream.readBytes(size = stream.readInt())),
                     )
                 }
             }
@@ -78,9 +83,9 @@ class SyncStreamsStorage<T : Any>(
         get() {
             val set = HashSet<UUID>()
             streamer.inputStream().use { stream ->
-                val deletedSize = BytesUtil.readInt(stream)
+                val deletedSize = stream.readInt()
                 for (index in 0 until deletedSize) {
-                    set.add(BytesUtil.readUUID(stream))
+                    set.add(stream.readUUID())
                 }
             }
             return set
@@ -90,10 +95,10 @@ class SyncStreamsStorage<T : Any>(
         get() {
             val set = HashSet<UUID>()
             streamer.inputStream().use { stream ->
-                stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip deleted
-                val localsSize = BytesUtil.readInt(stream)
+                stream.skip(stream.readInt().toLong() * 16) // skip deleted
+                val localsSize = stream.readInt()
                 for (index in 0 until localsSize) {
-                    set.add(BytesUtil.readUUID(stream))
+                    set.add(stream.readUUID())
                 }
             }
             return set
@@ -105,22 +110,22 @@ class SyncStreamsStorage<T : Any>(
         items: List<Described<T>>,
     ) {
         streamer.outputStream().use { stream ->
-            BytesUtil.writeBytes(stream, deleted.size)
+            stream.writeBytes(value = deleted.size)
             for (it in deleted) {
-                BytesUtil.writeBytes(stream, it)
+                stream.writeBytes(value = it)
             }
-            BytesUtil.writeBytes(stream, locals.size)
+            stream.writeBytes(value = locals.size)
             for (it in locals) {
-                BytesUtil.writeBytes(stream, it)
+                stream.writeBytes(value = it)
             }
-            BytesUtil.writeBytes(stream, items.size)
+            stream.writeBytes(value = items.size)
             for (it in items) {
-                BytesUtil.writeBytes(stream, it.id)
-                BytesUtil.writeBytes(stream, it.info.created.inWholeMilliseconds)
-                BytesUtil.writeBytes(stream, it.info.updated.inWholeMilliseconds)
+                stream.writeBytes(value = it.id)
+                stream.writeBytes(value = it.info.created.inWholeMilliseconds)
+                stream.writeBytes(value = it.info.updated.inWholeMilliseconds)
                 stream.write(it.info.hash)
                 val encoded = transformer.encode(it.payload)
-                BytesUtil.writeBytes(stream, encoded.size)
+                stream.writeBytes(value = encoded.size)
                 stream.write(encoded)
             }
             stream.flush()
@@ -254,21 +259,21 @@ class SyncStreamsStorage<T : Any>(
 
     override fun getSyncInfo(): SyncInfo {
         return streamer.inputStream().use { stream ->
-            val deletedSize = BytesUtil.readInt(stream)
+            val deletedSize = stream.readInt()
             val deleted = HashSet<UUID>(deletedSize)
             for (index in 0 until deletedSize) {
-                deleted.add(BytesUtil.readUUID(stream))
+                deleted.add(stream.readUUID())
             }
-            stream.skip(BytesUtil.readInt(stream).toLong() * 16) // skip locals
-            val itemsSize = BytesUtil.readInt(stream)
+            stream.skip(stream.readInt().toLong() * 16) // skip locals
+            val itemsSize = stream.readInt()
             val infos = HashMap<UUID, ItemInfo>(itemsSize)
             for (ignored in 0 until itemsSize) {
-                infos[BytesUtil.readUUID(stream)] = ItemInfo(
-                    created = BytesUtil.readLong(stream).milliseconds,
-                    updated = BytesUtil.readLong(stream).milliseconds,
-                    hash = BytesUtil.readBytes(stream, hf.size),
+                infos[stream.readUUID()] = ItemInfo(
+                    created = stream.readLong().milliseconds,
+                    updated = stream.readLong().milliseconds,
+                    hash = stream.readBytes(size = hf.size),
                 )
-                stream.skip(BytesUtil.readInt(stream).toLong()) // skip encoded
+                stream.skip(stream.readInt().toLong()) // skip encoded
             }
             SyncInfo(
                 infos = infos,
