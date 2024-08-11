@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import sp.kx.bytes.write
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -193,8 +194,8 @@ class SyncStreamsStorage<T : Any>(
         val bytes = ByteArray(items.size * size)
         for (index in items.indices) {
             val item = items[index]
-            BytesUtil.writeBytes(bytes, index = index * size, value = item.id)
-            BytesUtil.writeBytes(bytes, index = index * size + 16, value = item.info.updated.inWholeMilliseconds)
+            bytes.write(index = index * size, value = item.id)
+            bytes.write(index = index * size + 16, value = item.info.updated.inWholeMilliseconds)
             System.arraycopy(item.info.hash, 0, bytes, index * size + 16 + 8, hf.size)
         }
         return bytes

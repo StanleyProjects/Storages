@@ -1,5 +1,8 @@
 package sp.kx.storages
 
+import sp.kx.bytes.readInt
+import sp.kx.bytes.readUUID
+import sp.kx.bytes.write
 import java.io.File
 import java.util.UUID
 
@@ -52,20 +55,19 @@ internal class FileStreamerProvider(
             val entries = values.entries
             val size = entries.size
             val bytes = ByteArray(4 + size * 20)
-            BytesUtil.writeBytes(bytes = bytes, index = 0, value = size)
+            bytes.write(value = size)
             entries.forEachIndexed { index, (id, pointer) ->
-                BytesUtil.writeBytes(bytes = bytes, index = 4 + index * 20, value = id)
-                BytesUtil.writeBytes(bytes = bytes, index = 4 + index * 20 + 16, value = pointer)
+                bytes.write(index = 4 + index * 20, value = id)
+                bytes.write(index = 4 + index * 20 + 16, value = pointer)
             }
             return bytes
         }
 
         private fun fromBytes(bytes: ByteArray): Map<UUID, Int> {
             val values = mutableMapOf<UUID, Int>()
-            val size = BytesUtil.readInt(bytes = bytes, index = 0)
-            for (index in 0 until size) {
-                val id = BytesUtil.readUUID(bytes = bytes, index = 4 + index * 20)
-                val pointer = BytesUtil.readInt(bytes = bytes, index = 4 + index * 20 + 16)
+            for (index in 0 until bytes.readInt()) {
+                val id = bytes.readUUID(index = 4 + index * 20)
+                val pointer = bytes.readInt(index = 4 + index * 20 + 16)
                 values[id] = pointer
             }
             return values
