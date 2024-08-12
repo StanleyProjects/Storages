@@ -150,16 +150,10 @@ class SyncStreamsStorages private constructor(
         )
     }
 
-    private fun checkSession(session: SyncSession, ids: Set<UUID>) {
-        val localSession = this.session ?: error("No session!")
-        if (!localSession.dst.contentEquals(getHash(ids = ids))) error("Session expired!")
-        if (!localSession.dst.contentEquals(session.dst)) TODO()
-        if (!localSession.src.contentEquals(session.src)) TODO()
-    }
-
     fun getMergeInfo(session: SyncSession, infos: Map<UUID, SyncInfo>): Map<UUID, MergeInfo> {
         val ids = transformers.keys
-        checkSession(session = session, ids = ids)
+        if (!session.src.contentEquals(getHash(ids = ids))) error("Session expired!")
+        this.session = session
         return infos.mapValues { (id, info) ->
             if (!ids.contains(id)) error("No storage by ID: \"$id\"!")
             val pointer = streamers.getPointer(id = id)
@@ -169,7 +163,12 @@ class SyncStreamsStorages private constructor(
     }
 
     fun merge(session: SyncSession, infos: Map<UUID, MergeInfo>): Map<UUID, CommitInfo> {
-        checkSession(session = session, ids = transformers.keys)
+        val ids = transformers.keys
+        if (!session.dst.contentEquals(getHash(ids = ids))) error("Session expired!")
+        val dstSession = this.session ?: error("No session!")
+        if (!dstSession.dst.contentEquals(session.dst)) TODO()
+        if (!dstSession.src.contentEquals(session.src)) TODO()
+        this.session = null
         val newPointers = mutableMapOf<UUID, Int>()
         val result = mutableMapOf<UUID, CommitInfo>()
         for ((id, info) in infos) {
@@ -189,12 +188,16 @@ class SyncStreamsStorages private constructor(
             newPointers[id] = outputPointer
         }
         streamers.putPointers(newPointers)
-        this.session = null
         return result
     }
 
     fun commit(session: SyncSession, infos: Map<UUID, CommitInfo>): Set<UUID> {
-        checkSession(session = session, ids = transformers.keys)
+        val ids = transformers.keys
+        if (!session.src.contentEquals(getHash(ids = ids))) error("Session expired!")
+        val srcSession = this.session ?: error("No session!")
+        if (!srcSession.dst.contentEquals(session.dst)) TODO()
+        if (!srcSession.src.contentEquals(session.src)) TODO()
+        this.session = null
         if (infos.isEmpty()) return emptySet()
         val newPointers = mutableMapOf<UUID, Int>()
         for ((id, info) in infos) {
@@ -216,7 +219,6 @@ class SyncStreamsStorages private constructor(
         if (newPointers.isNotEmpty()) {
             streamers.putPointers(newPointers)
         }
-        this.session = null
         return newPointers.keys
     }
 }

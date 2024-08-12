@@ -1,12 +1,12 @@
 package sp.service.sample
 
+import sp.kx.bytes.toHEX
 import sp.kx.storages.HashFunction
 import sp.kx.storages.SyncStreamsStorage
 import sp.kx.storages.SyncStreamsStorages
 import sp.kx.storages.Transformer
 import sp.kx.storages.require
 import java.io.File
-import java.util.Locale
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -36,14 +36,6 @@ private object DefaultEnvironment : SyncStreamsStorage.Environment {
     }
 }
 
-private fun Byte.toHEX(): String {
-    return String.format(Locale.US, "%02x", toInt() and 0xff)
-}
-
-private fun ByteArray.toHEX(): String {
-    return joinToString(separator = "") { it.toHEX() }
-}
-
 private fun SyncStreamsStorages.println() {
     val builder = StringBuilder()
     val hashes = hashes()
@@ -60,7 +52,7 @@ private fun SyncStreamsStorages.println() {
         val storages = require(id = id)
         storages.items.forEachIndexed { index, item ->
             builder.append("\n")
-                .append("  $index] ${item.id}: ${item.item}")
+                .append("  $index] ${item.id}: ${item.payload}")
         }
     }
     println(builder.toString())
@@ -78,8 +70,8 @@ private fun commit(
     println("\ncommit...")
     val hashes = srcStorages.hashes()
 //    println("hashes: ${hashes.map { (id, bytes) -> "$id: ${bytes.toHEX()}" }}")
-    val sis = dstStorages.getSyncInfo(hashes = hashes)
-    for ((storageId, si) in sis) {
+    val response = dstStorages.getSyncInfo(hashes = hashes)
+    for ((storageId, si) in response.infos) {
         println("dst:SyncInfo: $storageId")
         si.infos.keys.sorted().forEachIndexed { index, itemId ->
             println("$index] $itemId: ${si.infos[itemId]!!.hash.toHEX()}")
@@ -93,11 +85,11 @@ private fun commit(
             println("$index] ${it.id}: ${it.info.hash.toHEX()}")
         }
     }
-    val mis = srcStorages.getMergeInfo(infos = sis)
+    val mis = srcStorages.getMergeInfo(session = response.session, infos = response.infos)
     for ((storageId, mi) in mis) {
         println("src:MergeInfo: $storageId")
         mi.items.forEachIndexed { index, item ->
-            println("$index] ${item.id}: ${String(item.item)}")
+            println("$index] ${item.id}: ${String(item.payload)}")
         }
         println("deleted:")
         mi.deleted.forEachIndexed { index, id ->
@@ -105,21 +97,21 @@ private fun commit(
         }
         println("dst:")
         dstStorages.require(id = storageId).items.forEachIndexed { index, it ->
-            println("$index] ${it.id}: ${it.item}")
+            println("$index] ${it.id}: ${it.payload}")
         }
     }
-    val cis = dstStorages.merge(infos = mis)
+    val cis = dstStorages.merge(session = response.session, infos = mis)
     for ((storageId, ci) in cis) {
         println("dst:CommitInfo: $storageId")
         ci.items.forEachIndexed { index, item ->
-            println("$index] ${item.id}: ${String(item.item)}")
+            println("$index] ${item.id}: ${String(item.payload)}")
         }
         println("deleted:")
         ci.deleted.forEachIndexed { index, id ->
             println("$index] $id")
         }
     }
-    srcStorages.commit(infos = cis)
+    srcStorages.commit(session = response.session, infos = cis)
     check(srcStorages.hashes().keys.all { id -> srcStorages.require(id = id).items == dstStorages.require(id = id).items })
 //    storages.println()
     println("")
@@ -173,14 +165,14 @@ fun main() {
     check(deleted)
     tStorages.println()
     println("update: ${rDescribed.id}")
-    val rItemInfo = rStorages.require<Foo>().update(id = rDescribed.id, item = Foo(text = "foo:${nextInt()}"))
+    val rItemInfo = rStorages.require<Foo>().update(id = rDescribed.id, payload = Foo(text = "foo:${nextInt()}"))
     checkNotNull(rItemInfo)
     rStorages.println()
     //
     commit(srcStorages = tStorages, dstStorages = rStorages)
     //
     println("update: ${rDescribed.id}")
-    tStorages.require<Foo>().update(id = rDescribed.id, item = Foo(text = "foo:${nextInt()}"))
+    tStorages.require<Foo>().update(id = rDescribed.id, payload = Foo(text = "foo:${nextInt()}"))
     //
     commit(srcStorages = tStorages, dstStorages = rStorages)
     //
