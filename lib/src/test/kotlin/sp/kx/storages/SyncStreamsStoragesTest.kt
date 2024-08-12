@@ -200,29 +200,29 @@ internal class SyncStreamsStoragesTest {
             val rHash = rStorages.require<String>().hash
             check(!tHash.contentEquals(rHash))
         }
-        val sis = rStorages.hashes().let {
+        val response = rStorages.hashes().let {
             assertEquals(it.keys.single(), mockUUID(1))
             assertTrue(it.values.single().contentEquals(item2ListHash))
             tStorages.getSyncInfo(it)
         }
-        assertEquals(sis.keys.single(), mockUUID(1))
-        val syncInfo = sis.values.single()
+        assertEquals(response.infos.keys.single(), mockUUID(1))
+        val syncInfo = response.infos.values.single()
         assertEquals(syncInfo.infos.keys.single(), mockUUID(11))
         assertEquals(syncInfo.infos.values.single(), mockItemInfo(created = 11.milliseconds, updated = 11.milliseconds, hash = itemHash))
         assertTrue(syncInfo.deleted.isEmpty())
-        val mis = rStorages.getMergeInfo(sis)
+        val mis = rStorages.getMergeInfo(session = response.session, infos = response.infos)
         assertEquals(mis.keys.single(), mockUUID(1))
         val mergeInfo = mis.values.single()
         assertTrue(mergeInfo.deleted.isEmpty())
         assertEquals(mergeInfo.downloaded.single(), mockUUID(11))
         assertEquals(mergeInfo.items.single(), mockDescribed(id = mockUUID(12), payload = StringTransformer.encode(payload), info = mockItemInfo(created = 12.milliseconds, updated = 12.milliseconds, hash = itemHash)))
-        val cis = tStorages.merge(mis)
+        val cis = tStorages.merge(session = response.session, infos = mis)
         assertEquals(cis.keys.single(), mockUUID(1))
         val commitInfo = cis.values.single()
         assertTrue(commitInfo.deleted.isEmpty())
         assertEquals(commitInfo.items.single(), mockDescribed(id = mockUUID(11), payload = StringTransformer.encode(payload), info = mockItemInfo(created = 11.milliseconds, updated = 11.milliseconds, hash = itemHash)))
         assertTrue(commitInfo.hash.contentEquals(itemFinalListHash))
-        val ids = rStorages.commit(cis)
+        val ids = rStorages.commit(session = response.session, infos = cis)
         assertEquals(ids.single(), mockUUID(1))
         assertEquals(tStorages.hashes().keys.single(), mockUUID(1))
         assertTrue(tStorages.hashes().values.single().contentEquals(itemFinalListHash))
@@ -289,7 +289,10 @@ internal class SyncStreamsStoragesTest {
             time = described.info.created
             tStorages.require<String>().add(described.payload)
         }
-        rStorages.commit(tStorages.merge(rStorages.getMergeInfo(tStorages.getSyncInfo(rStorages.hashes()))))
+        val response = tStorages.getSyncInfo(hashes = rStorages.hashes())
+        val mis = rStorages.getMergeInfo(session = response.session, infos = response.infos)
+        val cis = tStorages.merge(session = response.session, infos = mis)
+        rStorages.commit(session = response.session, infos = cis)
         check(tStorages.hashes().keys.sorted() == rStorages.hashes().keys.sorted())
         tStorages.hashes().keys.forEach { storageId ->
             val tStorage = tStorages.require(storageId)
@@ -306,16 +309,16 @@ internal class SyncStreamsStoragesTest {
         assertTrue(deleted)
         assertTrue(rStorages.require(mockUUID(1)).items.none { it.id == mockUUID(11) })
         assertTrue(tStorages.require(mockUUID(1)).items.any { it.id == mockUUID(11) })
-        rStorages.getSyncInfo(tStorages.hashes()).also { sis ->
-            assertEquals(sis.keys, setOf(mockUUID(1)))
-            val si = sis[mockUUID(1)]
+        rStorages.getSyncInfo(tStorages.hashes()).also { response ->
+            assertEquals(response.infos.keys, setOf(mockUUID(1)))
+            val si = response.infos[mockUUID(1)]
             assertNotNull(si)
             checkNotNull(si)
             assertEquals(si.deleted.sorted(), listOf(mockUUID(11)))
         }
-        tStorages.getSyncInfo(rStorages.hashes()).also { sis ->
-            assertEquals(sis.keys, setOf(mockUUID(1)))
-            val si = sis[mockUUID(1)]
+        tStorages.getSyncInfo(rStorages.hashes()).also { response ->
+            assertEquals(response.infos.keys, setOf(mockUUID(1)))
+            val si = response.infos[mockUUID(1)]
             assertNotNull(si)
             checkNotNull(si)
             assertEquals(si.deleted.sorted(), emptyList<UUID>())
@@ -479,9 +482,11 @@ internal class SyncStreamsStoragesTest {
         val storages = SyncStreamsStorages.Builder()
             .add(mockUUID(1), StringTransformer)
             .mock()
-        assertThrows(IllegalStateException::class.java) {
-            storages.getMergeInfo(infos = mapOf(mockUUID(2) to mockSyncInfo()))
+        val id = mockUUID(2)
+        val throwable = assertThrows(IllegalStateException::class.java) {
+            storages.getMergeInfo(session = TODO("getMergeInfoErrorTest:session"), infos = mapOf(id to mockSyncInfo()))
         }
+        assertEquals("No storage by ID: \"$id\"!", throwable.message)
     }
 
     @Test
@@ -538,13 +543,14 @@ internal class SyncStreamsStoragesTest {
         infos: Map<UUID, CommitInfo>,
         items: Map<UUID, List<Described<out Any>>>,
     ) {
-        val mergeInfo = getMergeInfo(storages.getSyncInfo(hashes()))
-        val commitInfo = storages.merge(mergeInfo)
+        val response = storages.getSyncInfo(hashes())
+        val mis = getMergeInfo(session = response.session, infos = response.infos)
+        val cis = storages.merge(session = response.session, infos = mis)
         assertFiles(files = files)
         check(infos.keys.isNotEmpty())
-        assertEquals(commitInfo.keys.sorted(), infos.keys.sorted())
+        assertEquals(cis.keys.sorted(), infos.keys.sorted())
         infos.forEach { (id, info) ->
-            val actual = commitInfo[id]
+            val actual = cis[id]
             assertNotNull(actual, "id: $id")
             checkNotNull(actual)
             SyncStreamsStorageTest.assert(
@@ -715,9 +721,11 @@ internal class SyncStreamsStoragesTest {
         val storages = SyncStreamsStorages.Builder()
             .add(mockUUID(1), StringTransformer)
             .mock()
-        assertThrows(IllegalStateException::class.java) {
-            storages.merge(infos = mapOf(mockUUID(2) to mockMergeInfo()))
+        val id = mockUUID(2)
+        val throwable = assertThrows(IllegalStateException::class.java) {
+            storages.merge(session = TODO("mergeErrorTest:session"), infos = mapOf(id to mockMergeInfo()))
         }
+        assertEquals("No storage by ID: \"$id\"!", throwable.message)
     }
 
     private fun assertCommit(
@@ -726,8 +734,10 @@ internal class SyncStreamsStoragesTest {
         files: Map<File, List<String>>,
         items: Map<UUID, List<Described<out Any>>>,
     ) {
-        val mergeInfo = dstStorages.getMergeInfo(srcStorages.getSyncInfo(dstStorages.hashes()))
-        dstStorages.commit(srcStorages.merge(mergeInfo))
+        val response = srcStorages.getSyncInfo(dstStorages.hashes())
+        val mis = dstStorages.getMergeInfo(session = response.session, infos = response.infos)
+        val cis = srcStorages.merge(session = response.session, infos = mis)
+        dstStorages.commit(session = response.session, infos = cis)
         assertFiles(files = files)
         check(items.isNotEmpty())
         items.forEach { (id, list) ->
@@ -747,9 +757,11 @@ internal class SyncStreamsStoragesTest {
         afterCommit: Map<File, List<String>>,
     ) {
         assertFiles(files = beforeMerge)
-        val mergeInfo = dstStorages.merge(srcStorages.getMergeInfo(dstStorages.getSyncInfo(srcStorages.hashes())))
+        val response = dstStorages.getSyncInfo(srcStorages.hashes())
+        val mis = srcStorages.getMergeInfo(session = response.session, infos = response.infos)
+        val cis = dstStorages.merge(session = response.session, infos = mis)
         assertFiles(files = afterMerge)
-        srcStorages.commit(mergeInfo)
+        srcStorages.commit(session = response.session, infos = cis)
         assertFiles(files = afterCommit)
     }
 
@@ -1068,9 +1080,11 @@ internal class SyncStreamsStoragesTest {
         val storages = SyncStreamsStorages.Builder()
             .add(mockUUID(1), StringTransformer)
             .mock()
-        assertThrows(IllegalStateException::class.java) {
-            storages.commit(infos = mapOf(mockUUID(2) to mockCommitInfo()))
+        val id = mockUUID(2)
+        val throwable = assertThrows(IllegalStateException::class.java) {
+            storages.commit(session = TODO("commitErrorTest:session"), infos = mapOf(id to mockCommitInfo()))
         }
+        assertEquals("No storage by ID: \"$id\"!", throwable.message)
     }
 
     @Test
@@ -1106,7 +1120,7 @@ internal class SyncStreamsStoragesTest {
             check(!commitInfo.hash.contentEquals(storages.require<String>().hash))
             val cis = mapOf(mockUUID(1) to commitInfo)
             check(cis.keys.single() == mockUUID(1))
-            storages.commit(infos = cis)
+            storages.commit(session = TODO("commitHashErrorTest:session"), infos = cis)
         }
         assertEquals("Wrong hash!", throwable.message)
     }
@@ -1122,7 +1136,9 @@ internal class SyncStreamsStoragesTest {
         }
 
         private fun SyncStreamsStorages.assertSyncInfo(hashes: Map<UUID, ByteArray>, expected: Map<UUID, SyncInfo>) {
-            val actual = getSyncInfo(hashes)
+            val response = getSyncInfo(hashes)
+            // todo response.session
+            val actual = response.infos
             assertEquals(expected.size, actual.size, "SyncInfo:\n$expected\n$actual\n")
             for ((storageId, value) in expected) {
                 val syncInfo = actual[storageId] ?: error("No hash by ID: \"$storageId\"!")
@@ -1146,7 +1162,8 @@ internal class SyncStreamsStoragesTest {
         }
 
         private fun SyncStreamsStorages.assertMergeInfo(storage: SyncStreamsStorages, expected: Map<UUID, MergeInfo>) {
-            val actual = getMergeInfo(storage.getSyncInfo(hashes()))
+            val response = storage.getSyncInfo(hashes())
+            val actual = getMergeInfo(session = response.session, infos = response.infos)
             assertEquals(expected.size, actual.size, "MergeInfo:\n$expected\n$actual\n")
             for ((id, value) in expected) {
                 SyncStreamsStorageTest.assert(
@@ -1399,8 +1416,10 @@ internal class SyncStreamsStoragesTest {
                         ),
                     ),
                 )
-                val mergeInfo = rStorages.getMergeInfo(tStorages.getSyncInfo(rStorages.hashes()))
-                rStorages.commit(tStorages.merge(mergeInfo))
+                val response = tStorages.getSyncInfo(rStorages.hashes())
+                val mis = rStorages.getMergeInfo(session = response.session, infos = response.infos)
+                val cis = tStorages.merge(session = response.session, infos = mis)
+                rStorages.commit(session = response.session, infos = cis)
                 assertFiles(
                     mapOf(
                         File(dir, "t/storages") to listOf(
