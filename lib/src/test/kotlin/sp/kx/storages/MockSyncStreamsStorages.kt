@@ -20,5 +20,5 @@ internal fun SyncStreamsStorages.Builder.mock(
             return uuidProvider.provide()
         }
     },
-    getStreamerProvider = getStreamerProvider,
+    getStreamers = getStreamerProvider,
 )
