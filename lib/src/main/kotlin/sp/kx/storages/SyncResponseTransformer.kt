@@ -1,40 +1,41 @@
 package sp.kx.storages
 
+import sp.kx.bytes.readBytes
 import sp.kx.bytes.readInt
-import sp.kx.bytes.write
-import java.util.HashMap
+import sp.kx.bytes.readLong
+import sp.kx.bytes.readUUID
+import sp.kx.bytes.writeBytes
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.util.UUID
+import kotlin.time.Duration.Companion.milliseconds
 
 class SyncResponseTransformer(
     private val hf: HashFunction,
 ) : Transformer<SyncResponse> {
     override fun encode(decoded: SyncResponse): ByteArray {
-        val encoded = ByteArray(hf.size * 2 + 4 + decoded.infos.size)
-        System.arraycopy(decoded.session.src, 0, encoded, 0, hf.size)
-        System.arraycopy(decoded.session.dst, 0, encoded, hf.size, hf.size)
-        encoded.write(index = hf.size * 2, value = decoded.infos.size)
-        decoded.infos.entries.forEachIndexed { index, (id, info) ->
-            encoded.write(index = hf.size * 2 + 4 + index * 16, value = id)
-            // todo
+        val stream = ByteArrayOutputStream()
+        stream.write(decoded.session.src)
+        stream.write(decoded.session.dst)
+        stream.writeBytes(value = decoded.infos.size)
+        decoded.infos.forEach { (id, info) ->
+            stream.writeBytes(value = id)
+            stream.writeBytes(value = info)
         }
-        return encoded
-    }
-
-    private fun ByteArray.readSyncSession(index: Int = 0, hf: HashFunction): SyncSession {
-        val src = ByteArray(hf.size)
-        System.arraycopy(this, index, src, 0, hf.size)
-        val dst = ByteArray(hf.size)
-        System.arraycopy(this, index + hf.size, dst, 0, hf.size)
-        return SyncSession(
-            src = src,
-            dst = dst,
-        )
+        return stream.toByteArray()
     }
 
     override fun decode(encoded: ByteArray): SyncResponse {
-        val session = encoded.readSyncSession(hf = hf)
-        val infos = HashMap<UUID, SyncInfo>(encoded.readInt(index = hf.size * 2))
-        // todo
+        val stream = ByteArrayInputStream(encoded)
+        val session = SyncSession(
+            src = stream.readBytes(hf.size),
+            dst = stream.readBytes(hf.size),
+        )
+        val syncInfoSize = stream.readInt()
+        val infos = HashMap<UUID, SyncInfo>(syncInfoSize)
+        for (i in 0 until syncInfoSize) {
+            infos[stream.readUUID()] = stream.readSyncInfo(hf = hf)
+        }
         return SyncResponse(
             session = session,
             infos = infos,
