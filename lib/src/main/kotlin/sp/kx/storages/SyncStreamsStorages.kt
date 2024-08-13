@@ -9,9 +9,19 @@ class SyncStreamsStorages private constructor(
     private val transformers: Map<UUID, Pair<Class<out Any>, Transformer<out Any>>>,
     private val env: SyncStreamsStorage.Environment,
     private val streamers: StreamerProvider,
+    private var session: SyncSession?,
 ) : MutableStorages {
     class Builder {
         private val transformers = mutableMapOf<UUID, Pair<Class<out Any>, Transformer<out Any>>>()
+        private var session: SyncSession?
+
+        constructor() {
+            session = null
+        }
+
+        internal constructor(session: SyncSession) {
+            this.session = session
+        }
 
         fun <T : Any> add(id: UUID, type: Class<T>, transformer: Transformer<T>): Builder {
             if (transformers.containsKey(id)) error("ID \"$id\" is repeated!")
@@ -34,6 +44,7 @@ class SyncStreamsStorages private constructor(
                 env = env,
                 streamers = getStreamers(transformers.keys),
                 transformers = transformers,
+                session = session,
             )
         }
 
@@ -48,6 +59,7 @@ class SyncStreamsStorages private constructor(
                 env = env,
                 streamers = FileStreamerProvider(dir = dir, ids = transformers.keys),
                 transformers = transformers,
+                session = session,
             )
         }
     }
@@ -61,8 +73,6 @@ class SyncStreamsStorages private constructor(
         fun getPointer(id: UUID): Int
         fun putPointers(values: Map<UUID, Int>)
     }
-
-    private var session: SyncSession? = null
 
     override fun get(id: UUID): MutableStorage<out Any>? {
         val (_, transformer) = transformers[id] ?: return null
@@ -166,8 +176,8 @@ class SyncStreamsStorages private constructor(
         val ids = transformers.keys
         if (!session.dst.contentEquals(getHash(ids = ids))) error("Session expired!")
         val dstSession = this.session ?: error("No session!")
-        if (!dstSession.dst.contentEquals(session.dst)) TODO()
-        if (!dstSession.src.contentEquals(session.src)) TODO()
+        if (!dstSession.dst.contentEquals(session.dst)) error("Destination session error!")
+        if (!dstSession.src.contentEquals(session.src)) error("Source session error!")
         this.session = null
         val newPointers = mutableMapOf<UUID, Int>()
         val result = mutableMapOf<UUID, CommitInfo>()

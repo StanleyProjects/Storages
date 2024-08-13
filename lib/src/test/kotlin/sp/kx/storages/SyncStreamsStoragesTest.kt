@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import sp.kx.bytes.toHEX
+import sp.kx.bytes.write
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -718,12 +719,33 @@ internal class SyncStreamsStoragesTest {
 
     @Test
     fun mergeErrorTest() {
-        val storages = SyncStreamsStorages.Builder()
+        val hashes = MockHashFunction.hashes(
+            emptyList<Described<String>>() to "items:empty",
+        ) + listOf(
+            MockHashFunction.bytesOf(id = mockUUID(1), decoded = "items:empty") to MockHashFunction.map("storages:hash"),
+        )
+        val dir = File("/tmp/storages")
+        dir.deleteRecursively()
+        dir.mkdirs()
+        val session = mockSyncSession(
+            dst = MockHashFunction.map("storages:hash"),
+        )
+        val storages = SyncStreamsStorages.Builder(session)
             .add(mockUUID(1), StringTransformer)
-            .mock()
+            .mock(
+                hashes = hashes,
+                getStreamerProvider = { ids ->
+                    assertEquals(listOf(mockUUID(1)), ids.sorted())
+                    FileStreamerProvider(
+                        dir = File(dir, "foo"),
+                        ids = ids,
+                    )
+                },
+            )
         val id = mockUUID(2)
+        val infos = mapOf(id to mockMergeInfo())
         val throwable = assertThrows(IllegalStateException::class.java) {
-            storages.merge(session = TODO("mergeErrorTest:session"), infos = mapOf(id to mockMergeInfo()))
+            storages.merge(session = session, infos = infos)
         }
         assertEquals("No storage by ID: \"$id\"!", throwable.message)
     }

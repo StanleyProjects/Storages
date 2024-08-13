@@ -43,6 +43,14 @@ internal class MockHashFunction(
             return idBytes + updatedBytes + encoded
         }
 
+        fun bytesOf(id: UUID, decoded: String): ByteArray {
+            val encoded = MockHashFunction.map(decoded)
+            val bytes = ByteArray(16 + encoded.size)
+            bytes.write(value = mockUUID(1))
+            System.arraycopy(encoded, 0, bytes, 16, encoded.size)
+            return bytes
+        }
+
         fun hash(list: List<Described<out Any>>): ByteArray {
             return list.flatMap {
                 bytesOf(id = it.id, updated = it.info.updated, encoded = it.info.hash).toList()
