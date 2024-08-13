@@ -2,13 +2,11 @@ package sp.kx.storages
 
 import sp.kx.bytes.readBytes
 import sp.kx.bytes.readInt
-import sp.kx.bytes.readLong
 import sp.kx.bytes.readUUID
 import sp.kx.bytes.writeBytes
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.UUID
-import kotlin.time.Duration.Companion.milliseconds
 
 class SyncResponseTransformer(
     private val hf: HashFunction,

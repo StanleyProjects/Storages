@@ -141,18 +141,6 @@ class SyncStreamsStorages private constructor(
 
     fun getSyncInfo(hashes: Map<UUID, ByteArray>): SyncResponse {
         val ids = transformers.keys
-        val foo = mutableMapOf<UUID, ByteArray>()
-        ids.sorted().forEachIndexed { index, id ->
-            val pointer = streamers.getPointer(id = id)
-            val streamer = streamers.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
-            val hash = SyncStreamsStorage.getHash(streamer = streamer, hf = hf)
-//            foo[id] = hash
-        }
-        hashes.forEach { (id, hash) ->
-            foo[id] = hash
-        }
-        val message = foo.entries.joinToString(prefix = "\n", separator = "\n") { (id, hash) -> "$id: \"${String(hash)}\"" }
-//        error(message)
         val session = SyncSession(
             src = getHash(hashes = hashes),
             dst = getHash(ids = ids),
