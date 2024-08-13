@@ -1334,6 +1334,23 @@ internal class SyncStreamsStoragesTest {
                 IntTransformer.hashPair(mockDescribed(pointer = 27, payload = 27)),
                 IntTransformer.hashPair(intTUpdated),
                 IntTransformer.hashPair(intRUpdated),
+            ) + listOf(
+                MockHashFunction.hashPair(
+                    mapOf(
+                        mockUUID(1) to "empty:hash",
+                        mockUUID(2) to "empty:hash",
+                        mockUUID(3) to "empty:hash",
+                        mockUUID(5) to "bars:hash",
+                    ),
+                ),
+                MockHashFunction.hashPair(
+                    mapOf(
+                        mockUUID(1) to "strings:hash",
+                        mockUUID(2) to "ints:hash",
+                        mockUUID(3) to "longs:hash",
+                        mockUUID(4) to "foos:hash",
+                    ),
+                ),
             )
             var time = 1.milliseconds
             val timeProvider = MockProvider { time }
@@ -1393,9 +1410,7 @@ internal class SyncStreamsStoragesTest {
                 itemId = described.id
                 time = described.info.created
                 tStorages.require<String>().add(described.payload)
-                if (!commited) {
-                    rStorages.require<String>().add(described.payload)
-                }
+                if (!commited) rStorages.require<String>().add(described.payload)
             }
             ints.forEach { described ->
                 itemId = described.id

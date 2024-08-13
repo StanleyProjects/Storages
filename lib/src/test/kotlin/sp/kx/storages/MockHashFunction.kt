@@ -44,11 +44,17 @@ internal class MockHashFunction(
         }
 
         fun bytesOf(id: UUID, decoded: String): ByteArray {
-            val encoded = MockHashFunction.map(decoded)
+            val encoded = map(decoded)
             val bytes = ByteArray(16 + encoded.size)
-            bytes.write(value = mockUUID(1))
+            bytes.write(value = id)
             System.arraycopy(encoded, 0, bytes, 16, encoded.size)
             return bytes
+        }
+
+        fun hashPair(hashes: Map<UUID, String>): Pair<ByteArray, ByteArray> {
+            return hashes.map { (id, decoded) ->
+                bytesOf(id = id, decoded = decoded).toList()
+            }.flatten().toByteArray() to map(hashes.map { (id, decoded) -> "$id-$decoded" }.toString())
         }
 
         fun hash(list: List<Described<out Any>>): ByteArray {
