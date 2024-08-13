@@ -13,17 +13,7 @@ internal class MockHashFunction(
     override fun map(bytes: ByteArray): ByteArray {
         val hash = hashes.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second
         if (hash == null) {
-            val message = """
-                No hash!
-                ---
-                hashes: ${hashes.map { (key, _) -> String(key)}}
-                -
-                ${bytes.size}
-                -
-                ${String(bytes)}
-                ---
-            """.trimIndent()
-            error(message)
+            return map("${bytes.contentHashCode()}")
         }
         return hash
     }
@@ -43,18 +33,12 @@ internal class MockHashFunction(
             return idBytes + updatedBytes + encoded
         }
 
-        fun bytesOf(id: UUID, decoded: String): ByteArray {
+        fun hashOf(id: UUID, decoded: String): ByteArray {
             val encoded = map(decoded)
             val bytes = ByteArray(16 + encoded.size)
             bytes.write(value = id)
             System.arraycopy(encoded, 0, bytes, 16, encoded.size)
-            return bytes
-        }
-
-        fun hashPair(hashes: Map<UUID, String>): Pair<ByteArray, ByteArray> {
-            return hashes.map { (id, decoded) ->
-                bytesOf(id = id, decoded = decoded).toList()
-            }.flatten().toByteArray() to map(hashes.map { (id, decoded) -> "$id-$decoded" }.toString())
+            return map("${bytes.contentHashCode()}")
         }
 
         fun hash(list: List<Described<out Any>>): ByteArray {

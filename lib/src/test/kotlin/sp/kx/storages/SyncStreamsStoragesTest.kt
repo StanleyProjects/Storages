@@ -480,12 +480,31 @@ internal class SyncStreamsStoragesTest {
 
     @Test
     fun getMergeInfoErrorTest() {
-        val storages = SyncStreamsStorages.Builder()
+        val hashes = MockHashFunction.hashes(
+            emptyList<Described<String>>() to "items:empty",
+        )
+        val session = mockSyncSession(
+            src = MockHashFunction.hashOf(id = mockUUID(1), decoded = "items:empty"),
+        )
+        val dir = File("/tmp/storages")
+        dir.deleteRecursively()
+        dir.mkdirs()
+        val storages = SyncStreamsStorages.Builder(session)
             .add(mockUUID(1), StringTransformer)
-            .mock()
+            .mock(
+                hashes = hashes,
+                getStreamerProvider = { ids ->
+                    assertEquals(listOf(mockUUID(1)), ids.sorted())
+                    FileStreamerProvider(
+                        dir = File(dir, "foo"),
+                        ids = ids,
+                    )
+                },
+            )
         val id = mockUUID(2)
+        val infos = mapOf(id to mockSyncInfo())
         val throwable = assertThrows(IllegalStateException::class.java) {
-            storages.getMergeInfo(session = TODO("getMergeInfoErrorTest:session"), infos = mapOf(id to mockSyncInfo()))
+            storages.getMergeInfo(session = session, infos = infos)
         }
         assertEquals("No storage by ID: \"$id\"!", throwable.message)
     }
@@ -721,14 +740,12 @@ internal class SyncStreamsStoragesTest {
     fun mergeErrorTest() {
         val hashes = MockHashFunction.hashes(
             emptyList<Described<String>>() to "items:empty",
-        ) + listOf(
-            MockHashFunction.bytesOf(id = mockUUID(1), decoded = "items:empty") to MockHashFunction.map("storages:hash"),
         )
         val dir = File("/tmp/storages")
         dir.deleteRecursively()
         dir.mkdirs()
         val session = mockSyncSession(
-            dst = MockHashFunction.map("storages:hash"),
+            dst = MockHashFunction.hashOf(id = mockUUID(1), decoded = "items:empty"),
         )
         val storages = SyncStreamsStorages.Builder(session)
             .add(mockUUID(1), StringTransformer)
@@ -1099,12 +1116,31 @@ internal class SyncStreamsStoragesTest {
 
     @Test
     fun commitErrorTest() {
-        val storages = SyncStreamsStorages.Builder()
+        val hashes = MockHashFunction.hashes(
+            emptyList<Described<String>>() to "items:empty",
+        )
+        val dir = File("/tmp/storages")
+        dir.deleteRecursively()
+        dir.mkdirs()
+        val session = mockSyncSession(
+            src = MockHashFunction.hashOf(id = mockUUID(1), decoded = "items:empty"),
+        )
+        val storages = SyncStreamsStorages.Builder(session)
             .add(mockUUID(1), StringTransformer)
-            .mock()
+            .mock(
+                hashes = hashes,
+                getStreamerProvider = { ids ->
+                    assertEquals(listOf(mockUUID(1)), ids.sorted())
+                    FileStreamerProvider(
+                        dir = File(dir, "foo"),
+                        ids = ids,
+                    )
+                },
+            )
         val id = mockUUID(2)
+        val infos = mapOf(id to mockCommitInfo())
         val throwable = assertThrows(IllegalStateException::class.java) {
-            storages.commit(session = TODO("commitErrorTest:session"), infos = mapOf(id to mockCommitInfo()))
+            storages.commit(session = session, infos = infos)
         }
         assertEquals("No storage by ID: \"$id\"!", throwable.message)
     }
@@ -1121,7 +1157,10 @@ internal class SyncStreamsStoragesTest {
         val dir = File("/tmp/storages")
         dir.deleteRecursively()
         dir.mkdirs()
-        val storages = SyncStreamsStorages.Builder()
+        val session = mockSyncSession(
+            src = MockHashFunction.hashOf(id = mockUUID(1), decoded = "items:empty"),
+        )
+        val storages = SyncStreamsStorages.Builder(session)
             .add(mockUUID(1), StringTransformer)
             .mock(
                 hashes = hashes,
@@ -1142,7 +1181,7 @@ internal class SyncStreamsStoragesTest {
             check(!commitInfo.hash.contentEquals(storages.require<String>().hash))
             val cis = mapOf(mockUUID(1) to commitInfo)
             check(cis.keys.single() == mockUUID(1))
-            storages.commit(session = TODO("commitHashErrorTest:session"), infos = cis)
+            storages.commit(session = session, infos = cis)
         }
         assertEquals("Wrong hash!", throwable.message)
     }
@@ -1334,23 +1373,6 @@ internal class SyncStreamsStoragesTest {
                 IntTransformer.hashPair(mockDescribed(pointer = 27, payload = 27)),
                 IntTransformer.hashPair(intTUpdated),
                 IntTransformer.hashPair(intRUpdated),
-            ) + listOf(
-                MockHashFunction.hashPair(
-                    mapOf(
-                        mockUUID(1) to "empty:hash",
-                        mockUUID(2) to "empty:hash",
-                        mockUUID(3) to "empty:hash",
-                        mockUUID(5) to "bars:hash",
-                    ),
-                ),
-                MockHashFunction.hashPair(
-                    mapOf(
-                        mockUUID(1) to "strings:hash",
-                        mockUUID(2) to "ints:hash",
-                        mockUUID(3) to "longs:hash",
-                        mockUUID(4) to "foos:hash",
-                    ),
-                ),
             )
             var time = 1.milliseconds
             val timeProvider = MockProvider { time }
