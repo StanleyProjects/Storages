@@ -25,9 +25,9 @@ internal fun OutputStream.writeBytes(value: SyncInfo) {
 }
 
 internal fun OutputStream.writeBytes(value: ItemInfo) {
-    writeBytes(value = value.created.inWholeMilliseconds)
     writeBytes(value = value.updated.inWholeMilliseconds)
     write(value.hash)
+    writeBytes(value.size)
 }
 
 internal fun InputStream.readSyncInfo(hf: HashFunction): SyncInfo {
@@ -49,8 +49,8 @@ internal fun InputStream.readSyncInfo(hf: HashFunction): SyncInfo {
 
 internal fun InputStream.readItemInfo(hf: HashFunction): ItemInfo {
     return ItemInfo(
-        created = readLong().milliseconds,
         updated = readLong().milliseconds,
-        hash = readBytes(hf.size),
+        hash = readBytes(size = hf.size),
+        size = readInt(),
     )
 }

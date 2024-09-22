@@ -20,7 +20,7 @@ import java.util.UUID
  */
 class CommitInfo(
     val hash: ByteArray,
-    val items: List<Described<ByteArray>>,
+    val items: List<RawPayload>,
     val deleted: Set<UUID>,
 ) {
     override fun toString(): String {

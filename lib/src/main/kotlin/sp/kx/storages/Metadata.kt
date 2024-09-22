@@ -1,31 +1,38 @@
 package sp.kx.storages
 
+import java.util.Date
 import java.util.Objects
 import java.util.UUID
 import kotlin.time.Duration
 
-class Raw(
+class Metadata(
     val id: UUID,
+    val created: Duration,
     val info: ItemInfo,
 ) {
     fun copy(
         updated: Duration,
         hash: ByteArray,
-    ): Raw {
-        return Raw(
+        size: Int,
+    ): Metadata {
+        return Metadata(
             id = id,
-            info = info.copy(updated = updated, hash = hash),
+            created = created,
+            info = info.copy(updated = updated, hash = hash, size = size),
         )
     }
 
     override fun toString(): String {
-        return "{id: $id, info: $info}"
+        return "{" +
+            "id: $id, " +
+            "created: ${Date(created.inWholeMilliseconds)}, " +
+            "info: $info, " +
+            "}"
     }
 
-    @Suppress("ReturnCount")
     override fun equals(other: Any?): Boolean {
         return when (other) {
-            is Raw -> other.id == id && other.info == info
+            is Metadata -> id == other.id && created == other.created && info == other.info
             else -> false
         }
     }
@@ -33,6 +40,7 @@ class Raw(
     override fun hashCode(): Int {
         return Objects.hash(
             id,
+            created,
             info,
         )
     }

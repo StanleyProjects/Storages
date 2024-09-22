@@ -13,41 +13,42 @@ import kotlin.time.Duration
  * @since 0.4.1
  */
 class ItemInfo(
-    val created: Duration,
     val updated: Duration,
     val hash: ByteArray,
+    val size: Int,
 ) {
     fun copy(
         updated: Duration,
         hash: ByteArray,
+        size: Int,
     ): ItemInfo {
         return ItemInfo(
-            created = created,
             updated = updated,
             hash = hash,
+            size = size,
         )
     }
 
     override fun toString(): String {
         return "{" +
-            "created: ${Date(created.inWholeMilliseconds)}, " +
             "updated: ${Date(updated.inWholeMilliseconds)}, " +
-            "hash: \"${hash.toHEX()}\"" +
+            "hash: \"${hash.toHEX()}\", " +
+            "size: $size" +
             "}"
     }
 
     override fun equals(other: Any?): Boolean {
         return when (other) {
-            is ItemInfo -> other.created == created && other.updated == updated && other.hash.contentEquals(hash)
+            is ItemInfo -> other.updated == updated && other.hash.contentEquals(hash) && other.size == size
             else -> false
         }
     }
 
     override fun hashCode(): Int {
         return Objects.hash(
-            created,
             updated,
             hash.contentHashCode(),
+            size,
         )
     }
 }

@@ -34,8 +34,8 @@ import java.util.UUID
  */
 interface MutableStorage<T : Any> : Storage<T> {
     fun delete(id: UUID): Boolean
-    fun add(payload: T): Described<T>
-    fun update(id: UUID, payload: T): ItemInfo?
+    fun add(value: T): Payload<T>
+    fun update(id: UUID, value: T): ItemInfo?
 
     // todo addAll
     // todo deleteAll

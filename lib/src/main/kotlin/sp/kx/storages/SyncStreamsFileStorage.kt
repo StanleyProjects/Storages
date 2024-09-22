@@ -13,7 +13,7 @@ class SyncStreamsFileStorage(
         TODO("SyncStreamsFileStorage:delete")
     }
 
-    override fun add(bytes: ByteArray): Raw {
+    override fun add(bytes: ByteArray): Metadata {
         TODO("SyncStreamsFileStorage:add")
     }
 
@@ -23,7 +23,7 @@ class SyncStreamsFileStorage(
 
     override val hash: ByteArray
         get() = TODO("SyncStreamsFileStorage:hash")
-    override val items: List<Raw>
+    override val items: List<Metadata>
         get() = TODO("SyncStreamsFileStorage:items")
 
     override fun getBytes(id: UUID): ByteArray {
