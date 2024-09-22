@@ -14,12 +14,13 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class SyncStreamsStorageTest {
     companion object {
         fun assert(
-            expected: Described<out Any>,
-            actual: Described<out Any>,
+            expected: Payload<out Any>,
+            actual: Payload<out Any>,
         ) {
-            assertEquals(expected.id, actual.id)
-            assert(expected.info, actual.info)
-            assertEquals(expected.payload, actual.payload, "described: ${expected.id}\n")
+            assertEquals(expected.meta.id, actual.meta.id)
+            assertEquals(expected.meta.created, actual.meta.created)
+            assert(expected.meta.info, actual.meta.info)
+            assertEquals(expected.value, actual.value, "payload: ${expected.meta.id}\n")
         }
 
         fun assert(
@@ -35,7 +36,7 @@ internal class SyncStreamsStorageTest {
 
         private fun MergeInfo.assert(
             downloaded: Set<UUID>,
-            items: List<Described<ByteArray>>,
+            items: List<RawPayload>,
             deleted: Set<UUID>,
         ) {
             assertEquals(deleted.size, this.deleted.size, "deleted:\n$deleted\n${this.deleted}\n")

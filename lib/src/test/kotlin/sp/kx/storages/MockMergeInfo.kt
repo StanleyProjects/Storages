@@ -4,7 +4,7 @@ import java.util.UUID
 
 internal fun mockMergeInfo(
     downloaded: Set<UUID> = emptySet(),
-    items: List<Described<ByteArray>> = emptyList(),
+    items: List<RawPayload> = emptyList(),
     deleted: Set<UUID> = emptySet(),
 ): MergeInfo {
     return MergeInfo(

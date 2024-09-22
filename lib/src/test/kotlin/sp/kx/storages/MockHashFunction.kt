@@ -41,15 +41,15 @@ internal class MockHashFunction(
             return map("${bytes.contentHashCode()}")
         }
 
-        fun hash(list: List<Described<out Any>>): ByteArray {
+        fun hash(list: List<Payload<out Any>>): ByteArray {
             return list.flatMap {
-                bytesOf(id = it.id, updated = it.info.updated, encoded = it.info.hash).toList()
+                bytesOf(id = it.meta.id, updated = it.meta.info.updated, encoded = it.meta.info.hash).toList()
             }.toByteArray()
         }
 
         fun hashes(
-            first: Pair<List<Described<out Any>>, String>,
-            vararg other: Pair<List<Described<out Any>>, String>,
+            first: Pair<List<Payload<out Any>>, String>,
+            vararg other: Pair<List<Payload<out Any>>, String>,
         ): List<Pair<ByteArray, ByteArray>> {
             return other.map { (item, hash) ->
                 hash(item) to map(hash)

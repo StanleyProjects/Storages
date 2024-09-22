@@ -10,9 +10,9 @@ internal class MockMutableFileStorage(
     private val hf: HashFunction = MockHashFunction(),
     private val uuidProvider: MockProvider<UUID> = MockProvider { mockUUID(1) },
     private val timeProvider: MockProvider<Duration> = MockProvider { 1.milliseconds },
-    values: Map<Raw, ByteArray> = emptyMap(),
+    values: Map<Metadata, ByteArray> = emptyMap(),
 ) : MutableFileStorage {
-    private val values: MutableMap<Raw, ByteArray> = values.toMutableMap()
+    private val values: MutableMap<Metadata, ByteArray> = values.toMutableMap()
 
     override fun delete(id: UUID): Boolean {
         val raw = values.entries.firstOrNull { (raw, _) -> raw.id == id }?.key ?: return false
@@ -20,23 +20,29 @@ internal class MockMutableFileStorage(
         return true
     }
 
-    override fun add(bytes: ByteArray): Raw {
-        val raw = Raw(
+    override fun add(bytes: ByteArray): Metadata {
+        val created = timeProvider.provide()
+        val meta = Metadata(
             id = uuidProvider.provide(),
+            created = created,
             info = mockItemInfo(
-                created = timeProvider.provide(),
-                updated = timeProvider.provide(),
+                updated = created,
                 hash = hf.map(bytes = bytes),
+                size = bytes.size,
             ),
         )
-        values[raw] = bytes
-        return raw
+        values[meta] = bytes
+        return meta
     }
 
     override fun update(id: UUID, bytes: ByteArray): ItemInfo? {
         val oldRaw = values.entries.firstOrNull { (raw, _) -> raw.id == id }?.key ?: return null
         check(values.remove(oldRaw) != null)
-        val newRaw = oldRaw.copy(updated = timeProvider.provide(), hash = hf.map(bytes))
+        val newRaw = oldRaw.copy(
+            updated = timeProvider.provide(),
+            hash = hf.map(bytes),
+            size = bytes.size,
+        )
         values[newRaw] = bytes
         return newRaw.info
     }
@@ -47,7 +53,7 @@ internal class MockMutableFileStorage(
             return hf.map(bytes)
         }
 
-    override val items: List<Raw>
+    override val items: List<Metadata>
         get() {
             return values.keys.toList()
         }

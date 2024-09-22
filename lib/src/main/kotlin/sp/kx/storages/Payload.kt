@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import java.util.Objects
 import kotlin.time.Duration
 
 class Payload<T : Any>(
@@ -15,6 +16,24 @@ class Payload<T : Any>(
         return Payload(
             meta = meta.copy(updated = updated, hash = hash, size = size),
             value = value,
+        )
+    }
+
+    override fun toString(): String {
+        return "{meta: $meta, value: ${value::class.java.name}}"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return when (other) {
+            is Payload<*> -> meta == other.meta && value == other.value
+            else -> false
+        }
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(
+            meta,
+            value,
         )
     }
 }

@@ -17,26 +17,14 @@ internal class SyncResponseTransformerTest {
         val infos = mapOf(
             mockUUID(10) to mockSyncInfo(
                 infos = mapOf(
-                    mockUUID(11) to mockItemInfo(
-                        created = 111.milliseconds,
-                        updated = 112.milliseconds,
-                        hash = MockHashFunction.map("1111"),
-                    ),
+                    mockUUID(11) to mockItemInfo(11),
                 ),
                 deleted = setOf(mockUUID(12)),
             ),
             mockUUID(20) to mockSyncInfo(
                 infos = mapOf(
-                    mockUUID(21) to mockItemInfo(
-                        created = 211.milliseconds,
-                        updated = 212.milliseconds,
-                        hash = MockHashFunction.map("2111"),
-                    ),
-                    mockUUID(22) to mockItemInfo(
-                        created = 221.milliseconds,
-                        updated = 222.milliseconds,
-                        hash = MockHashFunction.map("2211"),
-                    ),
+                    mockUUID(21) to mockItemInfo(21),
+                    mockUUID(22) to mockItemInfo(22),
                 )
             ),
         )
@@ -49,9 +37,9 @@ internal class SyncResponseTransformerTest {
                 syncInfo.infos.size.toByteArray() +
                 syncInfo.infos.map { (id1, itemInfo) ->
                     id1.toByteArray() +
-                        itemInfo.created.inWholeMilliseconds.toByteArray() +
-                        itemInfo.updated.inWholeMilliseconds.toByteArray() +
-                        itemInfo.hash
+                    itemInfo.updated.inWholeMilliseconds.toByteArray() +
+                    itemInfo.hash +
+                    itemInfo.size.toByteArray()
                 }.flatMap { it.toList() }.toByteArray() +
                 syncInfo.deleted.size.toByteArray() +
                 syncInfo.deleted.map { it.toByteArray() }.flatMap { it.toList() }.toByteArray()
@@ -71,26 +59,14 @@ internal class SyncResponseTransformerTest {
         val infos = mapOf(
             mockUUID(10) to mockSyncInfo(
                 infos = mapOf(
-                    mockUUID(11) to mockItemInfo(
-                        created = 111.milliseconds,
-                        updated = 112.milliseconds,
-                        hash = MockHashFunction.map("1111"),
-                    ),
+                    mockUUID(11) to mockItemInfo(11),
                 ),
                 deleted = setOf(mockUUID(12)),
             ),
             mockUUID(20) to mockSyncInfo(
                 infos = mapOf(
-                    mockUUID(21) to mockItemInfo(
-                        created = 211.milliseconds,
-                        updated = 212.milliseconds,
-                        hash = MockHashFunction.map("2111"),
-                    ),
-                    mockUUID(22) to mockItemInfo(
-                        created = 221.milliseconds,
-                        updated = 222.milliseconds,
-                        hash = MockHashFunction.map("2211"),
-                    ),
+                    mockUUID(21) to mockItemInfo(21),
+                    mockUUID(22) to mockItemInfo(22),
                 )
             ),
         )
@@ -103,9 +79,9 @@ internal class SyncResponseTransformerTest {
                 syncInfo.infos.size.toByteArray() +
                 syncInfo.infos.map { (id1, itemInfo) ->
                     id1.toByteArray() +
-                        itemInfo.created.inWholeMilliseconds.toByteArray() +
-                        itemInfo.updated.inWholeMilliseconds.toByteArray() +
-                        itemInfo.hash
+                    itemInfo.updated.inWholeMilliseconds.toByteArray() +
+                    itemInfo.hash +
+                    itemInfo.size.toByteArray()
                 }.flatMap { it.toList() }.toByteArray() +
                 syncInfo.deleted.size.toByteArray() +
                 syncInfo.deleted.map { it.toByteArray() }.flatMap { it.toList() }.toByteArray()

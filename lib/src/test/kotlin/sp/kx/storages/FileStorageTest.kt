@@ -7,10 +7,9 @@ internal class FileStorageTest {
     @Test
     fun interfaceTest() {
         val expected = "foobarbaz".toByteArray()
+        val meta = mockMetadata(1)
         val storage: FileStorage = MockFileStorage(
-            values = mapOf(
-                Raw(id = mockUUID(1), info = mockItemInfo(1)) to expected,
-            ),
+            values = mapOf(meta to expected),
         )
         assertTrue(expected.contentEquals(storage.getBytes(id = mockUUID(1))))
     }

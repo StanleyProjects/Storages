@@ -10,10 +10,13 @@ import java.util.Objects
 internal class CommitInfoTest {
     @Test
     fun toStringTest() {
-        val item = Described(
-            id = mockUUID(pointer = 1),
-            info = mockItemInfo(),
-            payload = byteArrayOf(
+        val payload = RawPayload(
+            meta = Metadata(
+                id = mockUUID(pointer = 1),
+                created = mockDuration(pointer = 1),
+                info = mockItemInfo(pointer = 1),
+            ),
+            bytes = byteArrayOf(
                 0x05.toByte(),
                 0x18.toByte(),
                 0x9e.toByte(),
@@ -27,11 +30,11 @@ internal class CommitInfoTest {
                 0x9e.toByte(),
                 0xd6.toByte(),
             ),
-            items = listOf(item),
+            items = listOf(payload),
             deleted = setOf(mockUUID(pointer = 2)),
         )
         val expected = "{" +
-            "items: [$item], " +
+            "items: [$payload], " +
             "deleted: [cbae2ba0-6be9-40f5-b565-d6152a120002], " +
             "hash: \"016e9ed6\"" +
             "}"
@@ -42,19 +45,19 @@ internal class CommitInfoTest {
     fun equalsTest() {
         val i11 = CommitInfo(
             hash = MockHashFunction.map("113"),
-            items = listOf(mockDescribed(pointer = 111).map { it.toByteArray() }),
+            items = listOf(mockRawPayload(pointer = 111)),
             deleted = setOf(mockUUID(pointer = 112)),
         )
         val i12 = CommitInfo(
             hash = MockHashFunction.map("113"),
-            items = listOf(mockDescribed(pointer = 111).map { it.toByteArray() }),
+            items = listOf(mockRawPayload(pointer = 111)),
             deleted = setOf(mockUUID(pointer = 112)),
         )
         assertEquals(i11, i12)
         assertTrue(i11 == i12)
         val i21 = CommitInfo(
             hash = MockHashFunction.map("213"),
-            items = listOf(mockDescribed(pointer = 211).map { it.toByteArray() }),
+            items = listOf(mockRawPayload(pointer = 211)),
             deleted = setOf(mockUUID(pointer = 212)),
         )
         assertNotEquals(i11, i21)
@@ -63,7 +66,7 @@ internal class CommitInfoTest {
         assertFalse(i12 == i21)
         val i22 = CommitInfo(
             hash = MockHashFunction.map("113"),
-            items = listOf(mockDescribed(pointer = 211).map { it.toByteArray() }),
+            items = listOf(mockRawPayload(pointer = 211)),
             deleted = setOf(mockUUID(pointer = 212)),
         )
         assertNotEquals(i11, i22)
@@ -72,7 +75,7 @@ internal class CommitInfoTest {
         assertFalse(i12 == i22)
         val i23 = CommitInfo(
             hash = MockHashFunction.map("113"),
-            items = listOf(mockDescribed(pointer = 111).map { it.toByteArray() }),
+            items = listOf(mockRawPayload(pointer = 111)),
             deleted = setOf(mockUUID(pointer = 212)),
         )
         assertNotEquals(i11, i23)
@@ -81,7 +84,7 @@ internal class CommitInfoTest {
         assertFalse(i12 == i23)
         val i24 = CommitInfo(
             hash = MockHashFunction.map("113"),
-            items = listOf(mockDescribed(pointer = 211).map { it.toByteArray() }),
+            items = listOf(mockRawPayload(pointer = 211)),
             deleted = setOf(mockUUID(pointer = 112)),
         )
         assertNotEquals(i11, i24)
@@ -95,12 +98,12 @@ internal class CommitInfoTest {
     fun hashCodeTest() {
         val commitInfo = CommitInfo(
             hash = MockHashFunction.map("113"),
-            items = listOf(mockDescribed(pointer = 111).map { it.toByteArray() }),
+            items = listOf(mockRawPayload(pointer = 111)),
             deleted = setOf(mockUUID(pointer = 112)),
         )
         val expected = Objects.hash(
             MockHashFunction.map("113").contentHashCode(),
-            listOf(mockDescribed(pointer = 111).map { it.toByteArray() }),
+            listOf(mockRawPayload(pointer = 111)),
             setOf(mockUUID(pointer = 112)),
         )
         assertEquals(expected, commitInfo.hashCode())
