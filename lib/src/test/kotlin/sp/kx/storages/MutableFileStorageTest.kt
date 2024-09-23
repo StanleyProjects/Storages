@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import sp.kx.bytes.toHEX
 import java.util.UUID
+import kotlin.time.Duration.Companion.milliseconds
 
 internal class MutableFileStorageTest {
     @Test
@@ -44,15 +45,24 @@ internal class MutableFileStorageTest {
     @Test
     fun updateTest() {
         val m1 = mockMetadata(1)
+        var time = mockDuration(1)
         val storage: MutableFileStorage = MockMutableFileStorage(
             values = mapOf(m1 to mockByteArray(1)),
+            timeProvider = { time },
+            hf = MockHashFunction(
+                hashes = listOf(mockByteArray(2) to "foobar".toByteArray()),
+            ),
         )
         assertEquals(storage.items.sortedBy { it.id }, listOf(m1))
         assertTrue(mockByteArray(1).contentEquals(storage.getBytes(id = m1.id)))
         assertNull(storage.update(mockUUID(2), mockByteArray(2)))
+        time = 128.milliseconds
         val info = storage.update(m1.id, mockByteArray(2))
         checkNotNull(info)
-        assertEquals(storage.items.sortedBy { it.id }, listOf(m1))
+        val mu = m1.copy(updated = time, hash = "foobar".toByteArray(), size = 2)
+        val items = storage.items
+        assertEquals(1, items.size)
+        assertEquals(mu, items.single())
         assertTrue(mockByteArray(2).contentEquals(storage.getBytes(id = m1.id)))
     }
 }

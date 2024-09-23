@@ -81,8 +81,7 @@ class SyncStreamsStorage<T : Any>(
             for (it in items) {
                 stream.writeBytes(value = it.meta.id)
                 stream.writeBytes(value = it.meta.created.inWholeMilliseconds)
-                stream.writeBytes(value = it.meta.info.updated.inWholeMilliseconds)
-                stream.write(it.meta.info.hash)
+                stream.writeBytes(value = it.meta.info)
                 val encoded = transformer.encode(it.value)
                 stream.writeBytes(value = encoded.size)
                 stream.write(encoded)
