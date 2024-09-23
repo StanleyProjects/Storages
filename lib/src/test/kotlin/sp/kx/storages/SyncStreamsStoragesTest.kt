@@ -1270,11 +1270,11 @@ internal class SyncStreamsStoragesTest {
             )
         }
 
-        private fun <T : Any> Payload<T>.map(transformer: Transformer<T>): RawPayload {
+        fun <T : Any> Payload<T>.map(transformer: Transformer<T>): RawPayload {
             return map(transform = transformer::encode)
         }
 
-        private fun <T : Any> Payload<T>.map(transform: (T) -> ByteArray): RawPayload {
+        fun <T : Any> Payload<T>.map(transform: (T) -> ByteArray): RawPayload {
             return RawPayload(
                 meta = meta,
                 bytes = transform(value),

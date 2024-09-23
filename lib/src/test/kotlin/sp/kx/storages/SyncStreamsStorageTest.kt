@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertThrowsExactly
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import sp.kx.bytes.toHEX
+import sp.kx.storages.SyncStreamsStoragesTest.Companion.map
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -43,19 +44,19 @@ internal class SyncStreamsStorageTest {
             assertEquals(deleted, this.deleted, "deleted:\n")
             assertEquals(downloaded.size, this.downloaded.size, "download:\n$downloaded\n${this.downloaded}\n")
             assertEquals(downloaded, this.downloaded, "download:\n")
-            assertEquals(items.size, this.items.size, "upload:\n${items.map { it.id }}\n${this.items.map { it.id }}\n")
-            val sorted = this.items.sortedBy { it.info.created }
-            items.sortedBy { it.info.created }.forEachIndexed { index, expected ->
+            assertEquals(items.size, this.items.size, "upload:\n${items.map { it.meta.id }}\n${this.items.map { it.meta.id }}\n")
+            val sorted = this.items.sortedBy { it.meta.created }
+            items.sortedBy { it.meta.created }.forEachIndexed { index, expected ->
                 val actual = sorted[index]
-                assertEquals(expected.id, actual.id)
-                assertEquals(expected.info, actual.info, "id: ${expected.id}")
+                assertEquals(expected.meta.id, actual.meta.id)
+                assertEquals(expected.meta.info, actual.meta.info, "id: ${expected.meta.id}")
                 val message = """
                     expected: $expected
                     actual: $actual
-                    expected.payload(${expected.payload.size}): ${expected.payload.toHEX()} "${String(expected.payload)}"
-                    actual.payload  (${actual.payload.size}): ${actual.payload.toHEX()} "${String(actual.payload)}"
+                    expected.value(${expected.bytes.size}): ${expected.bytes.toHEX()} "${String(expected.bytes)}"
+                    actual.payload  (${actual.bytes.size}): ${actual.bytes.toHEX()} "${String(actual.bytes)}"
                 """.trimIndent()
-                assertTrue(expected.payload.contentEquals(actual.payload), message)
+                assertTrue(expected.bytes.contentEquals(actual.bytes), message)
                 assertEquals(expected, actual)
             }
         }
@@ -73,17 +74,17 @@ internal class SyncStreamsStorageTest {
 
         private fun CommitInfo.assert(
             hash: ByteArray,
-            items: List<Described<ByteArray>>,
+            items: List<RawPayload>,
             deleted: Set<UUID>,
         ) {
             assertEquals(hash.toHEX(), this.hash.toHEX())
             assertEquals(deleted.size, this.deleted.size, "deleted:\n$deleted\n${this.deleted}\n")
             assertEquals(deleted, this.deleted)
-            assertEquals(items.size, this.items.size, "upload:\n${items.map { it.id }}\n${this.items.map { it.id }}\n")
+            assertEquals(items.size, this.items.size, "upload:\n${items.map { it.meta.id }}\n${this.items.map { it.meta.id }}\n")
             items.forEachIndexed { index, expected ->
                 val actual = this.items[index]
-                assertEquals(expected.id, actual.id)
-                assertEquals(expected.info, actual.info, "id: ${expected.id}")
+                assertEquals(expected.meta.id, actual.meta.id)
+                assertEquals(expected.meta.info, actual.meta.info, "id: ${expected.meta.id}")
                 assertEquals(expected, actual)
             }
         }
@@ -92,41 +93,42 @@ internal class SyncStreamsStorageTest {
             expected: ItemInfo,
             actual: ItemInfo,
         ) {
-            assertEquals(expected.created, actual.created)
             assertEquals(expected.updated, actual.updated)
             assertEquals(expected.hash.toHEX(), actual.hash.toHEX())
+            assertEquals(expected.size, actual.size)
+            assertEquals(expected, actual)
         }
 
         private fun ItemInfo.assert(
             storageId: UUID,
             itemId: UUID,
-            created: Duration,
             updated: Duration,
             hash: ByteArray,
+            size: Int,
         ) {
-            assertEquals(created, this.created, "storageId: $storageId\nitemId: $itemId\ncreated:\n")
             assertEquals(updated, this.updated, "storageId: $storageId\nitemId: $itemId\nupdated:\n")
             assertEquals(hash.toHEX(), this.hash.toHEX(), "storageId: $storageId\nitemId: $itemId\nhash:\n")
+            assertEquals(size, this.size, "storageId: $storageId\nitemId: $itemId\nsize:\n")
         }
     }
 
     private fun <T : Any> SyncStorage<T>.assert(
         id: UUID,
         hash: ByteArray,
-        items: List<Described<T>> = emptyList(),
+        items: List<Payload<T>> = emptyList(),
     ) {
         assertEquals(id, this.id)
         assertEquals(hash.toHEX(), this.hash.toHEX())
         assertEquals(items.size, this.items.size)
         items.forEachIndexed { index, expected ->
             val actual = this.items[index]
-            assertEquals(expected.id, actual.id)
-            actual.info.assert(
+            assertEquals(expected.meta.id, actual.meta.id)
+            actual.meta.info.assert(
                 storageId = id,
-                itemId = expected.id,
-                created = expected.info.created,
-                updated = expected.info.updated,
-                hash = expected.info.hash,
+                itemId = expected.meta.id,
+                updated = expected.meta.info.updated,
+                hash = expected.meta.info.hash,
+                size = expected.meta.info.size,
             )
             assertEquals(expected, actual)
         }
@@ -170,23 +172,29 @@ internal class SyncStreamsStorageTest {
         var itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
         val uuidProvider = MockProvider { itemId }
         val defaultItems = (0..3).map { index ->
-            Described(
-                id = mockUUID(index),
-                info = ItemInfo(
+            val value = "payload:$index"
+            Payload(
+                meta = Metadata(
+                    id = mockUUID(index),
                     created = (1_000 + index).milliseconds,
-                    updated = (1_000 + index).milliseconds,
-                    hash = MockHashFunction.map("item:hash:$index"),
+                    info = ItemInfo(
+                        updated = (1_000 + index).milliseconds,
+                        hash = MockHashFunction.map("item:hash:$index"),
+                        size = StringTransformer.encode(value).size,
+                    ),
                 ),
-                payload = "payload:$index",
+                value = value,
             )
         }
         check(defaultItems.size == 4)
-        val updatedItems = mutableListOf<Described<String>>().also {
+        val updatedItems = mutableListOf<Payload<String>>().also {
+            val value = "payload:0:updated"
             it.add(
                 defaultItems[0].copy(
                     updated = (2_000 + 0).milliseconds,
                     hash = MockHashFunction.map("item:hash:0:updated"),
-                    payload = "payload:0:updated",
+                    value = value,
+                    size = StringTransformer.encode(value).size,
                 ),
             )
             it.add(defaultItems[2])
@@ -207,9 +215,9 @@ internal class SyncStreamsStorageTest {
             MockHashFunction.hash(updatedItems) to storageHashUpdated,
         )
         val transformer = defaultItems.map {
-            it.payload.toByteArray() to it.payload
+            it.value.toByteArray() to it.value
         } + updatedItems.map {
-            it.payload.toByteArray() to it.payload
+            it.value.toByteArray() to it.value
         }
         val storage: SyncStorage<String> = mockSyncStreamsStorage(
             id = storageId,
@@ -218,10 +226,10 @@ internal class SyncStreamsStorageTest {
             hashes = hashes,
             transformer = transformer,
         )
-        defaultItems.forEachIndexed { index, described ->
-            itemId = described.id
+        defaultItems.forEachIndexed { index, payload ->
+            itemId = payload.meta.id
             time = (1_000 + index).milliseconds
-            storage.add(described.payload)
+            storage.add(payload.value)
         }
         storage.assert(
             id = storageId,
@@ -230,8 +238,8 @@ internal class SyncStreamsStorageTest {
         )
         //
         time = (2_000 + 0).milliseconds
-        assertEquals(updatedItems[0].info, storage.update(defaultItems[0].id, updatedItems[0].payload))
-        assertTrue(storage.delete(defaultItems[1].id))
+        assertEquals(updatedItems[0].meta.info, storage.update(defaultItems[0].meta.id, updatedItems[0].value))
+        assertTrue(storage.delete(defaultItems[1].meta.id))
         storage.assert(
             id = storageId,
             hash = storageHashUpdated,
@@ -257,6 +265,26 @@ internal class SyncStreamsStorageTest {
         )
     }
 
+    private fun mockPayload(
+        id: UUID,
+        time: Duration,
+        hash: ByteArray,
+        value: String,
+    ): Payload<String> {
+        return Payload(
+            meta = Metadata(
+                id = id,
+                created = time,
+                info = ItemInfo(
+                    updated = time,
+                    hash = hash,
+                    size = StringTransformer.encode(value).size,
+                ),
+            ),
+            value = value,
+        )
+    }
+
     @Test
     fun deleteTest() {
         val storageId = UUID.fromString("dc4092c6-e7a1-433e-9169-c2f6f92fc4c1")
@@ -265,14 +293,11 @@ internal class SyncStreamsStorageTest {
         val timeProvider = MockProvider { time }
         val itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
         val uuidProvider = MockProvider { itemId }
-        val expected = Described(
+        val expected = mockPayload(
             id = itemId,
-            info = ItemInfo(
-                created = time,
-                updated = time,
-                hash = itemHash,
-            ),
-            payload = "foobar",
+            time = time,
+            hash = itemHash,
+            value = "foobar",
         )
         val storageEmptyHash = MockHashFunction.map("storageEmptyHash")
         val storageHash = MockHashFunction.map("storageHash")
@@ -280,34 +305,34 @@ internal class SyncStreamsStorageTest {
             id = storageId,
             hashes = listOf(
                 ByteArray(0) to storageEmptyHash,
-                StringTransformer.encode(expected.payload) to itemHash,
+                StringTransformer.encode(expected.value) to itemHash,
                 MockHashFunction.hash(listOf(expected)) to storageHash,
             ),
             uuidProvider = uuidProvider,
             timeProvider = timeProvider,
             transformer = listOf(
-                expected.payload.toByteArray() to expected.payload,
+                expected.value.toByteArray() to expected.value,
             ),
         )
         storage.assert(
             id = storageId,
             hash = storageEmptyHash,
         )
-        assertEquals(expected, storage.add(expected.payload))
+        assertEquals(expected, storage.add(expected.value))
         storage.assert(
             id = storageId,
             hash = storageHash,
             items = listOf(expected),
         )
         val notExists = UUID.fromString("35ca49c2-d716-4eb3-ad1e-3f87337ce360")
-        check(notExists != expected.id)
+        check(notExists != expected.meta.id)
         assertFalse(storage.delete(id = notExists))
         storage.assert(
             id = storageId,
             hash = storageHash,
             items = listOf(expected),
         )
-        assertTrue(storage.delete(id = expected.id))
+        assertTrue(storage.delete(id = expected.meta.id))
         storage.assert(
             id = storageId,
             hash = storageEmptyHash,
@@ -322,14 +347,11 @@ internal class SyncStreamsStorageTest {
         val timeProvider = MockProvider { time }
         val itemId = mockUUID(2)
         val uuidProvider = MockProvider { itemId }
-        val expected = Described(
+        val expected = mockPayload(
             id = itemId,
-            info = ItemInfo(
-                created = time,
-                updated = time,
-                hash = itemHash,
-            ),
-            payload = "foobar",
+            time = time,
+            hash = itemHash,
+            value = "foobar",
         )
         val storageEmptyHash = MockHashFunction.map("storageEmptyHash")
         val storageHash = MockHashFunction.map("storageHash")
@@ -343,14 +365,14 @@ internal class SyncStreamsStorageTest {
             uuidProvider = uuidProvider,
             timeProvider = timeProvider,
             transformer = listOf(
-                expected.payload.toByteArray() to expected.payload,
+                expected.value.toByteArray() to expected.value,
             ),
         )
         storage.assert(
             id = id,
             hash = storageEmptyHash,
         )
-        assertEquals(expected, storage.add(expected.payload))
+        assertEquals(expected, storage.add(expected.value))
         storage.assert(
             id = id,
             hash = storageHash,
@@ -362,20 +384,17 @@ internal class SyncStreamsStorageTest {
     fun updateTest() {
         val id = UUID.fromString("dc4092c6-e7a1-433e-9169-c2f6f92fc4c1")
         val itemHash = MockHashFunction.map("itemHash")
-        val payloadUpdated = "itemUpdated"
+        val itemUpdated = "itemUpdated"
         val itemUpdatedHash = MockHashFunction.map("itemUpdatedHash")
         var time = 1.milliseconds
         val timeProvider = MockProvider { time }
         val itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
         val uuidProvider = MockProvider { itemId }
-        val expected = Described(
+        val expected = mockPayload(
             id = itemId,
-            info = ItemInfo(
-                created = time,
-                updated = time,
-                hash = itemHash,
-            ),
-            payload = "foobar",
+            time = time,
+            hash = itemHash,
+            value = "foobar",
         )
         val storageEmptyHash = MockHashFunction.map("storageEmptyHash")
         val storageHash = MockHashFunction.map("storageHash")
@@ -384,8 +403,8 @@ internal class SyncStreamsStorageTest {
             id = id,
             hashes = listOf(
                 ByteArray(0) to storageEmptyHash,
-                StringTransformer.encode(expected.payload) to itemHash,
-                StringTransformer.encode(payloadUpdated) to itemUpdatedHash,
+                StringTransformer.encode(expected.value) to itemHash,
+                StringTransformer.encode(itemUpdated) to itemUpdatedHash,
                 MockHashFunction.hash(listOf(expected)) to storageHash,
                 listOf(itemUpdatedHash).flatMap {
                     MockHashFunction.bytesOf(id = itemId, updated = 2.milliseconds, encoded = itemUpdatedHash).toList()
@@ -394,41 +413,44 @@ internal class SyncStreamsStorageTest {
             uuidProvider = uuidProvider,
             timeProvider = timeProvider,
             transformer = listOf(
-                expected.payload.toByteArray() to expected.payload,
-                payloadUpdated.toByteArray() to payloadUpdated,
+                expected.value.toByteArray() to expected.value,
+                itemUpdated.toByteArray() to itemUpdated,
             ),
         )
         storage.assert(
             id = id,
             hash = storageEmptyHash,
         )
-        assertEquals(expected, storage.add(expected.payload))
+        assertEquals(expected, storage.add(expected.value))
         storage.assert(
             id = id,
             hash = storageHash,
             items = listOf(expected),
         )
         val notExists = UUID.fromString("35ca49c2-d716-4eb3-ad1e-3f87337ce360")
-        check(notExists != expected.id)
-        assertNull(storage.update(id = notExists, payload = payloadUpdated))
+        check(notExists != expected.meta.id)
+        assertNull(storage.update(id = notExists, value = itemUpdated))
         storage.assert(
             id = id,
             hash = storageHash,
             items = listOf(expected),
         )
         time = 2.milliseconds
-        val updated = Described(
-            id = expected.id,
-            info = ItemInfo(
-                created = expected.info.created,
-                updated = time,
-                hash = itemUpdatedHash,
+        val updated = Payload(
+            meta = Metadata(
+                id = expected.meta.id,
+                created = expected.meta.created,
+                info = ItemInfo(
+                    updated = time,
+                    hash = itemUpdatedHash,
+                    size = StringTransformer.encode(itemUpdated).size,
+                ),
             ),
-            payload = payloadUpdated,
+            value = itemUpdated,
         )
         assertEquals(
-            updated.info,
-            storage.update(id = expected.id, payload = payloadUpdated),
+            updated.meta.info,
+            storage.update(id = expected.meta.id, value = itemUpdated),
         )
         storage.assert(
             id = id,
@@ -447,14 +469,11 @@ internal class SyncStreamsStorageTest {
         val timeProvider = MockProvider { time }
         val itemId = mockUUID(11)
         val uuidProvider = MockProvider { itemId }
-        val expected = Described(
+        val expected = mockPayload(
             id = itemId,
-            info = ItemInfo(
-                created = time,
-                updated = time,
-                hash = itemHash,
-            ),
-            payload = "foobar",
+            time = time,
+            hash = itemHash,
+            value = "foobar",
         )
         val storageEmptyHash = MockHashFunction.map("storageEmptyHash")
         val storageHash = MockHashFunction.map("storageHash")
@@ -463,7 +482,7 @@ internal class SyncStreamsStorageTest {
             id = id,
             hashes = listOf(
                 ByteArray(0) to storageEmptyHash,
-                StringTransformer.encode(expected.payload) to itemHash,
+                StringTransformer.encode(expected.value) to itemHash,
                 StringTransformer.encode(itemUpdated) to itemUpdatedHash,
                 MockHashFunction.hash(listOf(expected)) to storageHash,
                 listOf(itemUpdatedHash).flatMap {
@@ -473,7 +492,7 @@ internal class SyncStreamsStorageTest {
             uuidProvider = uuidProvider,
             timeProvider = timeProvider,
             transformer = listOf(
-                expected.payload.toByteArray() to expected.payload,
+                expected.value.toByteArray() to expected.value,
                 itemUpdated.toByteArray() to itemUpdated,
             ),
         )
@@ -482,47 +501,50 @@ internal class SyncStreamsStorageTest {
             hash = storageEmptyHash,
         )
         storage.getSyncInfo().assert()
-        assertEquals(expected, storage.add(expected.payload))
+        assertEquals(expected, storage.add(expected.value))
         storage.assert(
             id = id,
             hash = storageHash,
             items = listOf(expected),
         )
         val notExists = mockUUID(12)
-        check(notExists != expected.id)
-        assertNull(storage.update(id = notExists, payload = itemUpdated))
+        check(notExists != expected.meta.id)
+        assertNull(storage.update(id = notExists, value = itemUpdated))
         storage.assert(
             id = id,
             hash = storageHash,
             items = listOf(expected),
         )
         time = 2.milliseconds
-        val updated = Described(
-            id = expected.id,
-            info = ItemInfo(
-                created = expected.info.created,
-                updated = time,
-                hash = itemUpdatedHash,
+        val updated = Payload(
+            meta = Metadata(
+                id = expected.meta.id,
+                created = expected.meta.created,
+                info = ItemInfo(
+                    updated = time,
+                    hash = itemUpdatedHash,
+                    size = StringTransformer.encode(itemUpdated).size,
+                ),
             ),
-            payload = itemUpdated,
+            value = itemUpdated,
         )
         assertEquals(
-            updated.info,
-            storage.update(id = expected.id, payload = itemUpdated),
+            updated.meta.info,
+            storage.update(id = expected.meta.id, value = itemUpdated),
         )
         storage.assert(
             id = id,
             hash = storageUpdatedHash,
             items = listOf(updated),
         )
-        storage.getSyncInfo().assert(meta = mapOf(updated.id to updated.info))
+        storage.getSyncInfo().assert(meta = mapOf(updated.meta.id to updated.meta.info))
         assertFalse(storage.delete(id = notExists))
         storage.assert(
             id = id,
             hash = storageUpdatedHash,
             items = listOf(updated),
         )
-        assertTrue(storage.delete(id = expected.id))
+        assertTrue(storage.delete(id = expected.meta.id))
         storage.assert(
             id = id,
             hash = storageEmptyHash,
@@ -538,23 +560,37 @@ internal class SyncStreamsStorageTest {
         var itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
         val uuidProvider = MockProvider { itemId }
         val defaultItems = (0..4).map { index ->
-            mockDescribed(pointer = index)
+            mockPayload(pointer = index)
         }
         check(defaultItems.size == 5)
-        val rItems = mutableListOf<Described<String>>().also {
-            it.add(defaultItems[0].copy(updated = (2_000 + 0).milliseconds, hash = MockHashFunction.map("item:hash:0:updated"), payload = "item:0:updated"))
+        val rItems = mutableListOf<Payload<String>>().also {
+            it.add(
+                defaultItems[0].copy(
+                    updated = (2_000 + 0).milliseconds,
+                    hash = MockHashFunction.map("item:hash:0:updated"),
+                    value = "item:0:updated",
+                    size = StringTransformer.encode("item:0:updated").size,
+                ),
+            )
             it.add(defaultItems[2])
             it.add(defaultItems[3])
             it.add(defaultItems[4])
-            it.add(mockDescribed(pointer = 11))
+            it.add(mockPayload(pointer = 11))
         }
         check(rItems.size == 5)
-        val tItems = mutableListOf<Described<String>>().also {
+        val tItems = mutableListOf<Payload<String>>().also {
             it.add(defaultItems[0])
             it.add(defaultItems[1])
-            it.add(defaultItems[3].copy(updated = (3_000 + 0).milliseconds, hash = MockHashFunction.map("item:hash:3:updated"), payload = "item:3:updated"))
+            it.add(
+                defaultItems[3].copy(
+                    updated = (3_000 + 0).milliseconds,
+                    hash = MockHashFunction.map("item:hash:3:updated"),
+                    value = "item:3:updated",
+                    size = StringTransformer.encode("item:3:updated").size,
+                ),
+            )
             it.add(defaultItems[4])
-            it.add(mockDescribed(pointer = 21))
+            it.add(mockPayload(pointer = 21))
         }
         check(tItems.size == 5)
         val itemsMerged = listOf(
@@ -586,11 +622,11 @@ internal class SyncStreamsStorageTest {
             MockHashFunction.hash(itemsMerged) to storageHashMerged,
         )
         val transformer = defaultItems.map {
-            it.payload.toByteArray() to it.payload
+            it.value.toByteArray() to it.value
         } + rItems.map {
-            it.payload.toByteArray() to it.payload
+            it.value.toByteArray() to it.value
         } + tItems.map {
-            it.payload.toByteArray() to it.payload
+            it.value.toByteArray() to it.value
         }
         val rStorage: SyncStorage<String> = mockSyncStreamsStorage(
             id = storageId,
@@ -606,10 +642,10 @@ internal class SyncStreamsStorageTest {
             hashes = hashes,
             transformer = transformer,
         )
-        defaultItems.forEachIndexed { index, described ->
-            itemId = described.id
+        defaultItems.forEachIndexed { index, payload ->
+            itemId = payload.meta.id
             time = (1_000 + index).milliseconds
-            rStorage.add(described.payload)
+            rStorage.add(payload.value)
         }
         rStorage.commit(tStorage.merge(rStorage.getMergeInfo(tStorage.getSyncInfo())))
         rStorage.assert(
@@ -622,15 +658,15 @@ internal class SyncStreamsStorageTest {
             hash = storageHash,
             items = defaultItems,
         )
-        mockDescribed(pointer = 11).also { described ->
-            itemId = described.id
-            time = described.info.created
-            rStorage.add(described.payload)
+        mockPayload(pointer = 11).also { payload ->
+            itemId = payload.meta.id
+            time = payload.meta.created
+            rStorage.add(payload.value)
         }
-        mockDescribed(pointer = 21).also { described ->
-            itemId = described.id
-            time = described.info.created
-            tStorage.add(described.payload)
+        mockPayload(pointer = 21).also { payload ->
+            itemId = payload.meta.id
+            time = payload.meta.created
+            tStorage.add(payload.value)
         }
         rStorage.assert(
             id = storageId,
@@ -644,8 +680,8 @@ internal class SyncStreamsStorageTest {
         )
         //
         time = (2_000 + 0).milliseconds
-        assertEquals(rItems[0].info, rStorage.update(defaultItems[0].id, rItems[0].payload))
-        assertTrue(rStorage.delete(defaultItems[1].id))
+        assertEquals(rItems[0].meta.info, rStorage.update(defaultItems[0].meta.id, rItems[0].value))
+        assertTrue(rStorage.delete(defaultItems[1].meta.id))
         rStorage.assert(
             id = storageId,
             hash = storageRHash,
@@ -653,8 +689,8 @@ internal class SyncStreamsStorageTest {
         )
         //
         time = (3_000 + 0).milliseconds
-        assertEquals(tItems[2].info, tStorage.update(defaultItems[3].id, tItems[2].payload))
-        assertTrue(tStorage.delete(defaultItems[2].id))
+        assertEquals(tItems[2].meta.info, tStorage.update(defaultItems[3].meta.id, tItems[2].value))
+        assertTrue(tStorage.delete(defaultItems[2].meta.id))
         tStorage.assert(
             id = storageId,
             hash = storageTHash,
@@ -662,27 +698,27 @@ internal class SyncStreamsStorageTest {
         )
         //
         val rSyncInfo = rStorage.getSyncInfo()
-        rSyncInfo.assert(meta = rItems.associate { it.id to it.info }, deleted = setOf(defaultItems[1].id))
+        rSyncInfo.assert(meta = rItems.associate { it.meta.id to it.meta.info }, deleted = setOf(defaultItems[1].meta.id))
         val tMergeInfo = tStorage.getMergeInfo(rSyncInfo)
         tMergeInfo.assert(
-            downloaded = setOf(defaultItems[0].id, rItems.last().id),
+            downloaded = setOf(defaultItems[0].meta.id, rItems.last().meta.id),
             items = listOf(
-                tItems.last().map { it.toByteArray() },
-                tItems[2].map { it.toByteArray() },
+                tItems.last().map(StringTransformer),
+                tItems[2].map(StringTransformer),
             ),
-            deleted = setOf(defaultItems[2].id),
+            deleted = setOf(defaultItems[2].meta.id),
         )
         //
         val tSyncInfo = tStorage.getSyncInfo()
-        tSyncInfo.assert(meta = tItems.associate { it.id to it.info }, deleted = setOf(defaultItems[2].id))
+        tSyncInfo.assert(meta = tItems.associate { it.meta.id to it.meta.info }, deleted = setOf(defaultItems[2].meta.id))
         val rMergeInfo = rStorage.getMergeInfo(tSyncInfo)
         rMergeInfo.assert(
-            downloaded = setOf(defaultItems[3].id, tItems.last().id),
+            downloaded = setOf(defaultItems[3].meta.id, tItems.last().meta.id),
             items = listOf(
                 rItems.last().map { it.toByteArray() },
                 rItems[0].map { it.toByteArray() },
             ),
-            deleted = setOf(defaultItems[1].id),
+            deleted = setOf(defaultItems[1].meta.id),
         )
         //
         val commitInfo = rStorage.merge(tMergeInfo)
@@ -692,7 +728,7 @@ internal class SyncStreamsStorageTest {
                 rItems[0].map { it.toByteArray() },
                 rItems.last().map { it.toByteArray() },
             ),
-            deleted = setOf(defaultItems[1].id),
+            deleted = setOf(defaultItems[1].meta.id),
         )
         tStorage.commit(commitInfo)
         rStorage.assert(
@@ -710,19 +746,19 @@ internal class SyncStreamsStorageTest {
     @Test
     fun commitTest() {
         val rItems = listOf(
-            mockDescribed(pointer = 1),
-            mockDescribed(pointer = 11),
+            mockPayload(pointer = 1),
+            mockPayload(pointer = 11),
         )
         check(rItems.size == 2)
         val tItems = listOf(
-            mockDescribed(pointer = 1),
-            mockDescribed(pointer = 21),
+            mockPayload(pointer = 1),
+            mockPayload(pointer = 21),
         )
         check(tItems.size == 2)
         val itemsMerged = listOf(
-            mockDescribed(pointer = 1),
-            mockDescribed(pointer = 11),
-            mockDescribed(pointer = 21),
+            mockPayload(pointer = 1),
+            mockPayload(pointer = 11),
+            mockPayload(pointer = 21),
         )
         check(itemsMerged.size == 3)
         //
@@ -735,9 +771,9 @@ internal class SyncStreamsStorageTest {
             tItems to "t:default",
             itemsMerged to "merged:hash",
             listOf(
-                mockDescribed(pointer = 1),
-                mockDescribed(pointer = 21),
-                mockDescribed(pointer = 31),
+                mockPayload(pointer = 1),
+                mockPayload(pointer = 21),
+                mockPayload(pointer = 31),
             ) to "t:wrong",
         ) + rItems.map {
             StringTransformer.hashPair(it)
@@ -745,11 +781,11 @@ internal class SyncStreamsStorageTest {
             StringTransformer.hashPair(it)
         }
         val transformer = rItems.map {
-            it.payload.toByteArray() to it.payload
+            it.value.toByteArray() to it.value
         } + tItems.map {
-            it.payload.toByteArray() to it.payload
-        } + mockDescribed(pointer = 31).let {
-            it.payload.toByteArray() to it.payload
+            it.value.toByteArray() to it.value
+        } + mockPayload(pointer = 31).let {
+            it.value.toByteArray() to it.value
         }
         val storageId = mockUUID(pointer = 42)
         val rStorage: SyncStorage<String> = mockSyncStreamsStorage(
@@ -766,20 +802,20 @@ internal class SyncStreamsStorageTest {
             hashes = hashes,
             transformer = transformer,
         )
-        rItems.forEach { described ->
-            itemId = described.id
-            time = described.info.created
-            rStorage.add(described.payload)
+        rItems.forEach { payload ->
+            itemId = payload.meta.id
+            time = payload.meta.created
+            rStorage.add(payload.value)
         }
         rStorage.assert(
             id = storageId,
             hash = MockHashFunction.map("r:default"),
             items = rItems,
         )
-        tItems.forEach { described ->
-            itemId = described.id
-            time = described.info.created
-            tStorage.add(described.payload)
+        tItems.forEach { payload ->
+            itemId = payload.meta.id
+            time = payload.meta.created
+            tStorage.add(payload.value)
         }
         tStorage.assert(
             id = storageId,
@@ -792,7 +828,7 @@ internal class SyncStreamsStorageTest {
             val info = CommitInfo(
                 hash = MockHashFunction.map("wrong:hash"),
                 items = listOf(
-                    mockDescribed(pointer = 31).map { it.toByteArray() },
+                    mockPayload(pointer = 31).map { it.toByteArray() },
                 ),
                 deleted = emptySet(),
             )
