@@ -119,7 +119,14 @@ internal class SyncStreamsStorageTest {
         items: List<Payload<T>> = emptyList(),
     ) {
         assertEquals(id, this.id)
-        assertTrue(hash.contentEquals(this.hash), "e: ${hash.toHEX()}, a: ${this.hash.toHEX()}")
+        val message = """
+            storage:id: $id
+            storage:hash:e: ${hash.toHEX()}
+            storage:hash:a: ${this.hash.toHEX()}
+            items:e: $items
+            items:a: ${this.items}
+        """.trimIndent()
+        assertTrue(hash.contentEquals(this.hash), message)
         assertEquals(items.size, this.items.size)
         items.forEachIndexed { index, expected ->
             val actual = this.items[index]
@@ -559,18 +566,18 @@ internal class SyncStreamsStorageTest {
     @Test
     fun mergeAndCommitTest() {
         val storageId = mockUUID(1)
-        var time = 1.milliseconds
+        var time = 1.minutes
         val timeProvider = MockProvider { time }
         var itemId = UUID.fromString("10a325bd-3b99-4ff8-8865-086af338e935")
         val uuidProvider = MockProvider { itemId }
         val defaultItems = (0..4).map { index ->
-            mockPayload(pointer = index)
+            mockPayload(pointer = index, time = (10 + index).minutes)
         }
         check(defaultItems.size == 5)
         val rItems = mutableListOf<Payload<String>>().also {
             it.add(
                 defaultItems[0].copy(
-                    updated = (2_000 + 0).milliseconds,
+                    updated = (20 + 0).minutes,
                     hash = MockHashFunction.map("item:hash:0:updated"),
                     value = "item:0:updated",
                     size = StringTransformer.encode("item:0:updated").size,
@@ -579,7 +586,7 @@ internal class SyncStreamsStorageTest {
             it.add(defaultItems[2])
             it.add(defaultItems[3])
             it.add(defaultItems[4])
-            it.add(mockPayload(pointer = 11))
+            it.add(mockPayload(pointer = 11, time = (20 + 1).minutes))
         }
         check(rItems.size == 5)
         val tItems = mutableListOf<Payload<String>>().also {
@@ -587,14 +594,14 @@ internal class SyncStreamsStorageTest {
             it.add(defaultItems[1])
             it.add(
                 defaultItems[3].copy(
-                    updated = (3_000 + 0).milliseconds,
+                    updated = (30 + 0).minutes,
                     hash = MockHashFunction.map("item:hash:3:updated"),
                     value = "item:3:updated",
                     size = StringTransformer.encode("item:3:updated").size,
                 ),
             )
             it.add(defaultItems[4])
-            it.add(mockPayload(pointer = 21))
+            it.add(mockPayload(pointer = 21, time = (30 + 1).minutes))
         }
         check(tItems.size == 5)
         val itemsMerged = listOf(
@@ -648,7 +655,7 @@ internal class SyncStreamsStorageTest {
         )
         defaultItems.forEachIndexed { index, payload ->
             itemId = payload.meta.id
-            time = (1_000 + index).milliseconds
+            time = (10 + index).minutes
             rStorage.add(payload.value)
         }
         rStorage.commit(tStorage.merge(rStorage.getMergeInfo(tStorage.getSyncInfo())))
@@ -662,12 +669,12 @@ internal class SyncStreamsStorageTest {
             hash = storageHash,
             items = defaultItems,
         )
-        mockPayload(pointer = 11).also { payload ->
+        mockPayload(pointer = 11, time = (20 + 1).minutes).also { payload ->
             itemId = payload.meta.id
             time = payload.meta.created
             rStorage.add(payload.value)
         }
-        mockPayload(pointer = 21).also { payload ->
+        mockPayload(pointer = 21, time = (30 + 1).minutes).also { payload ->
             itemId = payload.meta.id
             time = payload.meta.created
             tStorage.add(payload.value)
@@ -683,7 +690,7 @@ internal class SyncStreamsStorageTest {
             items = defaultItems + tItems.last(),
         )
         //
-        time = (2_000 + 0).milliseconds
+        time = (20 + 0).minutes
         assertEquals(rItems[0].meta.info, rStorage.update(defaultItems[0].meta.id, rItems[0].value))
         assertTrue(rStorage.delete(defaultItems[1].meta.id))
         rStorage.assert(
@@ -692,7 +699,7 @@ internal class SyncStreamsStorageTest {
             items = rItems,
         )
         //
-        time = (3_000 + 0).milliseconds
+        time = (30 + 0).minutes
         assertEquals(tItems[2].meta.info, tStorage.update(defaultItems[3].meta.id, tItems[2].value))
         assertTrue(tStorage.delete(defaultItems[2].meta.id))
         tStorage.assert(
@@ -766,7 +773,7 @@ internal class SyncStreamsStorageTest {
         )
         check(itemsMerged.size == 3)
         //
-        var time = 1.milliseconds
+        var time = 1.minutes
         val timeProvider = MockProvider { time }
         var itemId = mockUUID()
         val uuidProvider = MockProvider { itemId }

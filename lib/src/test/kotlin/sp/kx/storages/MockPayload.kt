@@ -1,5 +1,7 @@
 package sp.kx.storages
 
+import kotlin.time.Duration
+
 internal fun <T : Any> mockPayload(
     meta: Metadata = mockMetadata(pointer = 1),
     value: T = TODO("mock:payload"),
@@ -18,8 +20,21 @@ internal fun <T : Any> mockPayload(pointer: Int, value: T): Payload<T> {
 }
 
 internal fun mockPayload(pointer: Int): Payload<String> {
+    return mockPayload(pointer = pointer, time = mockDuration(pointer = pointer))
+}
+
+internal fun mockPayload(pointer: Int, time: Duration): Payload<String> {
+    val value = "payload:$pointer"
     return mockPayload(
-        meta = mockMetadata(pointer = pointer),
-        value = "payload:$pointer",
+        meta = mockMetadata(
+            id = mockUUID(pointer = pointer),
+            created = time,
+            info = mockItemInfo(
+                updated = time,
+                hash = MockHashFunction.map(value),
+                size = StringTransformer.encode(value).size,
+            ),
+        ),
+        value = value,
     )
 }
