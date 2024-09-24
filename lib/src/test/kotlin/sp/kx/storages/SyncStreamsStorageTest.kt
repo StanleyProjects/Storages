@@ -21,7 +21,7 @@ internal class SyncStreamsStorageTest {
         ) {
             assertEquals(expected.meta.id, actual.meta.id)
             assertEquals(expected.meta.created, actual.meta.created)
-            assert(expected.meta.info, actual.meta.info)
+            assert(expected.meta.id, expected.meta.info, actual.meta.info)
             assertEquals(expected.value, actual.value, "payload: ${expected.meta.id}\n")
         }
 
@@ -90,13 +90,19 @@ internal class SyncStreamsStorageTest {
             }
         }
 
-        fun assert(
+        private fun assert(
+            id: UUID,
             expected: ItemInfo,
             actual: ItemInfo,
         ) {
+            val message = """
+                id: $id
+                e: $expected
+                a: $actual
+            """.trimIndent()
             assertEquals(expected.updated, actual.updated)
-            assertEquals(expected.hash.toHEX(), actual.hash.toHEX())
-            assertEquals(expected.size, actual.size)
+            assertEquals(expected.hash.toHEX(), actual.hash.toHEX(), message)
+            assertEquals(expected.size, actual.size, message)
             assertEquals(expected, actual)
         }
 

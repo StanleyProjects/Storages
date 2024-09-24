@@ -26,7 +26,7 @@ class Metadata(
         return "{" +
             "id: $id, " +
             "created: ${Date(created.inWholeMilliseconds)}, " +
-            "info: $info, " +
+            "info: $info" +
             "}"
     }
 

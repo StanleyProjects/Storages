@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 internal class SyncStreamsStoragesTest {
     @Test
@@ -128,7 +129,7 @@ internal class SyncStreamsStoragesTest {
 
     @Test
     fun hashTest() {
-        var time = 1.milliseconds
+        var time = 1.minutes
         val timeProvider = MockProvider { time }
         var itemId = mockUUID()
         val uuidProvider = MockProvider { itemId }
@@ -142,14 +143,14 @@ internal class SyncStreamsStoragesTest {
         ) + listOf(
             StringTransformer.encode(payloadValue) to itemHash,
             listOf(
-                MockHashFunction.bytesOf(id = mockUUID(11), updated = 11.milliseconds, encoded = itemHash),
+                MockHashFunction.bytesOf(id = mockUUID(11), updated = 11.minutes, encoded = itemHash),
             ).flatMap { it.toList() }.toByteArray() to item1ListHash,
             listOf(
-                MockHashFunction.bytesOf(id = mockUUID(12), updated = 12.milliseconds, encoded = itemHash),
+                MockHashFunction.bytesOf(id = mockUUID(12), updated = 12.minutes, encoded = itemHash),
             ).flatMap { it.toList() }.toByteArray() to item2ListHash,
             listOf(
-                MockHashFunction.bytesOf(id = mockUUID(11), updated = 11.milliseconds, encoded = itemHash),
-                MockHashFunction.bytesOf(id = mockUUID(12), updated = 12.milliseconds, encoded = itemHash),
+                MockHashFunction.bytesOf(id = mockUUID(11), updated = 11.minutes, encoded = itemHash),
+                MockHashFunction.bytesOf(id = mockUUID(12), updated = 12.minutes, encoded = itemHash),
             ).flatMap { it.toList() }.toByteArray() to itemFinalListHash,
         )
         val dir = File("/tmp/storages")
@@ -183,10 +184,10 @@ internal class SyncStreamsStoragesTest {
                     )
                 },
             )
-        time = 11.milliseconds
+        time = 11.minutes
         itemId = mockUUID(11)
         tStorages.require<String>().add(payloadValue)
-        time = 12.milliseconds
+        time = 12.minutes
         itemId = mockUUID(12)
         rStorages.require<String>().add(payloadValue)
         tStorages.require<String>().items.single().also { tItem ->
@@ -209,19 +210,19 @@ internal class SyncStreamsStoragesTest {
         assertEquals(response.infos.keys.single(), mockUUID(1))
         val syncInfo = response.infos.values.single()
         assertEquals(syncInfo.infos.keys.single(), mockUUID(11))
-        assertEquals(syncInfo.infos.values.single(), mockItemInfo(updated = 11.milliseconds, hash = itemHash))
+        assertEquals(syncInfo.infos.values.single(), mockItemInfo(updated = 11.minutes, hash = itemHash, value = payloadValue))
         assertTrue(syncInfo.deleted.isEmpty())
         val mis = rStorages.getMergeInfo(session = response.session, infos = response.infos)
         assertEquals(mis.keys.single(), mockUUID(1))
         val mergeInfo = mis.values.single()
         assertTrue(mergeInfo.deleted.isEmpty())
         assertEquals(mergeInfo.downloaded.single(), mockUUID(11))
-        assertEquals(
-            mergeInfo.items.single(),
-            mockRawPayload(
+        mergeInfo.items.single().assert(
+            other = mockRawPayload(
                 meta = mockMetadata(
                     id = mockUUID(12),
-                    info = mockItemInfo(updated = 12.milliseconds, hash = itemHash),
+                    created = 12.minutes,
+                    info = mockItemInfo(updated = 12.minutes, hash = itemHash, value = payloadValue),
                 ),
                 bytes = StringTransformer.encode(payloadValue),
             ),
@@ -230,17 +231,17 @@ internal class SyncStreamsStoragesTest {
         assertEquals(cis.keys.single(), mockUUID(1))
         val commitInfo = cis.values.single()
         assertTrue(commitInfo.deleted.isEmpty())
-        assertEquals(
-            commitInfo.items.single(),
-            mockRawPayload(
+        commitInfo.items.single().assert(
+            other = mockRawPayload(
                 meta = mockMetadata(
                     id = mockUUID(11),
-                    info = mockItemInfo(updated = 11.milliseconds, hash = itemHash),
+                    created = 11.minutes,
+                    info = mockItemInfo(updated = 11.minutes, hash = itemHash, value = payloadValue),
                 ),
                 bytes = StringTransformer.encode(payloadValue),
             ),
         )
-        assertTrue(commitInfo.hash.contentEquals(itemFinalListHash))
+        assertTrue(commitInfo.hash.contentEquals(itemFinalListHash), "e: ${itemFinalListHash.toHEX()}\na: ${commitInfo.hash.toHEX()}")
         val ids = rStorages.commit(session = response.session, infos = cis)
         assertEquals(ids.single(), mockUUID(1))
         assertEquals(tStorages.hashes().keys.single(), mockUUID(1))
@@ -626,10 +627,10 @@ internal class SyncStreamsStoragesTest {
             mockPayload(pointer = 30 + number, value = number.toLong())
         }
         val foos = (1..5).map { number ->
-            mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"))
+            mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"), transformer = FooTransformer)
         }
         val bars = (1..5).map { number ->
-            mockPayload(pointer = 50 + number, value = Bar(number = 50 + number))
+            mockPayload(pointer = 50 + number, value = Bar(number = 50 + number), transformer = BarTransformer)
         }
         onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, dir: File ->
             tStorages.assertMerge(
@@ -1049,10 +1050,10 @@ internal class SyncStreamsStoragesTest {
             mockPayload(pointer = 30 + number, value = number.toLong())
         }
         val foos = (1..5).map { number ->
-            mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"))
+            mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"), transformer = FooTransformer)
         }
         val bars = (1..5).map { number ->
-            mockPayload(pointer = 50 + number, value = Bar(number = 50 + number))
+            mockPayload(pointer = 50 + number, value = Bar(number = 50 + number), transformer = BarTransformer)
         }
         onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, dir: File ->
             assertCommit(
@@ -1234,7 +1235,7 @@ internal class SyncStreamsStoragesTest {
                     checkNotNull(ei)
                     val ai = syncInfo.infos[key]
                     checkNotNull(ai)
-                    assertEquals(ei, ai, "storage: $storageId")
+                    assertEquals(ei, ai, "storage: $storageId\nkey: $key")
                 }
                 assertEquals(value, syncInfo, "storage: $storageId")
             }
@@ -1253,20 +1254,21 @@ internal class SyncStreamsStoragesTest {
         }
 
         private fun Payload<String>.updated(pointer: Int): Payload<String> {
+            val newValue = "$value:$pointer:updated"
             return copy(
                 updated = (1_000 + pointer).milliseconds,
-                hash = MockHashFunction.map("$value:$pointer:hash:updated"),
-                value = "$value:$pointer:updated",
-                size = StringTransformer.encode(value).size,
+                hash = MockHashFunction.map(newValue),
+                value = newValue,
+                size = StringTransformer.encode(newValue).size,
             )
         }
 
         private fun Payload<Int>.updated(pointer: Int, newValue: Int): Payload<Int> {
             return copy(
                 updated = (1_000 + pointer).milliseconds,
-                hash = MockHashFunction.map("$newValue:$pointer:hash:updated"),
+                hash = MockHashFunction.map("$newValue"),
                 value = newValue,
-                size = IntTransformer.encode(value).size,
+                size = IntTransformer.encode(newValue).size,
             )
         }
 
@@ -1279,6 +1281,18 @@ internal class SyncStreamsStoragesTest {
                 meta = meta,
                 bytes = transform(value),
             )
+        }
+
+        private fun RawPayload.assert(other: RawPayload) {
+            assertEquals(other.meta, meta)
+            assertTrue(other.bytes.contentEquals(bytes), "e: ${other.bytes.toHEX()}\na: ${bytes.toHEX()}")
+            assertEquals(other, this)
+        }
+
+        private fun <T : Any> Payload<T>.assert(other: Payload<T>) {
+            assertEquals(other.meta, meta)
+            assertEquals(other.value, value)
+            assertEquals(other, this)
         }
 
         private fun assertFiles(
@@ -1367,10 +1381,10 @@ internal class SyncStreamsStoragesTest {
                 mockPayload(pointer = 30 + number, value = number.toLong())
             }
             val foos = (1..5).map { number ->
-                mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"))
+                mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"), transformer = FooTransformer)
             }
             val bars = (1..5).map { number ->
-                mockPayload(pointer = 50 + number, value = Bar(number = 50 + number))
+                mockPayload(pointer = 50 + number, value = Bar(number = 50 + number), transformer = BarTransformer)
             }
             val hashes = MockHashFunction.hashes(
                 strings to "strings:hash",
@@ -1405,7 +1419,7 @@ internal class SyncStreamsStoragesTest {
                 IntTransformer.hashPair(intTUpdated),
                 IntTransformer.hashPair(intRUpdated),
             )
-            var time = 1.milliseconds
+            var time = 1.minutes
             val timeProvider = MockProvider { time }
             var itemId = mockUUID()
             val uuidProvider = MockProvider { itemId }

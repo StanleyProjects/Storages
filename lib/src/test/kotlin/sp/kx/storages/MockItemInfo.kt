@@ -15,11 +15,22 @@ internal fun mockItemInfo(
     )
 }
 
-internal fun mockItemInfo(pointer: Int): ItemInfo {
-    val decoded = "item:hash:$pointer"
+internal fun mockItemInfo(
+    updated: Duration = mockDuration(1),
+    hash: ByteArray = mockByteArray(1),
+    value: String,
+): ItemInfo {
+    return ItemInfo(
+        updated = updated,
+        hash = hash,
+        size = StringTransformer.encode(value).size,
+    )
+}
+
+internal fun mockItemInfo(pointer: Int, value: String = "payload:$pointer"): ItemInfo {
     return mockItemInfo(
         updated = mockDuration(pointer = pointer),
-        hash = MockHashFunction.map(decoded),
-        size = decoded.toByteArray().size,
+        hash = MockHashFunction.map(value),
+        size = StringTransformer.encode(value).size,
     )
 }
