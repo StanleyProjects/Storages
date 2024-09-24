@@ -11,6 +11,7 @@ import sp.kx.storages.SyncStreamsStoragesTest.Companion.map
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 internal class SyncStreamsStorageTest {
     companion object {
@@ -136,12 +137,15 @@ internal class SyncStreamsStorageTest {
     }
 
     private fun SyncInfo.assert(
-        meta: Map<UUID, ItemInfo> = emptyMap(),
+        infos: Map<UUID, ItemInfo> = emptyMap(),
         deleted: Set<UUID> = emptySet(),
     ) {
-        assertEquals(meta.size, this.infos.size)
-        meta.forEach { (itemId, expected) ->
+        assertEquals(infos.size, this.infos.size)
+        infos.forEach { (itemId, expected) ->
             val actual = this.infos[itemId] ?: error("No item info!")
+            assertEquals(expected.updated, actual.updated, "id: $itemId\n$expected\n$actual")
+            assertTrue(expected.hash.contentEquals(actual.hash), "e: ${expected.hash.toHEX()}, a: ${actual.hash.toHEX()}")
+            assertEquals(expected.size, actual.size, "id: $itemId")
             assertEquals(expected, actual, "id: $itemId")
         }
         assertEquals(deleted.size, this.deleted.size)
@@ -465,7 +469,7 @@ internal class SyncStreamsStorageTest {
         val itemHash = MockHashFunction.map("itemHash")
         val itemUpdated = "itemUpdated"
         val itemUpdatedHash = MockHashFunction.map("itemUpdatedHash")
-        var time = 1.milliseconds
+        var time = 1.minutes
         val timeProvider = MockProvider { time }
         val itemId = mockUUID(11)
         val uuidProvider = MockProvider { itemId }
@@ -486,7 +490,7 @@ internal class SyncStreamsStorageTest {
                 StringTransformer.encode(itemUpdated) to itemUpdatedHash,
                 MockHashFunction.hash(listOf(expected)) to storageHash,
                 listOf(itemUpdatedHash).flatMap {
-                    MockHashFunction.bytesOf(id = itemId, updated = 2.milliseconds, encoded = itemUpdatedHash).toList()
+                    MockHashFunction.bytesOf(id = itemId, updated = 2.minutes, encoded = itemUpdatedHash).toList()
                 }.toByteArray() to storageUpdatedHash,
             ),
             uuidProvider = uuidProvider,
@@ -515,7 +519,7 @@ internal class SyncStreamsStorageTest {
             hash = storageHash,
             items = listOf(expected),
         )
-        time = 2.milliseconds
+        time = 2.minutes
         val updated = Payload(
             meta = Metadata(
                 id = expected.meta.id,
@@ -537,7 +541,7 @@ internal class SyncStreamsStorageTest {
             hash = storageUpdatedHash,
             items = listOf(updated),
         )
-        storage.getSyncInfo().assert(meta = mapOf(updated.meta.id to updated.meta.info))
+        storage.getSyncInfo().assert(infos = mapOf(updated.meta.id to updated.meta.info))
         assertFalse(storage.delete(id = notExists))
         storage.assert(
             id = id,
@@ -698,7 +702,7 @@ internal class SyncStreamsStorageTest {
         )
         //
         val rSyncInfo = rStorage.getSyncInfo()
-        rSyncInfo.assert(meta = rItems.associate { it.meta.id to it.meta.info }, deleted = setOf(defaultItems[1].meta.id))
+        rSyncInfo.assert(infos = rItems.associate { it.meta.id to it.meta.info }, deleted = setOf(defaultItems[1].meta.id))
         val tMergeInfo = tStorage.getMergeInfo(rSyncInfo)
         tMergeInfo.assert(
             downloaded = setOf(defaultItems[0].meta.id, rItems.last().meta.id),
@@ -710,7 +714,7 @@ internal class SyncStreamsStorageTest {
         )
         //
         val tSyncInfo = tStorage.getSyncInfo()
-        tSyncInfo.assert(meta = tItems.associate { it.meta.id to it.meta.info }, deleted = setOf(defaultItems[2].meta.id))
+        tSyncInfo.assert(infos = tItems.associate { it.meta.id to it.meta.info }, deleted = setOf(defaultItems[2].meta.id))
         val rMergeInfo = rStorage.getMergeInfo(tSyncInfo)
         rMergeInfo.assert(
             downloaded = setOf(defaultItems[3].meta.id, tItems.last().meta.id),

@@ -262,7 +262,9 @@ class SyncStreamsStorage<T : Any>(
                 val itemsSize = stream.readInt()
                 val infos = HashMap<UUID, ItemInfo>(itemsSize)
                 for (ignored in 0 until itemsSize) {
-                    infos[stream.readUUID()] = stream.readItemInfo(hf = hf)
+                    val id = stream.readUUID()
+                    stream.skip(8) // skip created
+                    infos[id] = stream.readItemInfo(hf = hf)
                     stream.skip(stream.readInt().toLong()) // skip encoded
                 }
                 SyncInfo(
