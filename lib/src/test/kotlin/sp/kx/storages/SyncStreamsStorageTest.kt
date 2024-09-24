@@ -118,7 +118,7 @@ internal class SyncStreamsStorageTest {
         items: List<Payload<T>> = emptyList(),
     ) {
         assertEquals(id, this.id)
-        assertEquals(hash.toHEX(), this.hash.toHEX())
+        assertTrue(hash.contentEquals(this.hash), "e: ${hash.toHEX()}, a: ${this.hash.toHEX()}")
         assertEquals(items.size, this.items.size)
         items.forEachIndexed { index, expected ->
             val actual = this.items[index]
