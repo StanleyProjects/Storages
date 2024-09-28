@@ -38,8 +38,7 @@ internal class SyncResponseTransformerTest {
                 syncInfo.infos.map { (id1, itemInfo) ->
                     id1.toByteArray() +
                     itemInfo.updated.inWholeMilliseconds.toByteArray() +
-                    itemInfo.hash +
-                    itemInfo.size.toByteArray()
+                    itemInfo.hash
                 }.flatMap { it.toList() }.toByteArray() +
                 syncInfo.deleted.size.toByteArray() +
                 syncInfo.deleted.map { it.toByteArray() }.flatMap { it.toList() }.toByteArray()
@@ -80,8 +79,7 @@ internal class SyncResponseTransformerTest {
                 syncInfo.infos.map { (id1, itemInfo) ->
                     id1.toByteArray() +
                     itemInfo.updated.inWholeMilliseconds.toByteArray() +
-                    itemInfo.hash +
-                    itemInfo.size.toByteArray()
+                    itemInfo.hash
                 }.flatMap { it.toList() }.toByteArray() +
                 syncInfo.deleted.size.toByteArray() +
                 syncInfo.deleted.map { it.toByteArray() }.flatMap { it.toList() }.toByteArray()

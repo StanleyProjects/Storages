@@ -16,7 +16,6 @@ internal class ItemInfoTest {
     @Test
     fun equalsNotTest() {
         val expected: Any = mockItemInfo()
-        assertFalse(expected == mockItemInfo(size = 2))
         assertFalse(expected == mockItemInfo(updated = 12.milliseconds))
         assertFalse(expected == mockItemInfo(hash = "42".toByteArray()))
         assertFalse(expected == "42")

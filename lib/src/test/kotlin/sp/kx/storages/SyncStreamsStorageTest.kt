@@ -102,7 +102,6 @@ internal class SyncStreamsStorageTest {
             """.trimIndent()
             assertEquals(expected.updated, actual.updated)
             assertEquals(expected.hash.toHEX(), actual.hash.toHEX(), message)
-            assertEquals(expected.size, actual.size, message)
             assertEquals(expected, actual)
         }
 
@@ -111,11 +110,9 @@ internal class SyncStreamsStorageTest {
             itemId: UUID,
             updated: Duration,
             hash: ByteArray,
-            size: Int,
         ) {
             assertEquals(updated, this.updated, "storageId: $storageId\nitemId: $itemId\nupdated:\n")
             assertEquals(hash.toHEX(), this.hash.toHEX(), "storageId: $storageId\nitemId: $itemId\nhash:\n")
-            assertEquals(size, this.size, "storageId: $storageId\nitemId: $itemId\nsize:\n")
         }
     }
 
@@ -142,7 +139,6 @@ internal class SyncStreamsStorageTest {
                 itemId = expected.meta.id,
                 updated = expected.meta.info.updated,
                 hash = expected.meta.info.hash,
-                size = expected.meta.info.size,
             )
             assertEquals(expected, actual)
         }
@@ -158,7 +154,6 @@ internal class SyncStreamsStorageTest {
             val actual = this.infos[itemId] ?: error("No item info!")
             assertEquals(expected.updated, actual.updated, "id: $itemId\n$expected\n$actual")
             assertTrue(expected.hash.contentEquals(actual.hash), "e: ${expected.hash.toHEX()}, a: ${actual.hash.toHEX()}")
-            assertEquals(expected.size, actual.size, "id: $itemId")
             assertEquals(expected, actual, "id: $itemId")
         }
         assertEquals(deleted.size, this.deleted.size)
@@ -197,7 +192,6 @@ internal class SyncStreamsStorageTest {
                     info = ItemInfo(
                         updated = (1_000 + index).milliseconds,
                         hash = MockHashFunction.map("item:hash:$index"),
-                        size = StringTransformer.encode(value).size,
                     ),
                 ),
                 value = value,
@@ -211,7 +205,6 @@ internal class SyncStreamsStorageTest {
                     updated = (2_000 + 0).milliseconds,
                     hash = MockHashFunction.map("item:hash:0:updated"),
                     value = value,
-                    size = StringTransformer.encode(value).size,
                 ),
             )
             it.add(defaultItems[2])
@@ -295,7 +288,6 @@ internal class SyncStreamsStorageTest {
                 info = ItemInfo(
                     updated = time,
                     hash = hash,
-                    size = StringTransformer.encode(value).size,
                 ),
             ),
             value = value,
@@ -460,7 +452,6 @@ internal class SyncStreamsStorageTest {
                 info = ItemInfo(
                     updated = time,
                     hash = itemUpdatedHash,
-                    size = StringTransformer.encode(itemUpdated).size,
                 ),
             ),
             value = itemUpdated,
@@ -540,7 +531,6 @@ internal class SyncStreamsStorageTest {
                 info = ItemInfo(
                     updated = time,
                     hash = itemUpdatedHash,
-                    size = StringTransformer.encode(itemUpdated).size,
                 ),
             ),
             value = itemUpdated,
@@ -586,7 +576,6 @@ internal class SyncStreamsStorageTest {
                     updated = (20 + 0).minutes,
                     hash = MockHashFunction.map("item:hash:0:updated"),
                     value = "item:0:updated",
-                    size = StringTransformer.encode("item:0:updated").size,
                 ),
             )
             it.add(defaultItems[2])
@@ -603,7 +592,6 @@ internal class SyncStreamsStorageTest {
                     updated = (30 + 0).minutes,
                     hash = MockHashFunction.map("item:hash:3:updated"),
                     value = "item:3:updated",
-                    size = StringTransformer.encode("item:3:updated").size,
                 ),
             )
             it.add(defaultItems[4])

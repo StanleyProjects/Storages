@@ -237,7 +237,6 @@ class SyncStreamsStorage<T : Any>(
                     stream.skip(8) // skip created
                     stream.read(bytes, index * size + 16, 8)
                     stream.read(bytes, index * size + 16 + 8, hf.size)
-                    stream.skip(4) // skip size
                     stream.skip(stream.readInt().toLong()) // skip encoded
                 }
                 hf.map(bytes)

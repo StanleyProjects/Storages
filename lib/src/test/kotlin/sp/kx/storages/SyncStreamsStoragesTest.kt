@@ -210,7 +210,7 @@ internal class SyncStreamsStoragesTest {
         assertEquals(response.infos.keys.single(), mockUUID(1))
         val syncInfo = response.infos.values.single()
         assertEquals(syncInfo.infos.keys.single(), mockUUID(11))
-        assertEquals(syncInfo.infos.values.single(), mockItemInfo(updated = 11.minutes, hash = itemHash, value = payloadValue))
+        assertEquals(syncInfo.infos.values.single(), mockItemInfo(updated = 11.minutes, hash = itemHash))
         assertTrue(syncInfo.deleted.isEmpty())
         val mis = rStorages.getMergeInfo(session = response.session, infos = response.infos)
         assertEquals(mis.keys.single(), mockUUID(1))
@@ -222,7 +222,7 @@ internal class SyncStreamsStoragesTest {
                 meta = mockMetadata(
                     id = mockUUID(12),
                     created = 12.minutes,
-                    info = mockItemInfo(updated = 12.minutes, hash = itemHash, value = payloadValue),
+                    info = mockItemInfo(updated = 12.minutes, hash = itemHash),
                 ),
                 bytes = StringTransformer.encode(payloadValue),
             ),
@@ -236,7 +236,7 @@ internal class SyncStreamsStoragesTest {
                 meta = mockMetadata(
                     id = mockUUID(11),
                     created = 11.minutes,
-                    info = mockItemInfo(updated = 11.minutes, hash = itemHash, value = payloadValue),
+                    info = mockItemInfo(updated = 11.minutes, hash = itemHash),
                 ),
                 bytes = StringTransformer.encode(payloadValue),
             ),
@@ -627,10 +627,10 @@ internal class SyncStreamsStoragesTest {
             mockPayload(pointer = 30 + number, value = number.toLong())
         }
         val foos = (1..5).map { number ->
-            mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"), transformer = FooTransformer)
+            mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"))
         }
         val bars = (1..5).map { number ->
-            mockPayload(pointer = 50 + number, value = Bar(number = 50 + number), transformer = BarTransformer)
+            mockPayload(pointer = 50 + number, value = Bar(number = 50 + number))
         }
         onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, dir: File ->
             tStorages.assertMerge(
@@ -1050,10 +1050,10 @@ internal class SyncStreamsStoragesTest {
             mockPayload(pointer = 30 + number, value = number.toLong())
         }
         val foos = (1..5).map { number ->
-            mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"), transformer = FooTransformer)
+            mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"))
         }
         val bars = (1..5).map { number ->
-            mockPayload(pointer = 50 + number, value = Bar(number = 50 + number), transformer = BarTransformer)
+            mockPayload(pointer = 50 + number, value = Bar(number = 50 + number))
         }
         onSyncStreamsStorages { tStorages: SyncStreamsStorages, rStorages: SyncStreamsStorages, dir: File ->
             assertCommit(
@@ -1259,7 +1259,6 @@ internal class SyncStreamsStoragesTest {
                 updated = (1_000 + pointer).milliseconds,
                 hash = MockHashFunction.map(newValue),
                 value = newValue,
-                size = StringTransformer.encode(newValue).size,
             )
         }
 
@@ -1268,7 +1267,6 @@ internal class SyncStreamsStoragesTest {
                 updated = (1_000 + pointer).milliseconds,
                 hash = MockHashFunction.map("$newValue"),
                 value = newValue,
-                size = IntTransformer.encode(newValue).size,
             )
         }
 
@@ -1381,10 +1379,10 @@ internal class SyncStreamsStoragesTest {
                 mockPayload(pointer = 30 + number, value = number.toLong())
             }
             val foos = (1..5).map { number ->
-                mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"), transformer = FooTransformer)
+                mockPayload(pointer = 40 + number, value = Foo(text = "foo:${40 + number}"))
             }
             val bars = (1..5).map { number ->
-                mockPayload(pointer = 50 + number, value = Bar(number = 50 + number), transformer = BarTransformer)
+                mockPayload(pointer = 50 + number, value = Bar(number = 50 + number))
             }
             val hashes = MockHashFunction.hashes(
                 strings to "strings:hash",
