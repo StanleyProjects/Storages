@@ -20,5 +20,5 @@ import java.util.UUID
 interface Storage<T : Any> {
     val id: UUID
     val hash: ByteArray
-    val items: List<Described<T>>
+    val items: List<Payload<T>>
 }

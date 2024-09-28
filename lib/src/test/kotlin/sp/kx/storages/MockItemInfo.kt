@@ -1,24 +1,20 @@
 package sp.kx.storages
 
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 
 internal fun mockItemInfo(
-    created: Duration = 1.milliseconds,
-    updated: Duration = 2.milliseconds,
-    hash: ByteArray = "foo".toByteArray(),
+    updated: Duration = mockDuration(1),
+    hash: ByteArray = mockByteArray(1),
 ): ItemInfo {
     return ItemInfo(
-        created = created,
         updated = updated,
         hash = hash,
     )
 }
 
-internal fun mockItemInfo(pointer: Int): ItemInfo {
+internal fun mockItemInfo(pointer: Int, value: String = "payload:$pointer"): ItemInfo {
     return mockItemInfo(
-        created = (1_000 + pointer).milliseconds,
-        updated = (1_000 + pointer).milliseconds,
-        hash = MockHashFunction.map("item:hash:$pointer"),
+        updated = mockDuration(pointer = pointer),
+        hash = MockHashFunction.map(value),
     )
 }

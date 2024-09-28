@@ -16,7 +16,7 @@ import java.util.UUID
  * @since 0.4.1
  */
 data class MergeInfo(
-    val download: Set<UUID>,
-    val items: List<Described<ByteArray>>,
+    val downloaded: Set<UUID>,
+    val items: List<RawPayload>,
     val deleted: Set<UUID>,
 )

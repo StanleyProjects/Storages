@@ -1,5 +1,7 @@
 package sp.kx.storages
 
+import sp.kx.bytes.toHEX
+import sp.kx.bytes.writeBytes
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
@@ -20,16 +22,16 @@ internal fun <T : Any> mockSyncStreamsStorage(
     hf = MockHashFunction(hashes = hashes),
     streamer = object : Streamer {
         private val stream = ByteArrayOutputStream().also { stream ->
-            BytesUtil.writeBytes(stream, defaultDeleted.size)
+            stream.writeBytes(value = defaultDeleted.size)
             defaultDeleted.forEach {
-                BytesUtil.writeBytes(stream, it)
+                stream.writeBytes(value = it)
             }
-            BytesUtil.writeBytes(stream, defaultLocals.size)
+            stream.writeBytes(value = defaultLocals.size)
             defaultLocals.forEach {
-                BytesUtil.writeBytes(stream, it)
+                stream.writeBytes(value = it)
             }
             val itemsSize: Int = 0
-            BytesUtil.writeBytes(stream, itemsSize)
+            stream.writeBytes(value = itemsSize)
         }
 
         override fun inputStream(): InputStream {

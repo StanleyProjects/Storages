@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import sp.kx.bytes.toHEX
 import java.util.Objects
 import java.util.UUID
 
@@ -19,7 +20,7 @@ import java.util.UUID
  */
 class CommitInfo(
     val hash: ByteArray,
-    val items: List<Described<ByteArray>>,
+    val items: List<RawPayload>,
     val deleted: Set<UUID>,
 ) {
     override fun toString(): String {

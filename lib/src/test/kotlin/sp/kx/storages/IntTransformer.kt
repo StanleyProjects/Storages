@@ -1,13 +1,14 @@
 package sp.kx.storages
 
+import sp.kx.bytes.readInt
+import sp.kx.bytes.toByteArray
+
 internal object IntTransformer : Transformer<Int> {
     override fun encode(decoded: Int): ByteArray {
-        val byte = decoded.toByte()
-        if (decoded != byte.toInt()) TODO()
-        return byteArrayOf(byte)
+        return decoded.toByteArray()
     }
 
     override fun decode(encoded: ByteArray): Int {
-        return encoded[0].toInt()
+        return encoded.readInt()
     }
 }

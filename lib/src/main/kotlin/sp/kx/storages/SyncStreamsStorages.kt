@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import sp.kx.bytes.write
 import java.io.File
 import java.util.UUID
 
@@ -7,10 +8,20 @@ class SyncStreamsStorages private constructor(
     private val hf: HashFunction,
     private val transformers: Map<UUID, Pair<Class<out Any>, Transformer<out Any>>>,
     private val env: SyncStreamsStorage.Environment,
-    private val streamerProvider: StreamerProvider,
+    private val streamers: StreamerProvider,
+    private var session: SyncSession?,
 ) : MutableStorages {
     class Builder {
         private val transformers = mutableMapOf<UUID, Pair<Class<out Any>, Transformer<out Any>>>()
+        private var session: SyncSession?
+
+        constructor() {
+            session = null
+        }
+
+        internal constructor(session: SyncSession) {
+            this.session = session
+        }
 
         fun <T : Any> add(id: UUID, type: Class<T>, transformer: Transformer<T>): Builder {
             if (transformers.containsKey(id)) error("ID \"$id\" is repeated!")
@@ -25,14 +36,15 @@ class SyncStreamsStorages private constructor(
         fun build(
             hf: HashFunction,
             env: SyncStreamsStorage.Environment,
-            getStreamerProvider: (Set<UUID>) -> StreamerProvider,
+            getStreamers: (Set<UUID>) -> StreamerProvider,
         ): SyncStreamsStorages {
             if (transformers.isEmpty()) error("Empty storages!")
             return SyncStreamsStorages(
                 hf = hf,
                 env = env,
-                streamerProvider = getStreamerProvider(transformers.keys),
+                streamers = getStreamers(transformers.keys),
                 transformers = transformers,
+                session = session,
             )
         }
 
@@ -45,8 +57,9 @@ class SyncStreamsStorages private constructor(
             return SyncStreamsStorages(
                 hf = hf,
                 env = env,
-                streamerProvider = FileStreamerProvider(dir = dir, ids = transformers.keys),
+                streamers = FileStreamerProvider(dir = dir, ids = transformers.keys),
                 transformers = transformers,
+                session = session,
             )
         }
     }
@@ -63,8 +76,8 @@ class SyncStreamsStorages private constructor(
 
     override fun get(id: UUID): MutableStorage<out Any>? {
         val (_, transformer) = transformers[id] ?: return null
-        val pointer = streamerProvider.getPointer(id = id)
-        val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
+        val pointer = streamers.getPointer(id = id)
+        val streamer = streamers.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
         return getSyncStorage(
             id = id,
             streamer = streamer,
@@ -76,8 +89,8 @@ class SyncStreamsStorages private constructor(
         for ((id, value) in transformers) {
             if (type != value.first) continue
             val transformer = value.second as Transformer<T>
-            val pointer = streamerProvider.getPointer(id = id)
-            val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
+            val pointer = streamers.getPointer(id = id)
+            val streamer = streamers.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
             return getSyncStorage(
                 id = id,
                 streamer = streamer,
@@ -98,70 +111,112 @@ class SyncStreamsStorages private constructor(
     }
 
     fun hashes(): Map<UUID, ByteArray> {
-        return transformers.mapValues { (id, value) ->
-            val (_, transformer) = value
-            val pointer = streamerProvider.getPointer(id = id)
-            val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
-            getSyncStorage(id, streamer, transformer).hash
+        return transformers.mapValues { (id, _) ->
+            val pointer = streamers.getPointer(id = id)
+            val streamer = streamers.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
+            SyncStreamsStorage.getHash(streamer = streamer, hf = hf)
         }
     }
 
-    fun getSyncInfo(hashes: Map<UUID, ByteArray>): Map<UUID, SyncInfo> {
+    private fun getHash(hashes: Map<UUID, ByteArray>): ByteArray {
+        val bytes = ByteArray(hashes.size * (16 + hf.size))
+        hashes.entries.sortedBy { (id, _) -> id }.forEachIndexed { index, (id, hash) ->
+            bytes.write(index = index * (16 + hf.size), value = id)
+            System.arraycopy(hash, 0, bytes, index * (16 + hf.size) + 16, hash.size)
+        }
+        return hf.map(bytes)
+    }
+
+    private fun getHash(ids: Set<UUID>): ByteArray {
+        val bytes = ByteArray(ids.size * (16 + hf.size))
+        ids.sorted().forEachIndexed { index, id ->
+            bytes.write(index = index * (16 + hf.size), value = id)
+            val pointer = streamers.getPointer(id = id)
+            val streamer = streamers.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
+            val hash = SyncStreamsStorage.getHash(streamer = streamer, hf = hf)
+            System.arraycopy(hash, 0, bytes, index * (16 + hf.size) + 16, hash.size)
+        }
+        return hf.map(bytes)
+    }
+
+    fun getSyncInfo(hashes: Map<UUID, ByteArray>): SyncResponse {
+        val ids = transformers.keys
+        val session = SyncSession(
+            src = getHash(hashes = hashes),
+            dst = getHash(ids = ids),
+        )
         val result = mutableMapOf<UUID, SyncInfo>()
         for ((id, hash) in hashes) {
-            val (_, transformer) = transformers[id] ?: continue
-            val pointer = streamerProvider.getPointer(id = id)
-            val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
-            val storage = getSyncStorage(id, streamer, transformer)
-            if (storage.hash.contentEquals(hash)) continue
-            result[id] = storage.getSyncInfo()
+            if (!ids.contains(id)) continue
+            val pointer = streamers.getPointer(id = id)
+            val streamer = streamers.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
+            if (SyncStreamsStorage.getHash(streamer = streamer, hf = hf).contentEquals(hash)) continue
+            result[id] = SyncStreamsStorage.getSyncInfo(streamer = streamer, hf = hf)
         }
-        return result
+        this.session = session
+        return SyncResponse(
+            session = session,
+            infos = result,
+        )
     }
 
-    fun getMergeInfo(infos: Map<UUID, SyncInfo>): Map<UUID, MergeInfo> {
+    fun getMergeInfo(session: SyncSession, infos: Map<UUID, SyncInfo>): Map<UUID, MergeInfo> {
+        val ids = transformers.keys
+        if (!session.src.contentEquals(getHash(ids = ids))) error("Session expired!")
+        this.session = session
         return infos.mapValues { (id, info) ->
-            val (_, transformer) = transformers[id] ?: error("No storage by ID: \"$id\"!")
-            val pointer = streamerProvider.getPointer(id = id)
-            val streamer = streamerProvider.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
-            val storage = getSyncStorage(id, streamer, transformer)
-            storage.getMergeInfo(info)
+            if (!ids.contains(id)) error("No storage by ID: \"$id\"!")
+            val pointer = streamers.getPointer(id = id)
+            val streamer = streamers.getStreamer(id = id, inputPointer = pointer, outputPointer = pointer)
+            SyncStreamsStorage.getMergeInfo(streamer = streamer, hf = hf, info = info)
         }
     }
 
-    fun merge(infos: Map<UUID, MergeInfo>): Map<UUID, CommitInfo> {
+    fun merge(session: SyncSession, infos: Map<UUID, MergeInfo>): Map<UUID, CommitInfo> {
+        val ids = transformers.keys
+        if (!session.dst.contentEquals(getHash(ids = ids))) error("Session expired!")
+        val dstSession = this.session ?: error("No session!")
+        if (!dstSession.dst.contentEquals(session.dst)) error("Destination session error!")
+        if (!dstSession.src.contentEquals(session.src)) error("Source session error!")
+        this.session = null
         val newPointers = mutableMapOf<UUID, Int>()
         val result = mutableMapOf<UUID, CommitInfo>()
         for ((id, info) in infos) {
             val (_, transformer) = transformers[id] ?: error("No storage by ID: \"$id\"!")
-            val inputPointer = streamerProvider.getPointer(id = id)
+            val inputPointer = streamers.getPointer(id = id)
             val outputPointer = inputPointer + 1
             val storage = getSyncStorage(
                 id = id,
-                streamer = streamerProvider.getStreamer(
+                streamer = streamers.getStreamer(
                     id = id,
                     inputPointer = inputPointer,
                     outputPointer = outputPointer,
                 ),
                 transformer = transformer,
-            ) // todo SyncStorage only encoded
+            )
             result[id] = storage.merge(info)
             newPointers[id] = outputPointer
         }
-        streamerProvider.putPointers(newPointers)
+        streamers.putPointers(newPointers)
         return result
     }
 
-    fun commit(infos: Map<UUID, CommitInfo>): Set<UUID> {
+    fun commit(session: SyncSession, infos: Map<UUID, CommitInfo>): Set<UUID> {
+        val ids = transformers.keys
+        if (!session.src.contentEquals(getHash(ids = ids))) error("Session expired!")
+        val srcSession = this.session ?: error("No session!")
+        if (!srcSession.dst.contentEquals(session.dst)) TODO()
+        if (!srcSession.src.contentEquals(session.src)) TODO()
+        this.session = null
         if (infos.isEmpty()) return emptySet()
         val newPointers = mutableMapOf<UUID, Int>()
         for ((id, info) in infos) {
             val (_, transformer) = transformers[id] ?: error("No storage by ID: \"$id\"!")
-            val inputPointer = streamerProvider.getPointer(id = id)
+            val inputPointer = streamers.getPointer(id = id)
             val outputPointer = inputPointer + 1
             val storage = getSyncStorage(
                 id = id,
-                streamer = streamerProvider.getStreamer(
+                streamer = streamers.getStreamer(
                     id = id,
                     inputPointer = inputPointer,
                     outputPointer = outputPointer,
@@ -172,7 +227,7 @@ class SyncStreamsStorages private constructor(
             newPointers[id] = outputPointer
         }
         if (newPointers.isNotEmpty()) {
-            streamerProvider.putPointers(newPointers)
+            streamers.putPointers(newPointers)
         }
         return newPointers.keys
     }

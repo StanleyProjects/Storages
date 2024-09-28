@@ -1,7 +1,9 @@
 package sp.kx.storages
 
+import sp.kx.bytes.write
 import java.util.UUID
 import kotlin.math.absoluteValue
+import kotlin.time.Duration
 
 internal class MockHashFunction(
     private val hashes: List<Pair<ByteArray, ByteArray>> = emptyList(),
@@ -11,17 +13,7 @@ internal class MockHashFunction(
     override fun map(bytes: ByteArray): ByteArray {
         val hash = hashes.firstOrNull { (key, _) -> key.contentEquals(bytes) }?.second
         if (hash == null) {
-            val message = """
-                No hash!
-                ---
-                hashes: ${hashes.map { (key, _) -> String(key)}}
-                -
-                ${bytes.size}
-                -
-                ${String(bytes)}
-                ---
-            """.trimIndent()
-            error(message)
+            return map("${bytes.contentHashCode()}")
         }
         return hash
     }
@@ -33,24 +25,31 @@ internal class MockHashFunction(
             return String.format("%0${_size}d", value.hashCode().absoluteValue).toByteArray()
         }
 
-        fun <T : Any> bytesOf(id: UUID, item: T, encode: (T) -> ByteArray): ByteArray {
-            return bytesOf(id = id, encoded = encode(item))
+        fun bytesOf(id: UUID, updated: Duration, encoded: ByteArray): ByteArray {
+            val idBytes = ByteArray(16)
+            idBytes.write(value = id)
+            val updatedBytes = ByteArray(8)
+            updatedBytes.write(value = updated.inWholeMilliseconds)
+            return idBytes + updatedBytes + encoded
         }
 
-        fun bytesOf(id: UUID, encoded: ByteArray): ByteArray {
+        fun hashOf(id: UUID, decoded: String): ByteArray {
+            val encoded = map(decoded)
             val bytes = ByteArray(16 + encoded.size)
-            BytesUtil.writeBytes(bytes = bytes, index = 0, value = id)
+            bytes.write(value = id)
             System.arraycopy(encoded, 0, bytes, 16, encoded.size)
-            return bytes
+            return map("${bytes.contentHashCode()}")
         }
 
-        fun hash(list: List<Described<out Any>>): ByteArray {
-            return list.flatMap { it.info.hash.toList() }.toByteArray()
+        fun hash(list: List<Payload<out Any>>): ByteArray {
+            return list.flatMap {
+                bytesOf(id = it.meta.id, updated = it.meta.info.updated, encoded = it.meta.info.hash).toList()
+            }.toByteArray()
         }
 
         fun hashes(
-            first: Pair<List<Described<out Any>>, String>,
-            vararg other: Pair<List<Described<out Any>>, String>,
+            first: Pair<List<Payload<out Any>>, String>,
+            vararg other: Pair<List<Payload<out Any>>, String>,
         ): List<Pair<ByteArray, ByteArray>> {
             return other.map { (item, hash) ->
                 hash(item) to map(hash)

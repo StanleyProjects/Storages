@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import sp.kx.bytes.toHEX
 import java.util.Date
 import java.util.Objects
 import kotlin.time.Duration
@@ -12,7 +13,6 @@ import kotlin.time.Duration
  * @since 0.4.1
  */
 class ItemInfo(
-    val created: Duration,
     val updated: Duration,
     val hash: ByteArray,
 ) {
@@ -21,7 +21,6 @@ class ItemInfo(
         hash: ByteArray,
     ): ItemInfo {
         return ItemInfo(
-            created = created,
             updated = updated,
             hash = hash,
         )
@@ -29,7 +28,6 @@ class ItemInfo(
 
     override fun toString(): String {
         return "{" +
-            "created: ${Date(created.inWholeMilliseconds)}, " +
             "updated: ${Date(updated.inWholeMilliseconds)}, " +
             "hash: \"${hash.toHEX()}\"" +
             "}"
@@ -37,14 +35,13 @@ class ItemInfo(
 
     override fun equals(other: Any?): Boolean {
         return when (other) {
-            is ItemInfo -> other.created == created && other.updated == updated && other.hash.contentEquals(hash)
+            is ItemInfo -> other.updated == updated && other.hash.contentEquals(hash)
             else -> false
         }
     }
 
     override fun hashCode(): Int {
         return Objects.hash(
-            created,
             updated,
             hash.contentHashCode(),
         )
