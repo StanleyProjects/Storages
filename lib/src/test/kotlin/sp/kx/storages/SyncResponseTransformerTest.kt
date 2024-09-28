@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import sp.kx.bytes.toByteArray
 import sp.kx.bytes.toHEX
-import kotlin.time.Duration.Companion.milliseconds
 
 internal class SyncResponseTransformerTest {
     @Test
@@ -25,7 +24,7 @@ internal class SyncResponseTransformerTest {
                 infos = mapOf(
                     mockUUID(21) to mockItemInfo(21),
                     mockUUID(22) to mockItemInfo(22),
-                )
+                ),
             ),
         )
         val decoded = mockSyncResponse(
@@ -37,8 +36,8 @@ internal class SyncResponseTransformerTest {
                 syncInfo.infos.size.toByteArray() +
                 syncInfo.infos.map { (id1, itemInfo) ->
                     id1.toByteArray() +
-                    itemInfo.updated.inWholeMilliseconds.toByteArray() +
-                    itemInfo.hash
+                        itemInfo.updated.inWholeMilliseconds.toByteArray() +
+                        itemInfo.hash
                 }.flatMap { it.toList() }.toByteArray() +
                 syncInfo.deleted.size.toByteArray() +
                 syncInfo.deleted.map { it.toByteArray() }.flatMap { it.toList() }.toByteArray()
@@ -66,7 +65,7 @@ internal class SyncResponseTransformerTest {
                 infos = mapOf(
                     mockUUID(21) to mockItemInfo(21),
                     mockUUID(22) to mockItemInfo(22),
-                )
+                ),
             ),
         )
         val decoded = mockSyncResponse(
@@ -78,8 +77,8 @@ internal class SyncResponseTransformerTest {
                 syncInfo.infos.size.toByteArray() +
                 syncInfo.infos.map { (id1, itemInfo) ->
                     id1.toByteArray() +
-                    itemInfo.updated.inWholeMilliseconds.toByteArray() +
-                    itemInfo.hash
+                        itemInfo.updated.inWholeMilliseconds.toByteArray() +
+                        itemInfo.hash
                 }.flatMap { it.toList() }.toByteArray() +
                 syncInfo.deleted.size.toByteArray() +
                 syncInfo.deleted.map { it.toByteArray() }.flatMap { it.toList() }.toByteArray()

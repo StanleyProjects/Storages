@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import sp.kx.bytes.toHEX
-import sp.kx.bytes.write
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
