@@ -13,12 +13,11 @@ class Metadata(
     fun copy(
         updated: Duration,
         hash: ByteArray,
-        size: Int,
     ): Metadata {
         return Metadata(
             id = id,
             created = created,
-            info = info.copy(updated = updated, hash = hash, size = size),
+            info = info.copy(updated = updated, hash = hash),
         )
     }
 

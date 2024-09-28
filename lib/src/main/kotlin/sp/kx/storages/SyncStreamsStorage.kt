@@ -119,11 +119,9 @@ class SyncStreamsStorage<T : Any>(
         for (index in items.indices) {
             val oldItem = items[index]
             if (oldItem.meta.id == id) {
-                val encoded = transformer.encode(value)
                 val newItem = oldItem.copy(
                     updated = env.now(),
-                    hash = hf.map(encoded),
-                    size = encoded.size,
+                    hash = hf.map(transformer.encode(value)),
                     value = value,
                 )
                 items[index] = newItem
@@ -137,15 +135,13 @@ class SyncStreamsStorage<T : Any>(
     override fun add(value: T): Payload<T> {
         val items = items.toMutableList()
         val created = env.now()
-        val encoded = transformer.encode(value)
         val payload = Payload(
             meta = Metadata(
                 id = env.randomUUID(),
                 created = created,
                 info = ItemInfo(
                     updated = created,
-                    hash = hf.map(encoded),
-                    size = encoded.size,
+                    hash = hf.map(transformer.encode(value)),
                 ),
             ),
             value = value,

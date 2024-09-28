@@ -10,11 +10,10 @@ class Payload<T : Any>(
     fun copy(
         updated: Duration,
         hash: ByteArray,
-        size: Int,
         value: T,
     ): Payload<T> {
         return Payload(
-            meta = meta.copy(updated = updated, hash = hash, size = size),
+            meta = meta.copy(updated = updated, hash = hash),
             value = value,
         )
     }

@@ -15,31 +15,27 @@ import kotlin.time.Duration
 class ItemInfo(
     val updated: Duration,
     val hash: ByteArray,
-    val size: Int,
 ) {
     fun copy(
         updated: Duration,
         hash: ByteArray,
-        size: Int,
     ): ItemInfo {
         return ItemInfo(
             updated = updated,
             hash = hash,
-            size = size,
         )
     }
 
     override fun toString(): String {
         return "{" +
             "updated: ${Date(updated.inWholeMilliseconds)}, " +
-            "hash: \"${hash.toHEX()}\", " +
-            "size: $size" +
+            "hash: \"${hash.toHEX()}\"" +
             "}"
     }
 
     override fun equals(other: Any?): Boolean {
         return when (other) {
-            is ItemInfo -> other.updated == updated && other.hash.contentEquals(hash) && other.size == size
+            is ItemInfo -> other.updated == updated && other.hash.contentEquals(hash)
             else -> false
         }
     }
@@ -48,7 +44,6 @@ class ItemInfo(
         return Objects.hash(
             updated,
             hash.contentHashCode(),
-            size,
         )
     }
 }
