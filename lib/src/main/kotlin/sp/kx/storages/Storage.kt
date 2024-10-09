@@ -23,7 +23,6 @@ interface Storage<T : Any> {
     val items: List<Payload<T>>
 
     operator fun get(id: UUID): Payload<T>?
-
     fun require(id: UUID): Payload<T> {
         return get(id = id) ?: error("No payload by id: $id")
     }
