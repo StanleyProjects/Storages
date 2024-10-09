@@ -221,6 +221,10 @@ class SyncStreamsStorage<T : Any>(
 
     override fun getMergeInfo(info: SyncInfo): MergeInfo = getMergeInfo(streamer = streamer, hf = hf, info = info)
 
+    override fun get(id: UUID): Payload<T>? {
+        TODO("SyncStreamsStorage:get($id)")
+    }
+
     companion object {
         internal fun getHash(
             streamer: Streamer,
