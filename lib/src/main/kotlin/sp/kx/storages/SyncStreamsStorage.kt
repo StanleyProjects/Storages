@@ -115,6 +115,10 @@ class SyncStreamsStorage<T : Any>(
         return false
     }
 
+    override fun deleteAll(ids: Set<UUID>): Set<UUID> {
+        TODO("SyncStreamsStorage:deleteAll($ids)")
+    }
+
     override fun update(id: UUID, value: T): ItemInfo? {
         val items = items.toMutableList()
         for (index in items.indices) {

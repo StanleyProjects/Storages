@@ -8,6 +8,7 @@ interface MutableStorages : Storages {
         return get(id = id) ?: error("No storage by ID: \"$id\"!")
     }
     override fun <T : Any> get(type: Class<T>): MutableStorage<T>?
+    fun delete(ids: Map<UUID, Set<UUID>>): Map<UUID, Set<UUID>>
 }
 
 inline fun <reified T : Any> MutableStorages.get(): MutableStorage<T>? {
