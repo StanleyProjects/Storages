@@ -38,9 +38,9 @@ dependencies {
 
 ## Unstable
 
-![version](https://img.shields.io/static/v1?label=version&message=0.9.0u-SNAPSHOT&labelColor=212121&color=2962ff&style=flat)
+![version](https://img.shields.io/static/v1?label=version&message=0.9.2u-SNAPSHOT&labelColor=212121&color=2962ff&style=flat)
 
-- [Maven](https://s01.oss.sonatype.org/content/repositories/snapshots/com/github/kepocnhh/Storages/0.9.0u-SNAPSHOT)
+- [Maven](https://s01.oss.sonatype.org/content/repositories/snapshots/com/github/kepocnhh/Storages/0.9.2u-SNAPSHOT)
 
 ### Build
 ```
@@ -54,7 +54,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.kepocnhh:Storages:0.9.0u-SNAPSHOT")
+    implementation("com.github.kepocnhh:Storages:0.9.2u-SNAPSHOT")
 }
 ```
 
