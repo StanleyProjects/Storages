@@ -6,6 +6,7 @@ import sp.kx.bytes.readLong
 import sp.kx.bytes.readUUID
 import sp.kx.bytes.write
 import sp.kx.bytes.writeBytes
+import java.io.InputStream
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -220,6 +221,55 @@ class SyncStreamsStorage<T : Any>(
     override fun getSyncInfo(): SyncInfo = getSyncInfo(streamer = streamer, hf = hf)
 
     override fun getMergeInfo(info: SyncInfo): MergeInfo = getMergeInfo(streamer = streamer, hf = hf, info = info)
+
+    private fun get(id: UUID, stream: InputStream): Payload<T>? {
+        stream.skip(stream.readInt().toLong() * 16) // skip deleted
+        stream.skip(stream.readInt().toLong() * 16) // skip locals
+        for (i in 0 until stream.readInt()) {
+            val actual = stream.readUUID()
+            if (actual != id) {
+                stream.skip(8) // skip created
+                stream.skipItemInfo(hf = hf)
+                stream.skip(stream.readInt().toLong()) // skip encoded
+                continue
+            }
+            return Payload(
+                meta = Metadata(
+                    id = actual,
+                    created = stream.readLong().milliseconds,
+                    info = stream.readItemInfo(hf = hf),
+                ),
+                value = transformer.decode(encoded = stream.readBytes(size = stream.readInt())),
+            )
+        }
+        return null
+    }
+
+    override fun get(id: UUID): Payload<T>? {
+        return streamer.inputStream().use { stream ->
+            get(id = id, stream = stream)
+        }
+    }
+
+    override fun filter(predicate: (Payload<T>) -> Boolean): List<Payload<T>> {
+        val result = mutableListOf<Payload<T>>()
+        streamer.inputStream().use { stream ->
+            stream.skip(stream.readInt().toLong() * 16) // skip deleted
+            stream.skip(stream.readInt().toLong() * 16) // skip locals
+            for (i in 0 until stream.readInt()) {
+                val payload = Payload(
+                    meta = Metadata(
+                        id = stream.readUUID(),
+                        created = stream.readLong().milliseconds,
+                        info = stream.readItemInfo(hf = hf),
+                    ),
+                    value = transformer.decode(stream.readBytes(size = stream.readInt())),
+                )
+                if (predicate(payload)) result.add(payload)
+            }
+        }
+        return result
+    }
 
     companion object {
         internal fun getHash(

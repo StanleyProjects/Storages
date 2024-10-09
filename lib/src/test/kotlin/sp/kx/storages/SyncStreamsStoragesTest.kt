@@ -328,16 +328,16 @@ internal class SyncStreamsStoragesTest {
         assertTrue(deleted)
         assertTrue(rStorages.require(mockUUID(1)).items.none { it.meta.id == mockUUID(11) })
         assertTrue(tStorages.require(mockUUID(1)).items.any { it.meta.id == mockUUID(11) })
-        rStorages.getSyncInfo(tStorages.hashes()).also { response ->
-            assertEquals(response.infos.keys, setOf(mockUUID(1)))
-            val si = response.infos[mockUUID(1)]
+        rStorages.getSyncInfo(tStorages.hashes()).also {
+            assertEquals(it.infos.keys, setOf(mockUUID(1)))
+            val si = it.infos[mockUUID(1)]
             assertNotNull(si)
             checkNotNull(si)
             assertEquals(si.deleted.sorted(), listOf(mockUUID(11)))
         }
-        tStorages.getSyncInfo(rStorages.hashes()).also { response ->
-            assertEquals(response.infos.keys, setOf(mockUUID(1)))
-            val si = response.infos[mockUUID(1)]
+        tStorages.getSyncInfo(rStorages.hashes()).also {
+            assertEquals(it.infos.keys, setOf(mockUUID(1)))
+            val si = it.infos[mockUUID(1)]
             assertNotNull(si)
             checkNotNull(si)
             assertEquals(si.deleted.sorted(), emptyList<UUID>())
