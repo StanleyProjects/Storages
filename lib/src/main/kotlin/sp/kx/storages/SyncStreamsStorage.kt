@@ -251,6 +251,26 @@ class SyncStreamsStorage<T : Any>(
         }
     }
 
+    override fun filter(predicate: (Payload<T>) -> Boolean): List<Payload<T>> {
+        val result = mutableListOf<Payload<T>>()
+        streamer.inputStream().use { stream ->
+            stream.skip(stream.readInt().toLong() * 16) // skip deleted
+            stream.skip(stream.readInt().toLong() * 16) // skip locals
+            for (i in 0 until stream.readInt()) {
+                val payload = Payload(
+                    meta = Metadata(
+                        id = stream.readUUID(),
+                        created = stream.readLong().milliseconds,
+                        info = stream.readItemInfo(hf = hf),
+                    ),
+                    value = transformer.decode(stream.readBytes(size = stream.readInt())),
+                )
+                if (predicate(payload)) result.add(payload)
+            }
+        }
+        return result
+    }
+
     companion object {
         internal fun getHash(
             streamer: Streamer,

@@ -26,4 +26,5 @@ interface Storage<T : Any> {
     fun require(id: UUID): Payload<T> {
         return get(id = id) ?: error("No payload by id: $id")
     }
+    fun filter(predicate: (Payload<T>) -> Boolean): List<Payload<T>>
 }
