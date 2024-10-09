@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrowsExactly
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import sp.kx.bytes.toHEX
 import sp.kx.storages.SyncStreamsStoragesTest.Companion.map
 import java.util.UUID
@@ -853,5 +854,57 @@ internal class SyncStreamsStorageTest {
             hash = MockHashFunction.map("merged:hash"),
             items = itemsMerged,
         )
+    }
+
+    @Test
+    fun getTest() {
+        val storageId = mockUUID(1)
+        var time = 1.milliseconds
+        val timeProvider = MockProvider { time }
+        var itemId = mockUUID(1)
+        val uuidProvider = MockProvider { itemId }
+        val defaultItems = (0..3).map { index ->
+            mockPayload(pointer = index)
+        }
+        check(defaultItems.size == 4)
+        val storageHash = MockHashFunction.map("storageHash")
+        val hashes = defaultItems.map {
+            StringTransformer.hashPair(it)
+        } + listOf(
+            MockHashFunction.hash(defaultItems) to storageHash,
+        )
+        val transformer = defaultItems.map {
+            it.value.toByteArray() to it.value
+        }
+        val storage: SyncStorage<String> = mockSyncStreamsStorage(
+            id = storageId,
+            timeProvider = timeProvider,
+            uuidProvider = uuidProvider,
+            hashes = hashes,
+            transformer = transformer,
+        )
+        defaultItems.forEach { payload ->
+            itemId = payload.meta.id
+            time = payload.meta.created
+            storage.add(payload.value)
+        }
+        storage.assert(
+            id = storageId,
+            hash = storageHash,
+            items = defaultItems,
+        )
+        assertNull(storage[mockUUID(defaultItems.size)])
+        defaultItems.forEach { expected ->
+            val actual = storage[expected.meta.id]
+            checkNotNull(actual)
+            assertEquals(expected, actual)
+        }
+        assertThrows<IllegalStateException> {
+            storage.require(mockUUID(defaultItems.size))
+        }
+        defaultItems.forEach { expected ->
+            val actual = storage.require(expected.meta.id)
+            assertEquals(expected, actual)
+        }
     }
 }

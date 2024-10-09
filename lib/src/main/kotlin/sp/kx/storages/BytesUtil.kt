@@ -52,3 +52,8 @@ internal fun InputStream.readItemInfo(hf: HashFunction): ItemInfo {
         hash = readBytes(size = hf.size),
     )
 }
+
+internal fun InputStream.skipItemInfo(hf: HashFunction) {
+    skip(8) // skip updated
+    skip(hf.size.toLong()) // skip hash
+}
