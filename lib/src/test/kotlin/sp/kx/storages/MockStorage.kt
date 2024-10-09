@@ -10,4 +10,8 @@ internal class MockStorage<T : Any>(
     override fun get(id: UUID): Payload<T>? {
         TODO("MockStorage:get($id)")
     }
+
+    override fun filter(predicate: (Payload<T>) -> Boolean): List<Payload<T>> {
+        TODO("MockStorage:filter")
+    }
 }
