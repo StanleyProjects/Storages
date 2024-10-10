@@ -49,7 +49,7 @@ internal class SyncStreamsStorageTest {
             assertEquals(
                 items.size,
                 this.items.size,
-                "upload:\n${items.map { it.meta.id }}\n${this.items.map { it.meta.id }}\n"
+                "upload:\n${items.map { it.meta.id }}\n${this.items.map { it.meta.id }}\n",
             )
             val sorted = this.items.sortedBy { it.meta.created }
             items.sortedBy { it.meta.created }.forEachIndexed { index, expected ->
@@ -89,7 +89,7 @@ internal class SyncStreamsStorageTest {
             assertEquals(
                 items.size,
                 this.items.size,
-                "upload:\n${items.map { it.meta.id }}\n${this.items.map { it.meta.id }}\n"
+                "upload:\n${items.map { it.meta.id }}\n${this.items.map { it.meta.id }}\n",
             )
             items.forEachIndexed { index, expected ->
                 val actual = this.items[index]
@@ -165,7 +165,7 @@ internal class SyncStreamsStorageTest {
             assertEquals(expected.updated, actual.updated, "id: $itemId\n$expected\n$actual")
             assertTrue(
                 expected.hash.contentEquals(actual.hash),
-                "e: ${expected.hash.toHEX()}, a: ${actual.hash.toHEX()}"
+                "e: ${expected.hash.toHEX()}, a: ${actual.hash.toHEX()}",
             )
             assertEquals(expected, actual, "id: $itemId")
         }
@@ -803,7 +803,7 @@ internal class SyncStreamsStorageTest {
         val rSyncInfo = rStorage.getSyncInfo()
         rSyncInfo.assert(
             infos = rItems.associate { it.meta.id to it.meta.info },
-            deleted = setOf(defaultItems[1].meta.id)
+            deleted = setOf(defaultItems[1].meta.id),
         )
         val tMergeInfo = tStorage.getMergeInfo(rSyncInfo)
         tMergeInfo.assert(
@@ -818,7 +818,7 @@ internal class SyncStreamsStorageTest {
         val tSyncInfo = tStorage.getSyncInfo()
         tSyncInfo.assert(
             infos = tItems.associate { it.meta.id to it.meta.info },
-            deleted = setOf(defaultItems[2].meta.id)
+            deleted = setOf(defaultItems[2].meta.id),
         )
         val rMergeInfo = rStorage.getMergeInfo(tSyncInfo)
         rMergeInfo.assert(
