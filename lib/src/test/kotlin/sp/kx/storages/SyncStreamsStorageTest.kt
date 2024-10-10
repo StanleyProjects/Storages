@@ -370,6 +370,58 @@ internal class SyncStreamsStorageTest {
     }
 
     @Test
+    fun deleteAllTest() {
+        val storageId = mockUUID(1)
+        var time = 1.milliseconds
+        val timeProvider = MockProvider { time }
+        var itemId = mockUUID(1)
+        val uuidProvider = MockProvider { itemId }
+        val defaultItems = (1..5).map { number ->
+            mockPayload(pointer = number)
+        }
+        val updatedItems = (3..5).map { number ->
+            mockPayload(pointer = number)
+        }
+        check(defaultItems.size == 5)
+        val hashes = defaultItems.map {
+            StringTransformer.hashPair(it)
+        } + listOf(
+            MockHashFunction.hash(defaultItems) to MockHashFunction.map("storageHash:1..5"),
+            MockHashFunction.hash(updatedItems) to MockHashFunction.map("storageHash:3..5"),
+        )
+        val transformer = defaultItems.map {
+            it.value.toByteArray() to it.value
+        }
+        val storage: SyncStorage<String> = mockSyncStreamsStorage(
+            id = storageId,
+            timeProvider = timeProvider,
+            uuidProvider = uuidProvider,
+            hashes = hashes,
+            transformer = transformer,
+        )
+        defaultItems.forEach { payload ->
+            itemId = payload.meta.id
+            time = payload.meta.created
+            storage.add(payload.value)
+        }
+        assert(
+            storage = storage,
+            id = storageId,
+            hash = MockHashFunction.map("storageHash:1..5"),
+            items = defaultItems,
+        )
+        storage.deleteAll(
+            ids = setOf(mockUUID(1), mockUUID(2), mockUUID(6)),
+        )
+        assert(
+            storage = storage,
+            id = storageId,
+            hash = MockHashFunction.map("storageHash:3..5"),
+            items = updatedItems,
+        )
+    }
+
+    @Test
     fun addTest() {
         val id = mockUUID(1)
         val itemHash = MockHashFunction.map("itemHash")

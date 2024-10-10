@@ -116,7 +116,32 @@ class SyncStreamsStorage<T : Any>(
     }
 
     override fun deleteAll(ids: Set<UUID>): Set<UUID> {
-        TODO("SyncStreamsStorage:deleteAll($ids)")
+        val items = items.toMutableList()
+        val result = mutableSetOf<UUID>()
+        val iterator = items.listIterator()
+        while (iterator.hasNext()) {
+            val payload = iterator.next()
+            if (ids.contains(payload.meta.id)) {
+                iterator.remove()
+                result.add(payload.meta.id)
+            }
+        }
+        if (result.isEmpty()) return emptySet()
+        val newDeleted = deleted.toMutableSet()
+        val newLocals = locals.toMutableSet()
+        for (id in result) {
+            if (newLocals.contains(id)) {
+                newLocals -= id
+            } else {
+                newDeleted += id
+            }
+        }
+        write(
+            items = items,
+            deleted = newDeleted,
+            locals = newLocals,
+        )
+        return result
     }
 
     override fun update(id: UUID, value: T): ItemInfo? {
