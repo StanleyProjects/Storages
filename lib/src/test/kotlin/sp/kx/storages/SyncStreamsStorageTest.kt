@@ -46,7 +46,11 @@ internal class SyncStreamsStorageTest {
             assertEquals(deleted, this.deleted, "deleted:\n")
             assertEquals(downloaded.size, this.downloaded.size, "download:\n$downloaded\n${this.downloaded}\n")
             assertEquals(downloaded, this.downloaded, "download:\n")
-            assertEquals(items.size, this.items.size, "upload:\n${items.map { it.meta.id }}\n${this.items.map { it.meta.id }}\n")
+            assertEquals(
+                items.size,
+                this.items.size,
+                "upload:\n${items.map { it.meta.id }}\n${this.items.map { it.meta.id }}\n",
+            )
             val sorted = this.items.sortedBy { it.meta.created }
             items.sortedBy { it.meta.created }.forEachIndexed { index, expected ->
                 val actual = sorted[index]
@@ -82,7 +86,11 @@ internal class SyncStreamsStorageTest {
             assertEquals(hash.toHEX(), this.hash.toHEX())
             assertEquals(deleted.size, this.deleted.size, "deleted:\n$deleted\n${this.deleted}\n")
             assertEquals(deleted, this.deleted)
-            assertEquals(items.size, this.items.size, "upload:\n${items.map { it.meta.id }}\n${this.items.map { it.meta.id }}\n")
+            assertEquals(
+                items.size,
+                this.items.size,
+                "upload:\n${items.map { it.meta.id }}\n${this.items.map { it.meta.id }}\n",
+            )
             items.forEachIndexed { index, expected ->
                 val actual = this.items[index]
                 assertEquals(expected.meta.id, actual.meta.id)
@@ -115,35 +123,36 @@ internal class SyncStreamsStorageTest {
             assertEquals(updated, this.updated, "storageId: $storageId\nitemId: $itemId\nupdated:\n")
             assertEquals(hash.toHEX(), this.hash.toHEX(), "storageId: $storageId\nitemId: $itemId\nhash:\n")
         }
-    }
 
-    private fun <T : Any> SyncStorage<T>.assert(
-        id: UUID,
-        hash: ByteArray,
-        items: List<Payload<T>> = emptyList(),
-    ) {
-        assertEquals(id, this.id)
-        val message = """
-            storage:id: $id
-            storage:hash:e: ${hash.toHEX()}
-            storage:hash:a: ${this.hash.toHEX()}
-            items:e: $items
-            items:a: ${this.items}
-        """.trimIndent()
-        assertTrue(hash.contentEquals(this.hash), message)
-        assertEquals(items.size, this.items.size)
-        items.forEachIndexed { index, expected ->
-            val actual = this.items[index]
-            assertEquals(expected.meta.id, actual.meta.id)
-            actual.meta.info.assert(
-                storageId = id,
-                itemId = expected.meta.id,
-                updated = expected.meta.info.updated,
-                hash = expected.meta.info.hash,
-            )
-            assertEquals(expected, actual)
+        fun <T : Any> assert(
+            storage: Storage<T>,
+            id: UUID,
+            hash: ByteArray,
+            items: List<Payload<T>> = emptyList(),
+        ) {
+            assertEquals(id, storage.id)
+            val message = """
+                storage:id: $id
+                storage:hash:e: ${hash.toHEX()}
+                storage:hash:a: ${storage.hash.toHEX()}
+                items:e: $items
+                items:a: ${storage.items}
+            """.trimIndent()
+            assertTrue(hash.contentEquals(storage.hash), message)
+            assertEquals(items.size, storage.items.size)
+            items.forEachIndexed { index, expected ->
+                val actual = storage.items[index]
+                assertEquals(expected.meta.id, actual.meta.id)
+                actual.meta.info.assert(
+                    storageId = id,
+                    itemId = expected.meta.id,
+                    updated = expected.meta.info.updated,
+                    hash = expected.meta.info.hash,
+                )
+                assertEquals(expected, actual)
+            }
+            assertEquals(items, storage.items)
         }
-        assertEquals(items, this.items)
     }
 
     private fun SyncInfo.assert(
@@ -154,7 +163,10 @@ internal class SyncStreamsStorageTest {
         infos.forEach { (itemId, expected) ->
             val actual = this.infos[itemId] ?: error("No item info!")
             assertEquals(expected.updated, actual.updated, "id: $itemId\n$expected\n$actual")
-            assertTrue(expected.hash.contentEquals(actual.hash), "e: ${expected.hash.toHEX()}, a: ${actual.hash.toHEX()}")
+            assertTrue(
+                expected.hash.contentEquals(actual.hash),
+                "e: ${expected.hash.toHEX()}, a: ${actual.hash.toHEX()}",
+            )
             assertEquals(expected, actual, "id: $itemId")
         }
         assertEquals(deleted.size, this.deleted.size)
@@ -171,7 +183,8 @@ internal class SyncStreamsStorageTest {
                 "".toByteArray() to storageHash,
             ),
         )
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageHash,
         )
@@ -242,7 +255,8 @@ internal class SyncStreamsStorageTest {
             time = (1_000 + index).milliseconds
             storage.add(payload.value)
         }
-        storage.assert(
+        assert(
+            storage = storage,
             id = storageId,
             hash = storageHash,
             items = defaultItems,
@@ -251,7 +265,8 @@ internal class SyncStreamsStorageTest {
         time = (2_000 + 0).milliseconds
         assertEquals(updatedItems[0].meta.info, storage.update(defaultItems[0].meta.id, updatedItems[0].value))
         assertTrue(storage.delete(defaultItems[1].meta.id))
-        storage.assert(
+        assert(
+            storage = storage,
             id = storageId,
             hash = storageHashUpdated,
             items = updatedItems,
@@ -270,7 +285,8 @@ internal class SyncStreamsStorageTest {
             ),
             defaultDeleted = deleted,
         )
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageHash,
         )
@@ -324,12 +340,14 @@ internal class SyncStreamsStorageTest {
                 expected.value.toByteArray() to expected.value,
             ),
         )
-        storage.assert(
+        assert(
+            storage = storage,
             id = storageId,
             hash = storageEmptyHash,
         )
         assertEquals(expected, storage.add(expected.value))
-        storage.assert(
+        assert(
+            storage = storage,
             id = storageId,
             hash = storageHash,
             items = listOf(expected),
@@ -337,15 +355,76 @@ internal class SyncStreamsStorageTest {
         val notExists = UUID.fromString("35ca49c2-d716-4eb3-ad1e-3f87337ce360")
         check(notExists != expected.meta.id)
         assertFalse(storage.delete(id = notExists))
-        storage.assert(
+        assert(
+            storage = storage,
             id = storageId,
             hash = storageHash,
             items = listOf(expected),
         )
         assertTrue(storage.delete(id = expected.meta.id))
-        storage.assert(
+        assert(
+            storage = storage,
             id = storageId,
             hash = storageEmptyHash,
+        )
+    }
+
+    @Test
+    fun deleteAllTest() {
+        val storageId = mockUUID(1)
+        var time = 1.milliseconds
+        val timeProvider = MockProvider { time }
+        var itemId = mockUUID(1)
+        val uuidProvider = MockProvider { itemId }
+        val defaultItems = (1..5).map { number ->
+            mockPayload(pointer = number)
+        }
+        val updatedItems = (3..5).map { number ->
+            mockPayload(pointer = number)
+        }
+        check(defaultItems.size == 5)
+        val hashes = defaultItems.map {
+            StringTransformer.hashPair(it)
+        } + listOf(
+            MockHashFunction.hash(defaultItems) to MockHashFunction.map("storageHash:1..5"),
+            MockHashFunction.hash(updatedItems) to MockHashFunction.map("storageHash:3..5"),
+        )
+        val transformer = defaultItems.map {
+            it.value.toByteArray() to it.value
+        }
+        val storage: SyncStorage<String> = mockSyncStreamsStorage(
+            id = storageId,
+            timeProvider = timeProvider,
+            uuidProvider = uuidProvider,
+            hashes = hashes,
+            transformer = transformer,
+        )
+        defaultItems.forEach { payload ->
+            itemId = payload.meta.id
+            time = payload.meta.created
+            storage.add(payload.value)
+        }
+        assert(
+            storage = storage,
+            id = storageId,
+            hash = MockHashFunction.map("storageHash:1..5"),
+            items = defaultItems,
+        )
+        storage.deleteAll(
+            ids = setOf(mockUUID(1), mockUUID(2), mockUUID(6)),
+        )
+        assert(
+            storage = storage,
+            id = storageId,
+            hash = MockHashFunction.map("storageHash:3..5"),
+            items = updatedItems,
+        )
+        storage.deleteAll(ids = emptySet())
+        assert(
+            storage = storage,
+            id = storageId,
+            hash = MockHashFunction.map("storageHash:3..5"),
+            items = updatedItems,
         )
     }
 
@@ -378,12 +457,14 @@ internal class SyncStreamsStorageTest {
                 expected.value.toByteArray() to expected.value,
             ),
         )
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageEmptyHash,
         )
         assertEquals(expected, storage.add(expected.value))
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageHash,
             items = listOf(expected),
@@ -427,12 +508,14 @@ internal class SyncStreamsStorageTest {
                 itemUpdated.toByteArray() to itemUpdated,
             ),
         )
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageEmptyHash,
         )
         assertEquals(expected, storage.add(expected.value))
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageHash,
             items = listOf(expected),
@@ -440,7 +523,8 @@ internal class SyncStreamsStorageTest {
         val notExists = UUID.fromString("35ca49c2-d716-4eb3-ad1e-3f87337ce360")
         check(notExists != expected.meta.id)
         assertNull(storage.update(id = notExists, value = itemUpdated))
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageHash,
             items = listOf(expected),
@@ -461,7 +545,8 @@ internal class SyncStreamsStorageTest {
             updated.meta.info,
             storage.update(id = expected.meta.id, value = itemUpdated),
         )
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageUpdatedHash,
             items = listOf(updated),
@@ -505,13 +590,15 @@ internal class SyncStreamsStorageTest {
                 itemUpdated.toByteArray() to itemUpdated,
             ),
         )
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageEmptyHash,
         )
         storage.getSyncInfo().assert()
         assertEquals(expected, storage.add(expected.value))
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageHash,
             items = listOf(expected),
@@ -519,7 +606,8 @@ internal class SyncStreamsStorageTest {
         val notExists = mockUUID(12)
         check(notExists != expected.meta.id)
         assertNull(storage.update(id = notExists, value = itemUpdated))
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageHash,
             items = listOf(expected),
@@ -540,20 +628,23 @@ internal class SyncStreamsStorageTest {
             updated.meta.info,
             storage.update(id = expected.meta.id, value = itemUpdated),
         )
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageUpdatedHash,
             items = listOf(updated),
         )
         storage.getSyncInfo().assert(infos = mapOf(updated.meta.id to updated.meta.info))
         assertFalse(storage.delete(id = notExists))
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageUpdatedHash,
             items = listOf(updated),
         )
         assertTrue(storage.delete(id = expected.meta.id))
-        storage.assert(
+        assert(
+            storage = storage,
             id = id,
             hash = storageEmptyHash,
         )
@@ -654,12 +745,14 @@ internal class SyncStreamsStorageTest {
             rStorage.add(payload.value)
         }
         rStorage.commit(tStorage.merge(rStorage.getMergeInfo(tStorage.getSyncInfo())))
-        rStorage.assert(
+        assert(
+            storage = rStorage,
             id = storageId,
             hash = storageHash,
             items = defaultItems,
         )
-        tStorage.assert(
+        assert(
+            storage = tStorage,
             id = storageId,
             hash = storageHash,
             items = defaultItems,
@@ -674,12 +767,14 @@ internal class SyncStreamsStorageTest {
             time = payload.meta.created
             tStorage.add(payload.value)
         }
-        rStorage.assert(
+        assert(
+            storage = rStorage,
             id = storageId,
             hash = storageRDefaultHash,
             items = defaultItems + rItems.last(),
         )
-        tStorage.assert(
+        assert(
+            storage = tStorage,
             id = storageId,
             hash = storageTDefaultHash,
             items = defaultItems + tItems.last(),
@@ -688,7 +783,8 @@ internal class SyncStreamsStorageTest {
         time = (20 + 0).minutes
         assertEquals(rItems[0].meta.info, rStorage.update(defaultItems[0].meta.id, rItems[0].value))
         assertTrue(rStorage.delete(defaultItems[1].meta.id))
-        rStorage.assert(
+        assert(
+            storage = rStorage,
             id = storageId,
             hash = storageRHash,
             items = rItems,
@@ -697,14 +793,18 @@ internal class SyncStreamsStorageTest {
         time = (30 + 0).minutes
         assertEquals(tItems[2].meta.info, tStorage.update(defaultItems[3].meta.id, tItems[2].value))
         assertTrue(tStorage.delete(defaultItems[2].meta.id))
-        tStorage.assert(
+        assert(
+            storage = tStorage,
             id = storageId,
             hash = storageTHash,
             items = tItems,
         )
         //
         val rSyncInfo = rStorage.getSyncInfo()
-        rSyncInfo.assert(infos = rItems.associate { it.meta.id to it.meta.info }, deleted = setOf(defaultItems[1].meta.id))
+        rSyncInfo.assert(
+            infos = rItems.associate { it.meta.id to it.meta.info },
+            deleted = setOf(defaultItems[1].meta.id),
+        )
         val tMergeInfo = tStorage.getMergeInfo(rSyncInfo)
         tMergeInfo.assert(
             downloaded = setOf(defaultItems[0].meta.id, rItems.last().meta.id),
@@ -716,7 +816,10 @@ internal class SyncStreamsStorageTest {
         )
         //
         val tSyncInfo = tStorage.getSyncInfo()
-        tSyncInfo.assert(infos = tItems.associate { it.meta.id to it.meta.info }, deleted = setOf(defaultItems[2].meta.id))
+        tSyncInfo.assert(
+            infos = tItems.associate { it.meta.id to it.meta.info },
+            deleted = setOf(defaultItems[2].meta.id),
+        )
         val rMergeInfo = rStorage.getMergeInfo(tSyncInfo)
         rMergeInfo.assert(
             downloaded = setOf(defaultItems[3].meta.id, tItems.last().meta.id),
@@ -737,12 +840,14 @@ internal class SyncStreamsStorageTest {
             deleted = setOf(defaultItems[1].meta.id),
         )
         tStorage.commit(commitInfo)
-        rStorage.assert(
+        assert(
+            storage = rStorage,
             id = storageId,
             hash = storageHashMerged,
             items = itemsMerged,
         )
-        tStorage.assert(
+        assert(
+            storage = tStorage,
             id = storageId,
             hash = storageHashMerged,
             items = itemsMerged,
@@ -813,7 +918,8 @@ internal class SyncStreamsStorageTest {
             time = payload.meta.created
             rStorage.add(payload.value)
         }
-        rStorage.assert(
+        assert(
+            storage = rStorage,
             id = storageId,
             hash = MockHashFunction.map("r:default"),
             items = rItems,
@@ -823,7 +929,8 @@ internal class SyncStreamsStorageTest {
             time = payload.meta.created
             tStorage.add(payload.value)
         }
-        tStorage.assert(
+        assert(
+            storage = tStorage,
             id = storageId,
             hash = MockHashFunction.map("t:default"),
             items = tItems,
@@ -844,12 +951,14 @@ internal class SyncStreamsStorageTest {
         val rCommitInfo = rStorage.merge(tMergeInfo)
         tStorage.commit(rCommitInfo)
         assertEquals(rStorage.hash, tStorage.hash)
-        rStorage.assert(
+        assert(
+            storage = rStorage,
             id = storageId,
             hash = MockHashFunction.map("merged:hash"),
             items = itemsMerged,
         )
-        tStorage.assert(
+        assert(
+            storage = tStorage,
             id = storageId,
             hash = MockHashFunction.map("merged:hash"),
             items = itemsMerged,
@@ -888,7 +997,8 @@ internal class SyncStreamsStorageTest {
             time = payload.meta.created
             storage.add(payload.value)
         }
-        storage.assert(
+        assert(
+            storage = storage,
             id = storageId,
             hash = storageHash,
             items = defaultItems,
@@ -940,7 +1050,8 @@ internal class SyncStreamsStorageTest {
             time = payload.meta.created
             storage.add(payload.value)
         }
-        storage.assert(
+        assert(
+            storage = storage,
             id = storageId,
             hash = storageHash,
             items = defaultItems,

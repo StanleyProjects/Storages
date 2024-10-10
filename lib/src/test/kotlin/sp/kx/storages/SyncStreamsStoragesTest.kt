@@ -255,7 +255,7 @@ internal class SyncStreamsStoragesTest {
     }
 
     @Test
-    fun deleteTest() {
+    fun deleteMergeTest() {
         val strings = (1..5).map { number ->
             mockPayload(pointer = 10 + number)
         }
@@ -1202,6 +1202,157 @@ internal class SyncStreamsStoragesTest {
             storages.commit(session = session, infos = cis)
         }
         assertEquals("Wrong hash!", throwable.message)
+    }
+
+    @Test
+    fun deleteTest() {
+        val strings = (1..5).map { number ->
+            mockPayload(pointer = 10 + number)
+        }
+        val stringsUpdated = (3..5).map { number ->
+            mockPayload(pointer = 10 + number)
+        }
+        val ints = (1..5).map { number ->
+            mockPayload(pointer = 20 + number, value = number)
+        }
+        val intsUpdated = (2..5).map { number ->
+            mockPayload(pointer = 20 + number, value = number)
+        }
+        val longs = (1..5).map { number ->
+            mockPayload(pointer = 30 + number, value = number.toLong())
+        }
+        val foos = (1..5).map { number ->
+            mockPayload(pointer = 40 + number, value = Foo(text = "foo:$number"))
+        }
+        var time = 1.milliseconds
+        val timeProvider = MockProvider { time }
+        var itemId = mockUUID()
+        val uuidProvider = MockProvider { itemId }
+        val hashes = MockHashFunction.hashes(
+            emptyList<Payload<Any>>() to "empty:hash",
+            strings to "strings:hash",
+            stringsUpdated to "strings:hash:updated",
+            ints to "ints:hash",
+            intsUpdated to "ints:hash:updated",
+            longs to "longs:hash",
+            foos to "foos:hash",
+        ) + strings.map {
+            StringTransformer.hashPair(it)
+        } + ints.map {
+            IntTransformer.hashPair(it)
+        } + longs.map {
+            LongTransformer.hashPair(it)
+        } + foos.map {
+            FooTransformer.hashPair(it)
+        }
+        val dir = File("/tmp/storages")
+        dir.deleteRecursively()
+        dir.mkdirs()
+        val storages = SyncStreamsStorages.Builder()
+            .add(mockUUID(1), StringTransformer)
+            .add(mockUUID(2), IntTransformer)
+            .add(mockUUID(3), LongTransformer)
+            .add(mockUUID(4), FooTransformer)
+            .mock(
+                hashes = hashes,
+                timeProvider = timeProvider,
+                uuidProvider = uuidProvider,
+                getStreamerProvider = { ids ->
+                    val expected = listOf(
+                        mockUUID(1),
+                        mockUUID(2),
+                        mockUUID(3),
+                        mockUUID(4),
+                    )
+                    assertEquals(expected, ids.sorted())
+                    FileStreamerProvider(
+                        dir = File(dir, "t"),
+                        ids = ids,
+                    )
+                },
+            )
+        strings.forEach { payload ->
+            itemId = payload.meta.id
+            time = payload.meta.created
+            storages.require<String>().add(payload.value)
+        }
+        ints.forEach { payload ->
+            itemId = payload.meta.id
+            time = payload.meta.created
+            storages.require<Int>().add(payload.value)
+        }
+        longs.forEach { payload ->
+            itemId = payload.meta.id
+            time = payload.meta.created
+            storages.require<Long>().add(payload.value)
+        }
+        foos.forEach { payload ->
+            itemId = payload.meta.id
+            time = payload.meta.created
+            storages.require<Foo>().add(payload.value)
+        }
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<String>(),
+            id = mockUUID(1),
+            hash = MockHashFunction.map("strings:hash"),
+            items = strings,
+        )
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<Int>(),
+            id = mockUUID(2),
+            hash = MockHashFunction.map("ints:hash"),
+            items = ints,
+        )
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<Long>(),
+            id = mockUUID(3),
+            hash = MockHashFunction.map("longs:hash"),
+            items = longs,
+        )
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<Foo>(),
+            id = mockUUID(4),
+            hash = MockHashFunction.map("foos:hash"),
+            items = foos,
+        )
+        val deleted = storages.delete(
+            ids = mapOf(
+                mockUUID(1) to setOf(mockUUID(11), mockUUID(12)),
+                mockUUID(2) to setOf(mockUUID(21), mockUUID(12)),
+                mockUUID(3) to setOf(),
+            ),
+        )
+        assertEquals(
+            mapOf(
+                mockUUID(1) to setOf(mockUUID(11), mockUUID(12)),
+                mockUUID(2) to setOf(mockUUID(21)),
+            ),
+            deleted,
+        )
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<String>(),
+            id = mockUUID(1),
+            hash = MockHashFunction.map("strings:hash:updated"),
+            items = stringsUpdated,
+        )
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<Int>(),
+            id = mockUUID(2),
+            hash = MockHashFunction.map("ints:hash:updated"),
+            items = intsUpdated,
+        )
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<Long>(),
+            id = mockUUID(3),
+            hash = MockHashFunction.map("longs:hash"),
+            items = longs,
+        )
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<Foo>(),
+            id = mockUUID(4),
+            hash = MockHashFunction.map("foos:hash"),
+            items = foos,
+        )
     }
 
     companion object {

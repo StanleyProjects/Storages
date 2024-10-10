@@ -231,4 +231,30 @@ class SyncStreamsStorages private constructor(
         }
         return newPointers.keys
     }
+
+    override fun delete(ids: Map<UUID, Set<UUID>>): Map<UUID, Set<UUID>> {
+        if (session != null) TODO("Session exists!")
+        val newPointers = mutableMapOf<UUID, Int>()
+        val result = mutableMapOf<UUID, Set<UUID>>()
+        for ((storageId, payloadIds) in ids) {
+            val (_, transformer) = transformers[storageId] ?: error("No storage by ID: \"$storageId\"!")
+            val inputPointer = streamers.getPointer(id = storageId)
+            val outputPointer = inputPointer + 1
+            val deleted = getSyncStorage(
+                id = storageId,
+                streamer = streamers.getStreamer(
+                    id = storageId,
+                    inputPointer = inputPointer,
+                    outputPointer = outputPointer,
+                ),
+                transformer = transformer,
+            ).deleteAll(payloadIds)
+            if (deleted.isNotEmpty()) {
+                result[storageId] = deleted
+                newPointers[storageId] = outputPointer
+            }
+        }
+        streamers.putPointers(newPointers)
+        return result
+    }
 }
