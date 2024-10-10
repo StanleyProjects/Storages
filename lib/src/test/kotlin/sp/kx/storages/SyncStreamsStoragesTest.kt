@@ -1209,7 +1209,13 @@ internal class SyncStreamsStoragesTest {
         val strings = (1..5).map { number ->
             mockPayload(pointer = 10 + number)
         }
+        val stringsUpdated = (3..5).map { number ->
+            mockPayload(pointer = 10 + number)
+        }
         val ints = (1..5).map { number ->
+            mockPayload(pointer = 20 + number, value = number)
+        }
+        val intsUpdated = (2..5).map { number ->
             mockPayload(pointer = 20 + number, value = number)
         }
         val longs = (1..5).map { number ->
@@ -1225,7 +1231,9 @@ internal class SyncStreamsStoragesTest {
         val hashes = MockHashFunction.hashes(
             emptyList<Payload<Any>>() to "empty:hash",
             strings to "strings:hash",
+            stringsUpdated to "strings:hash:updated",
             ints to "ints:hash",
+            intsUpdated to "ints:hash:updated",
             longs to "longs:hash",
             foos to "foos:hash",
         ) + strings.map {
@@ -1321,7 +1329,30 @@ internal class SyncStreamsStoragesTest {
             ),
             deleted,
         )
-        TODO("SyncStreamsStoragesTest:deleteTest")
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<String>(),
+            id = mockUUID(1),
+            hash = MockHashFunction.map("strings:hash:updated"),
+            items = stringsUpdated,
+        )
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<Int>(),
+            id = mockUUID(2),
+            hash = MockHashFunction.map("ints:hash:updated"),
+            items = intsUpdated,
+        )
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<Long>(),
+            id = mockUUID(3),
+            hash = MockHashFunction.map("longs:hash"),
+            items = longs,
+        )
+        SyncStreamsStorageTest.assert(
+            storage = storages.require<Foo>(),
+            id = mockUUID(4),
+            hash = MockHashFunction.map("foos:hash"),
+            items = foos,
+        )
     }
 
     companion object {

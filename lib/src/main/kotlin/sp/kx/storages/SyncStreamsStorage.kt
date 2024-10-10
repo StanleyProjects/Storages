@@ -116,6 +116,7 @@ class SyncStreamsStorage<T : Any>(
     }
 
     override fun deleteAll(ids: Set<UUID>): Set<UUID> {
+        if (ids.isEmpty()) return emptySet()
         val items = items.toMutableList()
         val result = mutableSetOf<UUID>()
         val iterator = items.listIterator()

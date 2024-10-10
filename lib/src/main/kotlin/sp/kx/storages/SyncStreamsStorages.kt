@@ -249,8 +249,10 @@ class SyncStreamsStorages private constructor(
                 ),
                 transformer = transformer,
             ).deleteAll(payloadIds)
-            if (deleted.isNotEmpty()) result[storageId] = deleted
-            newPointers[storageId] = outputPointer
+            if (deleted.isNotEmpty()) {
+                result[storageId] = deleted
+                newPointers[storageId] = outputPointer
+            }
         }
         streamers.putPointers(newPointers)
         return result

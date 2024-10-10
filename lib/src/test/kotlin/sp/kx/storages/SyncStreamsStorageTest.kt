@@ -419,6 +419,13 @@ internal class SyncStreamsStorageTest {
             hash = MockHashFunction.map("storageHash:3..5"),
             items = updatedItems,
         )
+        storage.deleteAll(ids = emptySet())
+        assert(
+            storage = storage,
+            id = storageId,
+            hash = MockHashFunction.map("storageHash:3..5"),
+            items = updatedItems,
+        )
     }
 
     @Test
