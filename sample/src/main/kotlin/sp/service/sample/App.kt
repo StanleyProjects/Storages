@@ -52,7 +52,7 @@ private fun SyncStreamsStorages.println() {
         val storages = require(id = id)
         storages.items.forEachIndexed { index, item ->
             builder.append("\n")
-                .append("  $index] ${item.id}: ${item.payload}")
+                .append("  $index] ${item.meta.id}: ${item.value}")
         }
     }
     println(builder.toString())
@@ -82,14 +82,14 @@ private fun commit(
         }
         println("src:")
         srcStorages.require(id = storageId).items.forEachIndexed { index, it ->
-            println("$index] ${it.id}: ${it.info.hash.toHEX()}")
+            println("$index] ${it.meta.id}: ${it.meta.info.hash.toHEX()}")
         }
     }
     val mis = srcStorages.getMergeInfo(session = response.session, infos = response.infos)
     for ((storageId, mi) in mis) {
         println("src:MergeInfo: $storageId")
         mi.items.forEachIndexed { index, item ->
-            println("$index] ${item.id}: ${String(item.payload)}")
+            println("$index] ${item.meta.id}: ${String(item.bytes)}")
         }
         println("deleted:")
         mi.deleted.forEachIndexed { index, id ->
@@ -97,14 +97,14 @@ private fun commit(
         }
         println("dst:")
         dstStorages.require(id = storageId).items.forEachIndexed { index, it ->
-            println("$index] ${it.id}: ${it.payload}")
+            println("$index] ${it.meta.id}: ${it.value}")
         }
     }
     val cis = dstStorages.merge(session = response.session, infos = mis)
     for ((storageId, ci) in cis) {
         println("dst:CommitInfo: $storageId")
         ci.items.forEachIndexed { index, item ->
-            println("$index] ${item.id}: ${String(item.payload)}")
+            println("$index] ${item.meta.id}: ${String(item.bytes)}")
         }
         println("deleted:")
         ci.deleted.forEachIndexed { index, id ->
@@ -160,19 +160,19 @@ fun main() {
     //
     commit(srcStorages = tStorages, dstStorages = rStorages)
     //
-    println("delete: ${tDescribed.id}")
-    val deleted = tStorages.require<Foo>().delete(id = tDescribed.id)
+    println("delete: ${tDescribed.meta.id}")
+    val deleted = tStorages.require<Foo>().delete(id = tDescribed.meta.id)
     check(deleted)
     tStorages.println()
-    println("update: ${rDescribed.id}")
-    val rItemInfo = rStorages.require<Foo>().update(id = rDescribed.id, payload = Foo(text = "foo:${nextInt()}"))
+    println("update: ${rDescribed.meta.id}")
+    val rItemInfo = rStorages.require<Foo>().update(id = rDescribed.meta.id, value = Foo(text = "foo:${nextInt()}"))
     checkNotNull(rItemInfo)
     rStorages.println()
     //
     commit(srcStorages = tStorages, dstStorages = rStorages)
     //
-    println("update: ${rDescribed.id}")
-    tStorages.require<Foo>().update(id = rDescribed.id, payload = Foo(text = "foo:${nextInt()}"))
+    println("update: ${rDescribed.meta.id}")
+    tStorages.require<Foo>().update(id = rDescribed.meta.id, value = Foo(text = "foo:${nextInt()}"))
     //
     commit(srcStorages = tStorages, dstStorages = rStorages)
     //
