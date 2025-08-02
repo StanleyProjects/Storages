@@ -61,6 +61,7 @@ tasks.getByName<KotlinCompile>("compileTestKotlin") {
 dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:${Version.jupiter}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${Version.jupiter}")
+//    testRuntimeOnly("org.junit.platform:junit-platform-launcher:${Version.jupiter}") // todo kotlin 2.1.0
     implementation("com.github.kepocnhh:Bytes:0.2.1-SNAPSHOT")
 }
 
