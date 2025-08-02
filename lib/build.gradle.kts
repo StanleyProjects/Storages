@@ -33,7 +33,7 @@ val gh = GitHub.Repository(
 
 repositories {
     mavenCentral()
-    maven("https://s01.oss.sonatype.org/content/repositories/snapshots")
+    maven("https://central.sonatype.com/repository/maven-snapshots/")
 }
 
 plugins {
@@ -62,7 +62,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:${Version.jupiter}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${Version.jupiter}")
 //    testRuntimeOnly("org.junit.platform:junit-platform-launcher:${Version.jupiter}") // todo kotlin 2.1.0
-    implementation("com.github.kepocnhh:Bytes:0.2.1-SNAPSHOT")
+    implementation("com.github.kepocnhh:Bytes:0.3.0u-SNAPSHOT")
 }
 
 fun Test.getExecutionData(): File {
