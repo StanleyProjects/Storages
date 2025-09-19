@@ -1,6 +1,6 @@
 package sp.kx.storages
 
-import sp.kx.bytes.toHEX
+import sp.kx.bytes.hex
 import java.util.Objects
 import java.util.UUID
 
@@ -27,7 +27,7 @@ class CommitInfo(
         return "{" +
             "items: $items, " +
             "deleted: $deleted, " +
-            "hash: \"${hash.toHEX()}\"" +
+            "hash: \"${hash.hex()}\"" +
             "}"
     }
 

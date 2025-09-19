@@ -3,7 +3,6 @@ object Version {
     const val dokka = "1.9.20"
     const val jacoco = "0.8.13"
     const val jupiter = "5.11.4"
-//    const val jupiter = "6.0.0-M2" // todo kotlin 2.1.0
     const val jvmTarget = "17"
     const val kotlin = "1.9.25"
     const val ktlint = "0.50.0"

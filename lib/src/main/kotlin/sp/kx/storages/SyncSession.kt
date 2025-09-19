@@ -1,6 +1,6 @@
 package sp.kx.storages
 
-import sp.kx.bytes.toHEX
+import sp.kx.bytes.hex
 import java.util.Objects
 
 class SyncSession(
@@ -8,7 +8,7 @@ class SyncSession(
     val dst: ByteArray,
 ) {
     override fun toString(): String {
-        return "SyncSession(src: ${src.toHEX()}, dst: ${dst.toHEX()})"
+        return "SyncSession(src: ${src.hex()}, dst: ${dst.hex()})"
     }
 
     override fun equals(other: Any?): Boolean {

@@ -1,6 +1,6 @@
 package sp.kx.storages
 
-import sp.kx.bytes.toHEX
+import sp.kx.bytes.hex
 import java.util.Date
 import java.util.Objects
 import kotlin.time.Duration
@@ -29,7 +29,7 @@ class ItemInfo(
     override fun toString(): String {
         return "{" +
             "updated: ${Date(updated.inWholeMilliseconds)}, " +
-            "hash: \"${hash.toHEX()}\"" +
+            "hash: \"${hash.hex()}\"" +
             "}"
     }
 
