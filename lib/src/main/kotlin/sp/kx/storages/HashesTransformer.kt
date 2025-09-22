@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import sp.kx.bytes.Transformer
 import sp.kx.bytes.readInt
 import sp.kx.bytes.readUUID
 import sp.kx.bytes.write

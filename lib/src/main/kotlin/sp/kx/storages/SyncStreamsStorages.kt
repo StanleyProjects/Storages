@@ -1,5 +1,6 @@
 package sp.kx.storages
 
+import sp.kx.bytes.Transformer
 import sp.kx.bytes.write
 import java.io.File
 import java.util.UUID
