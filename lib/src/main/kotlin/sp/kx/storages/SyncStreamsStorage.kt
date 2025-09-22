@@ -7,6 +7,7 @@ import sp.kx.bytes.readLong
 import sp.kx.bytes.readUUID
 import sp.kx.bytes.write
 import sp.kx.bytes.writeBytes
+import sp.kx.hashes.HashFunction
 import java.io.InputStream
 import java.util.UUID
 import kotlin.time.Duration

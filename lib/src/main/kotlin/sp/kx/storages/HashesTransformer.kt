@@ -4,6 +4,7 @@ import sp.kx.bytes.Transformer
 import sp.kx.bytes.readInt
 import sp.kx.bytes.readUUID
 import sp.kx.bytes.write
+import sp.kx.hashes.HashFunction
 import java.util.HashMap
 import java.util.UUID
 

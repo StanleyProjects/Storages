@@ -5,6 +5,7 @@ import sp.kx.bytes.readBytes
 import sp.kx.bytes.readInt
 import sp.kx.bytes.readUUID
 import sp.kx.bytes.writeBytes
+import sp.kx.hashes.HashFunction
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.UUID
