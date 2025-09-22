@@ -1,10 +1,10 @@
 package sp.service.sample
 
-import sp.kx.bytes.toHEX
-import sp.kx.storages.HashFunction
+import sp.kx.bytes.Transformer
+import sp.kx.bytes.hex
+import sp.kx.hashes.HashFunction
 import sp.kx.storages.SyncStreamsStorage
 import sp.kx.storages.SyncStreamsStorages
-import sp.kx.storages.Transformer
 import sp.kx.storages.require
 import java.io.File
 import java.util.UUID
@@ -42,7 +42,7 @@ private fun SyncStreamsStorages.println() {
     builder.append("\n")
         .append(" hashes:")
     hashes.forEach { (id, bytes) ->
-        builder.append("\n").append("$id: ${bytes.toHEX()}")
+        builder.append("\n").append("$id: ${bytes.hex()}")
     }
     hashes.forEach { (id, _) ->
         builder.append("\n")
@@ -74,7 +74,7 @@ private fun commit(
     for ((storageId, si) in response.infos) {
         println("dst:SyncInfo: $storageId")
         si.infos.keys.sorted().forEachIndexed { index, itemId ->
-            println("$index] $itemId: ${si.infos[itemId]!!.hash.toHEX()}")
+            println("$index] $itemId: ${si.infos[itemId]!!.hash.hex()}")
         }
         println("deleted:")
         si.deleted.forEachIndexed { index, id ->
@@ -82,7 +82,7 @@ private fun commit(
         }
         println("src:")
         srcStorages.require(id = storageId).items.forEachIndexed { index, it ->
-            println("$index] ${it.meta.id}: ${it.meta.info.hash.toHEX()}")
+            println("$index] ${it.meta.id}: ${it.meta.info.hash.hex()}")
         }
     }
     val mis = srcStorages.getMergeInfo(session = response.session, infos = response.infos)
@@ -120,7 +120,7 @@ private fun commit(
 fun main() {
     val dir = File("/tmp/sample")
     dir.deleteRecursively()
-    val hf: HashFunction = MDHashFunction("MD5")
+    val hf: HashFunction = HashFunction.MD5
     val idFoo = UUID.fromString("548ba538-0ff1-43ba-8b36-4bdbe4c32aef")
     val tStorages = SyncStreamsStorages.Builder()
         .add(idFoo, FooTransformer)
