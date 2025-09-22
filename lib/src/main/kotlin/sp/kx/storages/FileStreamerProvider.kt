@@ -3,6 +3,7 @@ package sp.kx.storages
 import sp.kx.bytes.readInt
 import sp.kx.bytes.readUUID
 import sp.kx.bytes.write
+import sp.kx.streamers.MutableStreamer
 import java.io.File
 import java.util.UUID
 
@@ -18,7 +19,7 @@ internal class FileStreamerProvider(
         }
     }
 
-    override fun getStreamer(id: UUID, inputPointer: Int, outputPointer: Int): Streamer {
+    override fun getStreamer(id: UUID, inputPointer: Int, outputPointer: Int): MutableStreamer {
         return FileStreamer(
             dir = File(dir, "storages"),
             id = id,

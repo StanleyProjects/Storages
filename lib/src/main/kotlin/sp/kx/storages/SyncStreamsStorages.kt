@@ -3,6 +3,7 @@ package sp.kx.storages
 import sp.kx.bytes.Transformer
 import sp.kx.bytes.write
 import sp.kx.hashes.HashFunction
+import sp.kx.streamers.MutableStreamer
 import java.io.File
 import java.util.UUID
 
@@ -71,7 +72,7 @@ class SyncStreamsStorages private constructor(
             id: UUID,
             inputPointer: Int,
             outputPointer: Int,
-        ): Streamer
+        ): MutableStreamer
         fun getPointer(id: UUID): Int
         fun putPointers(values: Map<UUID, Int>)
     }
@@ -102,7 +103,7 @@ class SyncStreamsStorages private constructor(
         return null
     }
 
-    private fun <T : Any> getSyncStorage(id: UUID, streamer: Streamer, transformer: Transformer<T>): SyncStorage<T> {
+    private fun <T : Any> getSyncStorage(id: UUID, streamer: MutableStreamer, transformer: Transformer<T>): SyncStorage<T> {
         return SyncStreamsStorage(
             id = id,
             hf = hf,

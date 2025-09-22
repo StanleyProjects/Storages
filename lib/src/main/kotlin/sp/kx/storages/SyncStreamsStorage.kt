@@ -8,6 +8,8 @@ import sp.kx.bytes.readUUID
 import sp.kx.bytes.write
 import sp.kx.bytes.writeBytes
 import sp.kx.hashes.HashFunction
+import sp.kx.streamers.MutableStreamer
+import sp.kx.streamers.Streamer
 import java.io.InputStream
 import java.util.UUID
 import kotlin.time.Duration
@@ -35,7 +37,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class SyncStreamsStorage<T : Any>(
     override val id: UUID,
     private val hf: HashFunction,
-    private val streamer: Streamer,
+    private val streamer: MutableStreamer,
     private val transformer: Transformer<T>,
     private val env: Environment,
 ) : SyncStorage<T> {
@@ -47,7 +49,7 @@ class SyncStreamsStorage<T : Any>(
     override val hash: ByteArray get() = getHash(streamer = streamer, hf = hf)
     override val items: List<Payload<T>>
         get() {
-            return streamer.inputStream().use { stream ->
+            return streamer.reader().use { stream ->
                 stream.skip(stream.readInt().toLong() * 16) // skip deleted
                 stream.skip(stream.readInt().toLong() * 16) // skip locals
                 List(stream.readInt()) { _ ->
@@ -71,7 +73,7 @@ class SyncStreamsStorage<T : Any>(
         locals: Set<UUID> = this.locals,
         items: List<Payload<T>>,
     ) {
-        streamer.outputStream().use { stream ->
+        streamer.writer().use { stream ->
             stream.writeBytes(value = deleted.size)
             for (it in deleted) {
                 stream.writeBytes(value = it)
@@ -278,14 +280,14 @@ class SyncStreamsStorage<T : Any>(
     }
 
     override fun get(id: UUID): Payload<T>? {
-        return streamer.inputStream().use { stream ->
+        return streamer.reader().use { stream ->
             get(id = id, stream = stream)
         }
     }
 
     override fun filter(predicate: (Payload<T>) -> Boolean): List<Payload<T>> {
         val result = mutableListOf<Payload<T>>()
-        streamer.inputStream().use { stream ->
+        streamer.reader().use { stream ->
             stream.skip(stream.readInt().toLong() * 16) // skip deleted
             stream.skip(stream.readInt().toLong() * 16) // skip locals
             for (i in 0 until stream.readInt()) {
@@ -308,7 +310,7 @@ class SyncStreamsStorage<T : Any>(
             streamer: Streamer,
             hf: HashFunction,
         ): ByteArray {
-            return streamer.inputStream().use { stream ->
+            return streamer.reader().use { stream ->
                 stream.skip(stream.readInt().toLong() * 16) // skip deleted
                 stream.skip(stream.readInt().toLong() * 16) // skip locals
                 val itemsSize = stream.readInt()
@@ -329,7 +331,7 @@ class SyncStreamsStorage<T : Any>(
             streamer: Streamer,
             hf: HashFunction,
         ): SyncInfo {
-            return streamer.inputStream().use { stream ->
+            return streamer.reader().use { stream ->
                 val deletedSize = stream.readInt()
                 val deleted = HashSet<UUID>(deletedSize)
                 for (index in 0 until deletedSize) {
@@ -355,7 +357,7 @@ class SyncStreamsStorage<T : Any>(
             streamer: Streamer,
             hf: HashFunction,
         ): List<RawPayload> {
-            return streamer.inputStream().use { stream ->
+            return streamer.reader().use { stream ->
                 stream.skip(stream.readInt().toLong() * 16) // skip deleted
                 stream.skip(stream.readInt().toLong() * 16) // skip locals
                 List(stream.readInt()) { _ ->
@@ -373,7 +375,7 @@ class SyncStreamsStorage<T : Any>(
 
         private fun getDeleted(streamer: Streamer): Set<UUID> {
             val set = HashSet<UUID>()
-            streamer.inputStream().use { stream ->
+            streamer.reader().use { stream ->
                 for (index in 0 until stream.readInt()) {
                     set.add(stream.readUUID())
                 }
@@ -383,7 +385,7 @@ class SyncStreamsStorage<T : Any>(
 
         private fun getLocals(streamer: Streamer): Set<UUID> {
             val set = HashSet<UUID>()
-            streamer.inputStream().use { stream ->
+            streamer.reader().use { stream ->
                 stream.skip(stream.readInt().toLong() * 16) // skip deleted
                 for (index in 0 until stream.readInt()) {
                     set.add(stream.readUUID())
