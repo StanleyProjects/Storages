@@ -25,5 +25,4 @@ tasks.getByName<KotlinCompile>("compileKotlin") {
 dependencies {
     implementation(project(":lib"))
     implementation("com.github.kepocnhh:Bytes:0.4.1u-SNAPSHOT")
-    implementation("com.github.kepocnhh:Hashes:0.0.1u-SNAPSHOT")
 }
