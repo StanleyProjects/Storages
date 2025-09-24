@@ -1,5 +1,5 @@
 # Storages
-A library for storing, changing and synchronizing data between devices.
+A library for storing and changing data between devices.
 
 ---
 
