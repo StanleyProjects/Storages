@@ -3,44 +3,11 @@ A library for storing, changing and synchronizing data between devices.
 
 ---
 
-### backlog
-
-- [ ] cache
-- [ ] backup
-- [ ] encryption
-
----
-
-## Snapshot
-
-![version](https://img.shields.io/static/v1?label=version&message=0.5.0-SNAPSHOT&labelColor=212121&color=2962ff&style=flat)
-
-- [Maven](https://s01.oss.sonatype.org/content/repositories/snapshots/com/github/kepocnhh/Storages/0.5.0-SNAPSHOT)
-- [Documentation](https://StanleyProjects.github.io/Storages/doc/0.5.0-SNAPSHOT)
-
-### Build
-```
-$ gradle lib:assembleSnapshotJar
-```
-
-### Import
-```kotlin
-repositories {
-    maven("https://s01.oss.sonatype.org/content/repositories/snapshots")
-}
-
-dependencies {
-    implementation("com.github.kepocnhh:Storages:0.5.0-SNAPSHOT")
-}
-```
-
----
-
 ## Unstable
 
-![version](https://img.shields.io/static/v1?label=version&message=0.10.0u-SNAPSHOT&labelColor=212121&color=2962ff&style=flat)
-
-- [Maven](https://s01.oss.sonatype.org/content/repositories/snapshots/com/github/kepocnhh/Storages/0.10.0u-SNAPSHOT)
+> GitHub [0.11.0u-SNAPSHOT](https://github.com/StanleyProjects/Storages/releases/tag/0.11.0u-SNAPSHOT) release
+>
+> Maven [metadata](https://central.sonatype.com/repository/maven-snapshots/com/github/kepocnhh/Storages/maven-metadata.xml)
 
 ### Build
 ```
@@ -50,11 +17,11 @@ $ gradle lib:assembleUnstableJar
 ### Import
 ```kotlin
 repositories {
-    maven("https://s01.oss.sonatype.org/content/repositories/snapshots")
+    maven("https://central.sonatype.com/repository/maven-snapshots")
 }
 
 dependencies {
-    implementation("com.github.kepocnhh:Storages:0.10.0u-SNAPSHOT")
+    implementation("com.github.kepocnhh:Storages:0.11.0u-SNAPSHOT")
 }
 ```
 

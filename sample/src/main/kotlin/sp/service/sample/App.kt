@@ -1,183 +1,147 @@
 package sp.service.sample
 
-import sp.kx.bytes.toHEX
-import sp.kx.storages.HashFunction
-import sp.kx.storages.SyncStreamsStorage
-import sp.kx.storages.SyncStreamsStorages
-import sp.kx.storages.Transformer
-import sp.kx.storages.require
+import sp.kx.bytes.readBytes
+import sp.kx.bytes.readInt
+import sp.kx.bytes.readLong
+import sp.kx.bytes.readUUID
+import sp.kx.bytes.toByteArray
+import sp.kx.bytes.writeBytes
+import sp.kx.storages.MutableStorage
+import sp.kx.storages.Payload
+import sp.kx.storages.ValueInfo
+import sp.kx.storages.ValueState
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.security.MessageDigest
 import java.util.UUID
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-private data class Foo(val text: String)
+private class FinalStorage(
+    private val delegate: File,
+) : MutableStorage<String> {
+    private val md = MessageDigest.getInstance("MD5")
 
-private object FooTransformer : Transformer<Foo> {
-    override fun encode(decoded: Foo): ByteArray {
-        return decoded.text.toByteArray()
-    }
-
-    override fun decode(encoded: ByteArray): Foo {
-        return Foo(text = String(encoded))
-    }
-}
-
-private object DefaultEnvironment : SyncStreamsStorage.Environment {
-    private var pointer = 1
-
-    override fun now(): Duration {
-        Thread.sleep(250)
-        return System.currentTimeMillis().milliseconds
+    init {
+        delegate.writeBytes(0.toByteArray())
     }
 
-    override fun randomUUID(): UUID {
-        return UUID.fromString("00000000-0000-0000-0000-0000000${10_000 + pointer++ % 1024}")
+    private fun write(items: List<Payload<String>>) {
+        val bytes = ByteArrayOutputStream().use { stream ->
+            stream.writeBytes(items.size)
+            items.forEachIndexed { index, payload ->
+                stream.writeBytes(payload.valueInfo.id)
+                stream.writeBytes(payload.valueInfo.created.inWholeMilliseconds)
+                stream.writeBytes(payload.valueState.updated.inWholeMilliseconds)
+                val bytes = payload.value.toByteArray()
+                stream.writeBytes(bytes.size)
+                stream.writeBytes(bytes)
+            }
+            stream.toByteArray()
+        }
+        delegate.writeBytes(bytes)
     }
-}
 
-private fun SyncStreamsStorages.println() {
-    val builder = StringBuilder()
-    val hashes = hashes()
-    builder.append("\n")
-        .append(" hashes:")
-    hashes.forEach { (id, bytes) ->
-        builder.append("\n").append("$id: ${bytes.toHEX()}")
-    }
-    hashes.forEach { (id, _) ->
-        builder.append("\n")
-            .append(" items:")
-            .append("\n")
-            .append("$id")
-        val storages = require(id = id)
-        storages.items.forEachIndexed { index, item ->
-            builder.append("\n")
-                .append("  $index] ${item.id}: ${item.payload}")
+    override fun delete(id: UUID): Boolean {
+        val items = items.toMutableList()
+        for (index in items.indices) {
+            val it = items[index]
+            if (it.valueInfo.id == id) {
+                items.removeAt(index)
+                write(items = items)
+                return true
+            }
         }
+        return false
     }
-    println(builder.toString())
-}
 
-private var current = 1
-private fun nextInt(): Int {
-    return current++
-}
+    override fun add(value: String): Payload<String> {
+        val created = System.currentTimeMillis().milliseconds
+        val payload = Payload(
+            value = value,
+            valueInfo = ValueInfo(
+                id = UUID.randomUUID(),
+                created = created,
+            ),
+            valueState = ValueState(
+                updated = created,
+                hash = md.digest(value.toByteArray()),
+            ),
+        )
+        write(items = items + payload)
+        return payload
+    }
 
-private fun commit(
-    srcStorages: SyncStreamsStorages,
-    dstStorages: SyncStreamsStorages,
-) {
-    println("\ncommit...")
-    val hashes = srcStorages.hashes()
-//    println("hashes: ${hashes.map { (id, bytes) -> "$id: ${bytes.toHEX()}" }}")
-    val response = dstStorages.getSyncInfo(hashes = hashes)
-    for ((storageId, si) in response.infos) {
-        println("dst:SyncInfo: $storageId")
-        si.infos.keys.sorted().forEachIndexed { index, itemId ->
-            println("$index] $itemId: ${si.infos[itemId]!!.hash.toHEX()}")
+    override fun set(id: UUID, value: String): ValueState? {
+        val items = items.toMutableList()
+        for (index in items.indices) {
+            val it = items[index]
+            if (it.valueInfo.id == id) {
+                items.removeAt(index)
+                val valueState = ValueState(
+                    updated = System.currentTimeMillis().milliseconds,
+                    hash = md.digest(value.toByteArray()),
+                )
+                val payload = Payload(
+                    value = value,
+                    valueInfo = it.valueInfo,
+                    valueState = valueState,
+                )
+                write(items = items + payload)
+                return valueState
+            }
         }
-        println("deleted:")
-        si.deleted.forEachIndexed { index, id ->
-            println("$index] $id")
-        }
-        println("src:")
-        srcStorages.require(id = storageId).items.forEachIndexed { index, it ->
-            println("$index] ${it.id}: ${it.info.hash.toHEX()}")
-        }
+        return null
     }
-    val mis = srcStorages.getMergeInfo(session = response.session, infos = response.infos)
-    for ((storageId, mi) in mis) {
-        println("src:MergeInfo: $storageId")
-        mi.items.forEachIndexed { index, item ->
-            println("$index] ${item.id}: ${String(item.payload)}")
+
+    override val id: UUID = UUID.randomUUID()
+    override val items: List<Payload<String>>
+        get() {
+            return ByteArrayInputStream(delegate.readBytes()).use { stream ->
+                (0 until stream.readInt()).map { index ->
+                    val valueInfo = ValueInfo(
+                        id = stream.readUUID(),
+                        created = stream.readLong().milliseconds,
+                    )
+                    val updated = stream.readLong().milliseconds
+                    val bytes = stream.readBytes(stream.readInt())
+                    Payload(
+                        value = String(bytes),
+                        valueInfo = valueInfo,
+                        valueState = ValueState(
+                            updated = updated,
+                            hash = md.digest(bytes),
+                        ),
+                    )
+                }
+            }
         }
-        println("deleted:")
-        mi.deleted.forEachIndexed { index, id ->
-            println("$index] $id")
-        }
-        println("dst:")
-        dstStorages.require(id = storageId).items.forEachIndexed { index, it ->
-            println("$index] ${it.id}: ${it.payload}")
-        }
+
+    override fun get(id: UUID): Payload<String>? {
+        return items.firstOrNull { it.valueInfo.id == id }
     }
-    val cis = dstStorages.merge(session = response.session, infos = mis)
-    for ((storageId, ci) in cis) {
-        println("dst:CommitInfo: $storageId")
-        ci.items.forEachIndexed { index, item ->
-            println("$index] ${item.id}: ${String(item.payload)}")
-        }
-        println("deleted:")
-        ci.deleted.forEachIndexed { index, id ->
-            println("$index] $id")
-        }
-    }
-    srcStorages.commit(session = response.session, infos = cis)
-    check(srcStorages.hashes().keys.all { id -> srcStorages.require(id = id).items == dstStorages.require(id = id).items })
-//    storages.println()
-    println("")
 }
 
 fun main() {
-    val dir = File("/tmp/sample")
-    dir.deleteRecursively()
-    val hf: HashFunction = MDHashFunction("MD5")
-    val idFoo = UUID.fromString("548ba538-0ff1-43ba-8b36-4bdbe4c32aef")
-    val tStorages = SyncStreamsStorages.Builder()
-        .add(idFoo, FooTransformer)
-        .build(
-            hf = hf,
-            env = DefaultEnvironment,
-            dir = File("/tmp/sample/t"),
-        )
-    tStorages.println()
-    Foo(text = "foo:${nextInt()}").also { item ->
-        println("add: $item")
-        tStorages.require<Foo>().add(item)
-    }
-    val tDescribed = Foo(text = "foo:${nextInt()}").let { item ->
-        println("add: $item")
-        tStorages.require<Foo>().add(item)
-    }
-    tStorages.println()
-    //
-    val rStorages = SyncStreamsStorages.Builder()
-        .add(idFoo, FooTransformer)
-        .build(
-            hf = hf,
-            env = DefaultEnvironment,
-            dir = File("/tmp/sample/r"),
-        )
-    rStorages.println()
-    Foo(text = "foo:${nextInt()}").also { item ->
-        println("add: $item")
-        rStorages.require<Foo>().add(item)
-    }
-    val rDescribed = Foo(text = "foo:${nextInt()}").let { item ->
-        println("add: $item")
-        rStorages.require<Foo>().add(item)
-    }
-    rStorages.println()
-    //
-    commit(srcStorages = tStorages, dstStorages = rStorages)
-    //
-    println("delete: ${tDescribed.id}")
-    val deleted = tStorages.require<Foo>().delete(id = tDescribed.id)
-    check(deleted)
-    tStorages.println()
-    println("update: ${rDescribed.id}")
-    val rItemInfo = rStorages.require<Foo>().update(id = rDescribed.id, payload = Foo(text = "foo:${nextInt()}"))
-    checkNotNull(rItemInfo)
-    rStorages.println()
-    //
-    commit(srcStorages = tStorages, dstStorages = rStorages)
-    //
-    println("update: ${rDescribed.id}")
-    tStorages.require<Foo>().update(id = rDescribed.id, payload = Foo(text = "foo:${nextInt()}"))
-    //
-    commit(srcStorages = tStorages, dstStorages = rStorages)
-    //
-    println("transmitter:")
-    tStorages.println()
-    println("receiver:")
-    rStorages.println()
+    val storage: MutableStorage<String> = FinalStorage(File.createTempFile("foo", "bar"))
+    println("storage: ${storage.id}")
+    check(storage.items.isEmpty())
+    val p0 = storage.add("foo")
+    check(storage.items.size == 1)
+    println("item: ${p0.valueInfo}")
+    val p1 = storage.add("bar")
+    check(storage.items.size == 2)
+    println("item: ${p1.valueInfo}")
+    val p2 = storage.add("baz")
+    check(storage.items.size == 3)
+    println("item: ${p2.valueInfo}")
+    check(storage[p0.valueInfo.id]!!.value == "foo")
+    check(storage[p1.valueInfo.id]!!.value == "bar")
+    check(storage[p2.valueInfo.id]!!.value == "baz")
+    storage[p0.valueInfo.id] = "qux"
+    storage.delete(p2.valueInfo.id)
+    check(storage.items.size == 2)
+    check(storage[p0.valueInfo.id]!!.value == "qux")
+    check(storage[p1.valueInfo.id]!!.value == "bar")
+    check(storage[UUID(0, 0)] == null)
 }
