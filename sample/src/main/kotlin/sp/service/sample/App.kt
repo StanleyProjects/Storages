@@ -72,7 +72,7 @@ private class FinalStorage(
         return payload
     }
 
-    override fun set(id: UUID, value: String): ValueState? {
+    override fun update(id: UUID, value: String): ValueState? {
         val items = items.toMutableList()
         for (index in items.indices) {
             val it = items[index]
@@ -138,7 +138,7 @@ fun main() {
     check(storage[p0.valueInfo.id]!!.value == "foo")
     check(storage[p1.valueInfo.id]!!.value == "bar")
     check(storage[p2.valueInfo.id]!!.value == "baz")
-    storage[p0.valueInfo.id] = "qux"
+    storage.update(p0.valueInfo.id, "qux") ?: TODO()
     storage.delete(p2.valueInfo.id)
     check(storage.items.size == 2)
     check(storage[p0.valueInfo.id]!!.value == "qux")
