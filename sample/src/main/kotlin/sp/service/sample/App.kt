@@ -26,10 +26,10 @@ private class FinalStorage(
         delegate.writeBytes(0.toByteArray())
     }
 
-    private fun write(items: List<Payload<String>>) {
+    private fun write(payloads: List<Payload<String>>) {
         val bytes = ByteArrayOutputStream().use { stream ->
-            stream.writeBytes(items.size)
-            items.forEachIndexed { index, payload ->
+            stream.writeBytes(payloads.size)
+            payloads.forEachIndexed { index, payload ->
                 stream.writeBytes(payload.valueInfo.id)
                 stream.writeBytes(payload.valueInfo.created.inWholeMilliseconds)
                 stream.writeBytes(payload.valueState.updated.inWholeMilliseconds)
@@ -43,12 +43,12 @@ private class FinalStorage(
     }
 
     override fun delete(id: UUID): Boolean {
-        val items = items.toMutableList()
-        for (index in items.indices) {
-            val it = items[index]
+        val payloads = payloads.toMutableList()
+        for (index in payloads.indices) {
+            val it = payloads[index]
             if (it.valueInfo.id == id) {
-                items.removeAt(index)
-                write(items = items)
+                payloads.removeAt(index)
+                write(payloads = payloads)
                 return true
             }
         }
@@ -68,16 +68,16 @@ private class FinalStorage(
                 hash = md.digest(value.toByteArray()),
             ),
         )
-        write(items = items + payload)
+        write(payloads = payloads + payload)
         return payload
     }
 
     override fun update(id: UUID, value: String): ValueState? {
-        val items = items.toMutableList()
-        for (index in items.indices) {
-            val it = items[index]
+        val payloads = payloads.toMutableList()
+        for (index in payloads.indices) {
+            val it = payloads[index]
             if (it.valueInfo.id == id) {
-                items.removeAt(index)
+                payloads.removeAt(index)
                 val valueState = ValueState(
                     updated = System.currentTimeMillis().milliseconds,
                     hash = md.digest(value.toByteArray()),
@@ -87,7 +87,7 @@ private class FinalStorage(
                     valueInfo = it.valueInfo,
                     valueState = valueState,
                 )
-                write(items = items + payload)
+                write(payloads = payloads + payload)
                 return valueState
             }
         }
@@ -95,7 +95,7 @@ private class FinalStorage(
     }
 
     override val id: UUID = UUID.randomUUID()
-    override val items: List<Payload<String>>
+    override val payloads: List<Payload<String>>
         get() {
             return ByteArrayInputStream(delegate.readBytes()).use { stream ->
                 (0 until stream.readInt()).map { index ->
@@ -118,29 +118,29 @@ private class FinalStorage(
         }
 
     override fun get(id: UUID): Payload<String>? {
-        return items.firstOrNull { it.valueInfo.id == id }
+        return payloads.firstOrNull { it.valueInfo.id == id }
     }
 }
 
 fun main() {
     val storage: MutableStorage<String> = FinalStorage(File.createTempFile("foo", "bar"))
     println("storage: ${storage.id}")
-    check(storage.items.isEmpty())
+    check(storage.payloads.isEmpty())
     val p0 = storage.add("foo")
-    check(storage.items.size == 1)
+    check(storage.payloads.size == 1)
     println("item: ${p0.valueInfo}")
     val p1 = storage.add("bar")
-    check(storage.items.size == 2)
+    check(storage.payloads.size == 2)
     println("item: ${p1.valueInfo}")
     val p2 = storage.add("baz")
-    check(storage.items.size == 3)
+    check(storage.payloads.size == 3)
     println("item: ${p2.valueInfo}")
     check(storage[p0.valueInfo.id]!!.value == "foo")
     check(storage[p1.valueInfo.id]!!.value == "bar")
     check(storage[p2.valueInfo.id]!!.value == "baz")
     storage.update(p0.valueInfo.id, "qux") ?: TODO()
     storage.delete(p2.valueInfo.id)
-    check(storage.items.size == 2)
+    check(storage.payloads.size == 2)
     check(storage[p0.valueInfo.id]!!.value == "qux")
     check(storage[p1.valueInfo.id]!!.value == "bar")
     check(storage[UUID(0, 0)] == null)
