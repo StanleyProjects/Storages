@@ -24,4 +24,25 @@ internal class PayloadTest {
         val expected = "Payload(value: String, valueInfo: $valueInfo, valueState: $valueState)"
         assertEquals(expected, issuer.toString())
     }
+
+    @Test
+    fun getTest() {
+        val value = "foo bar baz"
+        val valueInfo = ValueInfo(
+            id = UUID(0, 1),
+            created = 1.milliseconds,
+        )
+        val valueState = ValueState(
+            updated = 2.milliseconds,
+            hash = byteArrayOf(4, 3, 2, 1),
+        )
+        val issuer = Payload(
+            value = value,
+            valueInfo = valueInfo,
+            valueState = valueState,
+        )
+        assertEquals(value, issuer.value)
+        assertEquals(valueInfo, issuer.valueInfo)
+        assertEquals(valueState, issuer.valueState)
+    }
 }

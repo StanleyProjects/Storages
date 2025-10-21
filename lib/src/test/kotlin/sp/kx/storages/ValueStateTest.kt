@@ -53,4 +53,16 @@ internal class ValueStateTest {
         val expected = -1689920704
         assertEquals(expected, issuer.hashCode())
     }
+
+    @Test
+    fun getTest() {
+        val updated = 42.milliseconds
+        val hash = byteArrayOf(4, 3, 2, 1)
+        val issuer = ValueState(
+            updated = updated,
+            hash = hash,
+        )
+        assertEquals(updated, issuer.updated)
+        assertTrue(hash.contentEquals(issuer.hash))
+    }
 }
