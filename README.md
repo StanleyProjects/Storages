@@ -29,7 +29,7 @@ dependencies {
 
 ## Unstable
 
-> GitHub [0.13.0u-SNAPSHOT](https://github.com/StanleyProjects/Storages/releases/tag/0.13.0u-SNAPSHOT) release
+> GitHub [0.13.1u-SNAPSHOT](https://github.com/StanleyProjects/Storages/releases/tag/0.13.1u-SNAPSHOT) release
 >
 > Maven [metadata](https://central.sonatype.com/repository/maven-snapshots/com/github/kepocnhh/Storages/maven-metadata.xml)
 
@@ -45,7 +45,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.kepocnhh:Storages:0.13.0u-SNAPSHOT")
+    implementation("com.github.kepocnhh:Storages:0.13.1u-SNAPSHOT")
 }
 ```
 

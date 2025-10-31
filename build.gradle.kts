@@ -11,11 +11,11 @@ buildscript {
     }
 }
 
-task<Delete>("clean") {
+tasks.register<Delete>("clean") {
     delete = setOf(buildDir(), buildSrc.buildDir())
 }
 
-task("checkLicense") {
+tasks.register("checkLicense") {
     doLast {
         val author = "Stanley Wintergreen" // todo
         file("LICENSE").check(
@@ -40,7 +40,7 @@ dependencies {
     }
 }
 
-task<JavaExec>("checkCodeStyle") {
+tasks.register<JavaExec>("checkCodeStyle") {
     classpath = ktlint
     mainClass = "com.pinterest.ktlint.Main"
     val reporter = "html"
