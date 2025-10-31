@@ -19,5 +19,11 @@ class Payload<T : Any>(
                 payload.valueState,
             )
         }
+
+        fun equals(expected: Payload<ByteArray>, actual: Payload<ByteArray>): Boolean {
+            return expected.value.contentEquals(actual.value) &&
+                expected.valueInfo == actual.valueInfo &&
+                expected.valueState == actual.valueState
+        }
     }
 }
