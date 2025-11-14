@@ -4,7 +4,7 @@ import java.util.Objects
 import java.util.UUID
 import kotlin.time.Duration
 
-class Payload<T : Any>(
+class Payload<out T : Any>(
     val id: UUID,
     val created: Duration,
     val updated: Duration,

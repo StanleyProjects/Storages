@@ -63,6 +63,20 @@ private class FinalStorage(
         return payload
     }
 
+    override fun addAll(values: List<String>): List<Payload<String>> {
+        val created = System.currentTimeMillis().milliseconds
+        val newPayloads = values.map { value ->
+            Payload(
+                id = UUID.randomUUID(),
+                created = created,
+                updated = created,
+                value = value,
+            )
+        }
+        write(payloads = payloads + newPayloads)
+        return newPayloads
+    }
+
     override fun update(id: UUID, value: String): Duration? {
         val payloads = payloads.toMutableList()
         for (index in payloads.indices) {
@@ -129,4 +143,14 @@ fun main() {
     check(storage[p0.id]!!.updated == updated)
     check(storage[p1.id]!!.value == "bar")
     check(storage[UUID(0, 0)] == null)
+    val newPayloads = storage.addAll(values = listOf("v1", "v2", "v3"))
+    check(newPayloads.size == 3)
+    newPayloads.forEach { expected ->
+        val actual = storage[expected.id] ?: error("No payload!")
+        check(expected.id == actual.id)
+        check(expected.created == actual.created)
+        check(expected.updated == actual.updated)
+        check(expected.updated == actual.created)
+        check(expected.value == actual.value)
+    }
 }
