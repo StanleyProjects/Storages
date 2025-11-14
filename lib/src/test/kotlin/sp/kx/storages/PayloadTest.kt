@@ -38,4 +38,21 @@ internal class PayloadTest {
         assertEquals(updated, issuer.updated)
         assertEquals(value, issuer.value)
     }
+
+    @Test
+    fun hashCodeTest() {
+        val id = UUID(0, 1)
+        val created = 1.milliseconds
+        val updated = 2.milliseconds
+        val value = byteArrayOf(4, 3, 2, 1)
+        val issuer = Payload(
+            id = id,
+            created = created,
+            updated = updated,
+            value = value,
+        )
+        val expected = 2047998943
+        val actual = Payload.hashCode(issuer)
+        assertEquals(expected, actual)
+    }
 }
