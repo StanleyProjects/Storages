@@ -54,6 +54,29 @@ private class FinalStorages : MutableStorages {
                         else -> error("No storage!")
                     }
                 }
+                is MutableStorages.Transaction.Operation.Delete<*> -> {
+                    when (operation.key) {
+                        k0 -> {
+                            for (index in _p0.indices) {
+                                val it = _p0[index]
+                                if (it.id == operation.id) {
+                                    _p0.removeAt(index)
+                                    break
+                                }
+                            }
+                        }
+                        k1 -> {
+                            for (index in _p1.indices) {
+                                val it = _p1[index]
+                                if (it.id == operation.id) {
+                                    _p1.removeAt(index)
+                                    break
+                                }
+                            }
+                        }
+                        else -> error("No storage!")
+                    }
+                }
             }
         }
         p0.clear()
@@ -139,19 +162,31 @@ fun main() {
     val storages: MutableStorages = FinalStorages()
     val strings = Storage.Key(UUID(42, 0), String::class.java)
     val durations = Storage.Key(UUID(42, 1), Duration::class.java)
-    val transaction = MutableStorages.Transaction.Builder()
+    var transaction = MutableStorages.Transaction.Builder()
         .add(strings, "foo")
         .add(strings, "bar")
-        .add(strings, "baz")
         .add(durations, 42.seconds)
+        .add(durations, 43.seconds)
         .build()
     check(storages[strings]!!.payloads.isEmpty())
     check(storages[durations]!!.payloads.isEmpty())
     storages.commit(transaction = transaction)
-    check(storages[strings]!!.payloads.size == 3)
-    check(storages[strings]!!.payloads.map { it.value } == listOf("foo", "bar", "baz"))
+    check(storages[strings]!!.payloads.size == 2)
+    check(storages[strings]!!.payloads.map { it.value } == listOf("foo", "bar"))
+    check(storages[durations]!!.payloads.size == 2)
+    check(storages[durations]!!.payloads.map { it.value } == listOf(42.seconds, 43.seconds))
+    val p00 = storages[strings]!!.payloads.firstOrNull { it.value == "foo" } ?: error("No payload!")
+    val p10 = storages[durations]!!.payloads.firstOrNull { it.value == 42.seconds } ?: error("No payload!")
+    transaction = MutableStorages.Transaction.Builder()
+        .delete(strings, p00.id)
+        .add(strings, "baz")
+        .delete(durations, p10.id)
+        .build()
+    storages.commit(transaction = transaction)
+    check(storages[strings]!!.payloads.size == 2)
+    check(storages[strings]!!.payloads.map { it.value } == listOf("bar", "baz"))
     check(storages[durations]!!.payloads.size == 1)
-    check(storages[durations]!!.payloads.map { it.value } == listOf(42.seconds))
+    check(storages[durations]!!.payloads.map { it.value } == listOf(43.seconds))
 }
 
 fun main0() {
