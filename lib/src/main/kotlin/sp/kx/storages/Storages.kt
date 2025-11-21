@@ -1,5 +1,5 @@
 package sp.kx.storages
 
 interface Storages {
-    operator fun <T : Any> get(type: Class<T>): Storage<T>?
+    operator fun <T : Any> get(key: Storage.Key<T>): Storage<T>?
 }

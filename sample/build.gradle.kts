@@ -1,9 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-repositories {
-    mavenCentral()
-    maven("https://central.sonatype.com/repository/maven-snapshots/")
-}
+repositories.mavenCentral()
 
 plugins {
     id("application")
@@ -24,5 +21,4 @@ tasks.getByName<KotlinCompile>("compileKotlin") {
 
 dependencies {
     implementation(project(":lib"))
-    implementation("com.github.kepocnhh:Bytes:0.4.1u-SNAPSHOT")
 }
