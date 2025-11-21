@@ -1,16 +1,22 @@
 package sp.kx.storages
 
 interface MutableStorages : Storages {
-    class Transaction {
-        internal sealed interface Operation {
-            class Add<T : Any>(val key: Storage.Key<T>, value: T) : Operation
+    class Transaction private constructor(val operations: List<Operation>) {
+        sealed interface Operation {
+            class Add<T : Any>(val key: Storage.Key<T>, val value: T) : Operation
         }
 
-        private val operations = mutableListOf<Operation>()
+        class Builder {
+            private val operations = mutableListOf<Operation>()
 
-        fun <T : Any> add(key: Storage.Key<T>, value: T): Transaction {
-            operations.add(Operation.Add(key = key, value = value))
-            return this
+            fun <T : Any> add(key: Storage.Key<T>, value: T): Builder {
+                operations.add(Operation.Add(key = key, value = value))
+                return this
+            }
+
+            fun build(): Transaction {
+                return Transaction(operations = ArrayList(operations))
+            }
         }
     }
 

@@ -7,23 +7,69 @@ import sp.kx.storages.Storage
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 private class FinalStorages : MutableStorages {
-    private val storages = listOf(
-        FinalStorage(id = UUID(42, 0)),
-    )
+    private val k0 = Storage.Key(id = UUID(42, 0), type = String::class.java)
+    private val k1 = Storage.Key(id = UUID(42, 1), type = Duration::class.java)
+    private val p0 = mutableListOf<Payload<String>>()
+    private val p1 = mutableListOf<Payload<Duration>>()
+    private val s0 = FinalStorage(k0, p0)
+    private val s1 = FinalStorage(k1, p1)
 
     override fun <T : Any> get(key: Storage.Key<T>): MutableStorage<T>? {
-        val storage = storages.firstOrNull { it.key == key } ?: return null
-        return storage as MutableStorage<T>
+        return when (key) {
+            k0 -> s0 as MutableStorage<T>
+            k1 -> s1 as MutableStorage<T>
+            else -> null
+        }
+    }
+
+    override fun commit(transaction: MutableStorages.Transaction) {
+        val _p0 = p0.toMutableList()
+        val _p1 = p1.toMutableList()
+        for (operation in transaction.operations) {
+            when (operation) {
+                is MutableStorages.Transaction.Operation.Add<*> -> {
+                    val created = System.currentTimeMillis().milliseconds
+                    when (operation.key) {
+                        k0 -> {
+                            val payload = Payload(
+                                id = UUID.randomUUID(),
+                                created = created,
+                                updated = created,
+                                value = operation.value as String,
+                            )
+                            _p0.add(payload)
+                        }
+                        k1 -> {
+                            val payload = Payload(
+                                id = UUID.randomUUID(),
+                                created = created,
+                                updated = created,
+                                value = operation.value as Duration,
+                            )
+                            _p1.add(payload)
+                        }
+                        else -> error("No storage!")
+                    }
+                }
+            }
+        }
+        p0.clear()
+        p0.addAll(_p0)
+        p1.clear()
+        p1.addAll(_p1)
     }
 }
 
-private class FinalStorage(id: UUID) : MutableStorage<String> {
-    private var _payloads = emptyList<Payload<String>>()
-
-    private fun write(payloads: List<Payload<String>>) {
-        _payloads = payloads
+private class FinalStorage<T : Any>(
+    override val key: Storage.Key<T>,
+    override val payloads: MutableList<Payload<T>>,
+) : MutableStorage<T> {
+    private fun write(payloads: List<Payload<T>>) {
+        this.payloads.clear()
+        this.payloads.addAll(payloads)
     }
 
     override fun delete(id: UUID): Boolean {
@@ -39,7 +85,7 @@ private class FinalStorage(id: UUID) : MutableStorage<String> {
         return false
     }
 
-    override fun add(value: String): Payload<String> {
+    override fun add(value: T): Payload<T> {
         val created = System.currentTimeMillis().milliseconds
         val payload = Payload(
             id = UUID.randomUUID(),
@@ -51,7 +97,7 @@ private class FinalStorage(id: UUID) : MutableStorage<String> {
         return payload
     }
 
-    override fun addAll(values: List<String>): List<Payload<String>> {
+    override fun addAll(values: List<T>): List<Payload<T>> {
         val created = System.currentTimeMillis().milliseconds
         val newPayloads = values.map { value ->
             Payload(
@@ -65,7 +111,7 @@ private class FinalStorage(id: UUID) : MutableStorage<String> {
         return newPayloads
     }
 
-    override fun update(id: UUID, value: String): Duration? {
+    override fun update(id: UUID, value: T): Duration? {
         val payloads = payloads.toMutableList()
         for (index in payloads.indices) {
             val it = payloads[index]
@@ -84,16 +130,31 @@ private class FinalStorage(id: UUID) : MutableStorage<String> {
         return null
     }
 
-    override val key = Storage.Key(id = id, type = String::class.java)
-    override val payloads: List<Payload<String>>
-        get() { return _payloads }
-
-    override fun get(id: UUID): Payload<String>? {
+    override fun get(id: UUID): Payload<T>? {
         return payloads.firstOrNull { it.id == id }
     }
 }
 
 fun main() {
+    val storages: MutableStorages = FinalStorages()
+    val strings = Storage.Key(UUID(42, 0), String::class.java)
+    val durations = Storage.Key(UUID(42, 1), Duration::class.java)
+    val transaction = MutableStorages.Transaction.Builder()
+        .add(strings, "foo")
+        .add(strings, "bar")
+        .add(strings, "baz")
+        .add(durations, 42.seconds)
+        .build()
+    check(storages[strings]!!.payloads.isEmpty())
+    check(storages[durations]!!.payloads.isEmpty())
+    storages.commit(transaction = transaction)
+    check(storages[strings]!!.payloads.size == 3)
+    check(storages[strings]!!.payloads.map { it.value } == listOf("foo", "bar", "baz"))
+    check(storages[durations]!!.payloads.size == 1)
+    check(storages[durations]!!.payloads.map { it.value } == listOf(42.seconds))
+}
+
+fun main0() {
     val storages: MutableStorages = FinalStorages()
     val storage = storages[Storage.Key(UUID(42, 0), String::class.java)] ?: error("No storage!")
     println("storage: ${storage.key.id}")
