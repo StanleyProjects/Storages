@@ -1,42 +1,29 @@
 package sp.service.sample
 
-import sp.kx.bytes.readBytes
-import sp.kx.bytes.readInt
-import sp.kx.bytes.readLong
-import sp.kx.bytes.readUUID
-import sp.kx.bytes.toByteArray
-import sp.kx.bytes.writeBytes
 import sp.kx.storages.MutableStorage
+import sp.kx.storages.MutableStorages
 import sp.kx.storages.Payload
 import sp.kx.storages.Storage
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.File
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-private class FinalStorage(
-    private val delegate: File,
-) : MutableStorage<String> {
-    init {
-        delegate.writeBytes(0.toByteArray())
+private class FinalStorages : MutableStorages {
+    private val storages = listOf(
+        FinalStorage(id = UUID(42, 0)),
+    )
+
+    override fun <T : Any> get(key: Storage.Key<T>): MutableStorage<T>? {
+        val storage = storages.firstOrNull { it.key == key } ?: return null
+        return storage as MutableStorage<T>
     }
+}
+
+private class FinalStorage(id: UUID) : MutableStorage<String> {
+    private var _payloads = emptyList<Payload<String>>()
 
     private fun write(payloads: List<Payload<String>>) {
-        val bytes = ByteArrayOutputStream().use { stream ->
-            stream.writeBytes(payloads.size)
-            payloads.forEach { payload ->
-                stream.writeBytes(payload.id)
-                stream.writeBytes(payload.created.inWholeMilliseconds)
-                stream.writeBytes(payload.updated.inWholeMilliseconds)
-                val bytes = payload.value.toByteArray()
-                stream.writeBytes(bytes.size)
-                stream.writeBytes(bytes)
-            }
-            stream.toByteArray()
-        }
-        delegate.writeBytes(bytes)
+        _payloads = payloads
     }
 
     override fun delete(id: UUID): Boolean {
@@ -97,24 +84,9 @@ private class FinalStorage(
         return null
     }
 
-    override val key = Storage.Key(id = UUID.randomUUID(), type = String::class.java)
+    override val key = Storage.Key(id = id, type = String::class.java)
     override val payloads: List<Payload<String>>
-        get() {
-            return ByteArrayInputStream(delegate.readBytes()).use { stream ->
-                (0 until stream.readInt()).map { _ ->
-                    val id = stream.readUUID()
-                    val created = stream.readLong().milliseconds
-                    val updated = stream.readLong().milliseconds
-                    val bytes = stream.readBytes(stream.readInt())
-                    Payload(
-                        id = id,
-                        created = created,
-                        updated = updated,
-                        value = String(bytes),
-                    )
-                }
-            }
-        }
+        get() { return _payloads }
 
     override fun get(id: UUID): Payload<String>? {
         return payloads.firstOrNull { it.id == id }
@@ -122,7 +94,8 @@ private class FinalStorage(
 }
 
 fun main() {
-    val storage: MutableStorage<String> = FinalStorage(File.createTempFile("foo", "bar"))
+    val storages: MutableStorages = FinalStorages()
+    val storage = storages[Storage.Key(UUID(42, 0), String::class.java)] ?: error("No storage!")
     println("storage: ${storage.key.id}")
     check(storage.payloads.isEmpty())
     val p0 = storage.add("foo")
