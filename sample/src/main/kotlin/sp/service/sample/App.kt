@@ -8,6 +8,7 @@ import sp.kx.bytes.toByteArray
 import sp.kx.bytes.writeBytes
 import sp.kx.storages.MutableStorage
 import sp.kx.storages.Payload
+import sp.kx.storages.Storage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -96,7 +97,7 @@ private class FinalStorage(
         return null
     }
 
-    override val id: UUID = UUID.randomUUID()
+    override val key = Storage.Key(id = UUID.randomUUID(), type = String::class.java)
     override val payloads: List<Payload<String>>
         get() {
             return ByteArrayInputStream(delegate.readBytes()).use { stream ->
@@ -122,7 +123,7 @@ private class FinalStorage(
 
 fun main() {
     val storage: MutableStorage<String> = FinalStorage(File.createTempFile("foo", "bar"))
-    println("storage: ${storage.id}")
+    println("storage: ${storage.key.id}")
     check(storage.payloads.isEmpty())
     val p0 = storage.add("foo")
     check(storage.payloads.size == 1)
