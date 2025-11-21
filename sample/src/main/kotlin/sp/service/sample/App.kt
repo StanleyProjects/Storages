@@ -4,6 +4,7 @@ import sp.kx.storages.MutableStorage
 import sp.kx.storages.MutableStorages
 import sp.kx.storages.Payload
 import sp.kx.storages.Storage
+import sp.kx.storages.Transaction
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -25,12 +26,12 @@ private class FinalStorages : MutableStorages {
         }
     }
 
-    override fun commit(transaction: MutableStorages.Transaction) {
+    override fun commit(transaction: Transaction) {
         val _p0 = p0.toMutableList()
         val _p1 = p1.toMutableList()
         for (operation in transaction.operations) {
             when (operation) {
-                is MutableStorages.Transaction.Operation.Add<*> -> {
+                is Transaction.Operation.Add<*> -> {
                     val created = System.currentTimeMillis().milliseconds
                     when (operation.key) {
                         k0 -> {
@@ -54,7 +55,7 @@ private class FinalStorages : MutableStorages {
                         else -> error("No storage!")
                     }
                 }
-                is MutableStorages.Transaction.Operation.Delete<*> -> {
+                is Transaction.Operation.Delete<*> -> {
                     when (operation.key) {
                         k0 -> {
                             for (index in _p0.indices) {
@@ -162,7 +163,7 @@ fun main() {
     val storages: MutableStorages = FinalStorages()
     val strings = Storage.Key(UUID(42, 0), String::class.java)
     val durations = Storage.Key(UUID(42, 1), Duration::class.java)
-    var transaction = MutableStorages.Transaction.Builder()
+    var transaction = Transaction.Builder()
         .add(strings, "foo")
         .add(strings, "bar")
         .add(durations, 42.seconds)
@@ -177,7 +178,7 @@ fun main() {
     check(storages[durations]!!.payloads.map { it.value } == listOf(42.seconds, 43.seconds))
     val p00 = storages[strings]!!.payloads.firstOrNull { it.value == "foo" } ?: error("No payload!")
     val p10 = storages[durations]!!.payloads.firstOrNull { it.value == 42.seconds } ?: error("No payload!")
-    transaction = MutableStorages.Transaction.Builder()
+    transaction = Transaction.Builder()
         .delete(strings, p00.id)
         .add(strings, "baz")
         .delete(durations, p10.id)
