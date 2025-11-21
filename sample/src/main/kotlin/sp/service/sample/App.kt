@@ -15,8 +15,8 @@ private class FinalStorages : MutableStorages {
     private val k1 = Storage.Key(id = UUID(42, 1), type = Duration::class.java)
     private val p0 = mutableListOf<Payload<String>>()
     private val p1 = mutableListOf<Payload<Duration>>()
-    private val s0 = FinalStorage(k0, p0)
-    private val s1 = FinalStorage(k1, p1)
+    private val s0 = FinalStorage(k0.id, p0)
+    private val s1 = FinalStorage(k1.id, p1)
 
     override fun <T : Any> get(key: Storage.Key<T>): MutableStorage<T>? {
         return when (key) {
@@ -88,7 +88,7 @@ private class FinalStorages : MutableStorages {
 }
 
 private class FinalStorage<T : Any>(
-    override val key: Storage.Key<T>,
+    override val id: UUID,
     override val payloads: MutableList<Payload<T>>,
 ) : MutableStorage<T> {
     private fun write(payloads: List<Payload<T>>) {
@@ -193,7 +193,7 @@ fun main() {
 fun main0() {
     val storages: MutableStorages = FinalStorages()
     val storage = storages[Storage.Key(UUID(42, 0), String::class.java)] ?: error("No storage!")
-    println("storage: ${storage.key.id}")
+    println("storage: ${storage.id}")
     check(storage.payloads.isEmpty())
     val p0 = storage.add("foo")
     check(storage.payloads.size == 1)
