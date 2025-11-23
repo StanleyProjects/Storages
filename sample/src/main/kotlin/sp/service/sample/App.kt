@@ -26,6 +26,20 @@ private class FinalStorages : MutableStorages {
         }
     }
 
+    private fun <T : Any> deleteFirst(
+        payloads: MutableList<Payload<T>>,
+        operation: Transaction.Operation.DeleteFirst<*>,
+    ) {
+        val condition: (Payload<T>) -> Boolean = operation.condition as (Payload<T>) -> Boolean
+        for (index in payloads.indices) {
+            val payload = payloads[index]
+            if (condition(payload)) {
+                payloads.removeAt(index)
+                break
+            }
+        }
+    }
+
     override fun commit(transaction: Transaction) {
         val _p0 = p0.toMutableList()
         val _p1 = p1.toMutableList()
@@ -78,6 +92,15 @@ private class FinalStorages : MutableStorages {
                         else -> error("No storage!")
                     }
                 }
+                is Transaction.Operation.DeleteFirst<*> -> {
+                    when (operation.key) {
+                        k0 -> deleteFirst(_p0, operation)
+                        k1 -> deleteFirst(_p1, operation)
+                        else -> error("No storage!")
+                    }
+                }
+                is Transaction.Operation.Update<*> -> TODO()
+                is Transaction.Operation.UpdateFirst<*> -> TODO()
             }
         }
         p0.clear()
@@ -188,6 +211,12 @@ fun main() {
     check(storages[strings]!!.payloads.map { it.value } == listOf("bar", "baz"))
     check(storages[durations]!!.payloads.size == 1)
     check(storages[durations]!!.payloads.map { it.value } == listOf(43.seconds))
+    transaction = Transaction.Builder()
+        .deleteFirst(strings) { it.value == "bar" }
+        .build()
+    storages.commit(transaction = transaction)
+    check(storages[strings]!!.payloads.size == 1)
+    check(storages[strings]!!.payloads.map { it.value } == listOf("baz"))
 }
 
 fun main0() {
