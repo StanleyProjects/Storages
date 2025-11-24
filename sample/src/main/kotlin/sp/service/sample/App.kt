@@ -30,12 +30,26 @@ private class FinalStorages : MutableStorages {
         payloads: MutableList<Payload<T>>,
         operation: Transaction.Operation.DeleteFirst<*>,
     ) {
-        val condition: (Payload<T>) -> Boolean = operation.condition as (Payload<T>) -> Boolean
+        val condition = operation.condition as (Payload<T>) -> Boolean
         for (index in payloads.indices) {
             val payload = payloads[index]
             if (condition(payload)) {
                 payloads.removeAt(index)
                 break
+            }
+        }
+    }
+
+    private fun <T : Any> deleteAll(
+        payloads: MutableList<Payload<T>>,
+        operation: Transaction.Operation.DeleteAll<*>,
+    ) {
+        val condition = operation.condition as (Payload<T>) -> Boolean
+        val iterator = payloads.iterator()
+        while (iterator.hasNext()) {
+            val payload = iterator.next()
+            if (condition(payload)) {
+                iterator.remove()
             }
         }
     }
@@ -101,6 +115,13 @@ private class FinalStorages : MutableStorages {
                 }
                 is Transaction.Operation.Update<*> -> TODO()
                 is Transaction.Operation.UpdateFirst<*> -> TODO()
+                is Transaction.Operation.DeleteAll<*> -> {
+                    when (operation.key) {
+                        k0 -> deleteAll(_p0, operation)
+                        k1 -> deleteAll(_p1, operation)
+                        else -> error("No storage!")
+                    }
+                }
             }
         }
         p0.clear()
@@ -183,6 +204,32 @@ private class FinalStorage<T : Any>(
 }
 
 fun main() {
+    val storages: MutableStorages = FinalStorages()
+    var transaction = Transaction.Builder()
+        .add(Keys.Strings, "s00")
+        .add(Keys.Strings, "s01")
+        .add(Keys.Strings, "s02")
+        .add(Keys.Strings, "s10")
+        .add(Keys.Durations, 100.seconds)
+        .add(Keys.Durations, 101.seconds)
+        .add(Keys.Durations, 102.seconds)
+        .add(Keys.Durations, 110.seconds)
+        .build()
+    check(storages[Keys.Strings]!!.payloads.isEmpty())
+    check(storages[Keys.Durations]!!.payloads.isEmpty())
+    storages.commit(transaction = transaction)
+    check(storages[Keys.Strings]!!.payloads.size == 4)
+    check(storages[Keys.Durations]!!.payloads.size == 4)
+    transaction = Transaction.Builder()
+        .deleteAll(key = Keys.Strings) { it.value.startsWith("s0") }
+        .deleteAll(key = Keys.Durations) { it.value.inWholeSeconds < 110 }
+        .build()
+    storages.commit(transaction = transaction)
+    check(storages[Keys.Strings]!!.payloads.single().value == "s10")
+    check(storages[Keys.Durations]!!.payloads.single().value == 110.seconds)
+}
+
+fun main1() {
     val storages: MutableStorages = FinalStorages()
     val strings = Storage.Key(UUID(42, 0), String::class.java)
     val durations = Storage.Key(UUID(42, 1), Duration::class.java)

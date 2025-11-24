@@ -7,6 +7,7 @@ class Transaction private constructor(val operations: List<Operation>) {
         class Add<T : Any>(val key: Storage.Key<T>, val value: T) : Operation
         class Delete<T : Any>(val key: Storage.Key<T>, val id: UUID) : Operation
         class DeleteFirst<T : Any>(val key: Storage.Key<T>, val condition: (Payload<T>) -> Boolean) : Operation
+        class DeleteAll<T : Any>(val key: Storage.Key<T>, val condition: (Payload<T>) -> Boolean) : Operation
         class Update<T : Any>(val key: Storage.Key<T>, val id: UUID, val value: T) : Operation
         class UpdateFirst<T : Any>(val key: Storage.Key<T>, val value: T, val condition: (Payload<T>) -> Boolean) : Operation
     }
@@ -26,6 +27,11 @@ class Transaction private constructor(val operations: List<Operation>) {
 
         fun <T : Any> deleteFirst(key: Storage.Key<T>, condition: (Payload<T>) -> Boolean): Builder {
             operations.add(Operation.DeleteFirst(key = key, condition = condition))
+            return this
+        }
+
+        fun <T : Any> deleteAll(key: Storage.Key<T>, condition: (Payload<T>) -> Boolean): Builder {
+            operations.add(Operation.DeleteAll(key = key, condition = condition))
             return this
         }
 
